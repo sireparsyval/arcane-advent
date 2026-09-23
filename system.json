@@ -1,0 +1,44 @@
+{
+    "id": "arcane-advent",
+    "title": "Arcane Advent",
+    "description": "Système de jeu Arcane Advent",
+    "version": "0.0.1",
+
+    "compatibility": {
+        "minimum": "14",
+        "verified": "14"
+    },
+
+    "authors": [
+        {
+            "name": "Parsyval"
+        }
+    ],
+
+    "esmodules": [
+        "arcane-advent.mjs"
+    ],
+    
+    "styles": [
+        "styles/arcane-advent.css"
+    ],
+
+    "languages": [
+        {
+            "lang": "fr",
+            "name": "Français",
+            "path": "lang/fr.json"
+        }
+    ],
+
+    "documentTypes": {
+        "Actor": {
+            "character": {},
+            "npc": {}
+        },
+
+        "Item": {
+            "item": {}
+        }
+    }
+}
