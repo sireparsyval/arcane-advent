@@ -33,30 +33,38 @@ export class ArcaneActor extends Actor {
             formulas[mode] ? mode : "normal";
 
 
-        // On lance uniquement le ou les d20.
-        const roll = new foundry.dice.Roll(
-            formulas[finalMode]
-        );
+        // Formule complète affichée par Foundry.
+        let formula = formulas[finalMode];
+
+        if (modifier > 0) {
+            formula += ` + ${modifier}`;
+        }
+        else if (modifier < 0) {
+            formula += ` - ${Math.abs(modifier)}`;
+        }
+
+
+        const roll = new foundry.dice.Roll(formula);
 
         await roll.evaluate();
 
 
-        // "values" ne contient que les résultats encore actifs.
-        // Donc avec kh/kl, on récupère directement le d20 conservé.
+        // Avec avantage/désavantage, values ne contient
+        // que le d20 retenu par kh / kl.
         const natural = roll.dice[0].values[0];
 
 
         let finalResult;
-        let modifierApplied = true;
 
 
-        // 1 et 20 naturels ignorent TOUS les modificateurs.
+        // 1 et 20 naturels :
+        // les modificateurs sont ignorés.
         if (natural === 1 || natural === 20) {
             finalResult = natural;
-            modifierApplied = false;
         }
 
-        // Sinon : d20 + modificateur, avec minimum 1.
+        // Sinon : d20 + modificateur,
+        // avec un minimum absolu de 1.
         else {
             finalResult = Math.max(
                 1,
@@ -65,33 +73,7 @@ export class ArcaneActor extends Actor {
         }
 
 
-        const modifierText =
-            modifier >= 0
-                ? `+${modifier}`
-                : `${modifier}`;
-
-
-        let formulaText;
-
-        if (!modifierApplied) {
-            formulaText =
-                `${natural} naturel — modificateurs ignorés`;
-        }
-        else {
-            formulaText =
-                `${natural} ${modifierText}`;
-
-            if (natural + modifier < 1) {
-                formulaText += " — minimum 1";
-            }
-        }
-
-
-        // On garde le vrai jet Foundry pour pouvoir voir
-        // les dés individuels, notamment avec avantage/désavantage.
-        const tooltip = await roll.getTooltip();
-
-
+        // On prépare le message Foundry sans encore le créer.
         const chatData = await roll.toMessage(
             {
                 speaker: foundry.documents.ChatMessage.getSpeaker({
@@ -107,27 +89,38 @@ export class ArcaneActor extends Actor {
         );
 
 
-        // On remplace simplement l'affichage du résultat
-        // par notre calcul Arcane Advent.
-        chatData.content = `
-            <div class="dice-roll">
-                <div class="dice-result">
+        // On garde le rendu natif de Foundry :
+        // formule, détail des dés, tooltip, etc.
+        let content = await roll.render();
 
-                    <div class="dice-formula">
-                        ${formulaText}
-                    </div>
 
-                    <div class="dice-tooltip">
-                        ${tooltip}
-                    </div>
+        // On remplace uniquement le total par
+        // le résultat final selon les règles Arcane Advent.
+        content = content.replace(
+            /(<h4 class="dice-total[^"]*">)([\s\S]*?)(<\/h4>)/,
+            `$1${finalResult}$3`
+        );
 
-                    <h4 class="dice-total">
-                        ${finalResult}
-                    </h4>
 
-                </div>
-            </div>
-        `;
+        // On ajoute une classe uniquement si
+        // le d20 RETENU est naturellement 20.
+        if (natural === 20) {
+            content = content.replace(
+                'class="dice-total"',
+                'class="dice-total aa-natural-20"'
+            );
+        }
+
+        // Même chose pour un 1 naturel.
+        else if (natural === 1) {
+            content = content.replace(
+                'class="dice-total"',
+                'class="dice-total aa-natural-1"'
+            );
+        }
+
+
+        chatData.content = content;
 
 
         await foundry.documents.ChatMessage.create(
@@ -168,9 +161,10 @@ export class ArcaneActor extends Actor {
 
 
     async rollSavingThrow(abilityKey, mode = "normal") {
-        const ability = this.system.abilities[abilityKey];
+        const savingThrow =
+            this.system.savingThrows[abilityKey];
 
-        if (!ability) return;
+        if (!savingThrow) return;
 
         const labels = {
             strength: "Force",
@@ -182,9 +176,35 @@ export class ArcaneActor extends Actor {
         };
 
         return this._rollD20(
-            ability.modifier,
+            savingThrow.total,
             mode,
             `Jet de sauvegarde de ${labels[abilityKey]}`
+        );
+    }
+
+
+    async rollSkill(skillId, mode = "normal") {
+        const skill = this.items.get(skillId);
+
+        if (!skill || skill.type !== "skill") {
+            return;
+        }
+
+        const ability =
+            this.system.abilities[skill.system.ability];
+
+        if (!ability) {
+            return;
+        }
+
+        const modifier =
+            ability.modifier
+            + skill.system.mastery;
+
+        return this._rollD20(
+            modifier,
+            mode,
+            `Jet de ${skill.name}`
         );
     }
 }

@@ -1,5 +1,6 @@
 import { CharacterData } from "./module/data/character-data.mjs";
 import { WeaponData } from "./module/data/weapon-data.mjs";
+import { SkillData } from "./module/data/skill-data.mjs";
 
 import { ArcaneActor } from "./module/documents/actor.mjs";
 import { ArcaneItem } from "./module/documents/item.mjs";
@@ -17,10 +18,22 @@ Hooks.once("init", () => {
     CONFIG.Actor.dataModels.npc = CharacterData;
 
     CONFIG.Item.dataModels.weapon = WeaponData;
+    CONFIG.Item.dataModels.skill = SkillData;
 
     CONFIG.Actor.trackableAttributes = {
         character: {
-            bar: ["consciousness"],
+            bar: [
+                "consciousness",
+                "fever"
+            ],
+            value: []
+        },
+
+        npc: {
+            bar: [
+                "consciousness",
+                "fever"
+            ],
             value: []
         }
     };

@@ -50,12 +50,23 @@
     margin-bottom: 12px;
 }
 
-.aa-tabs button {
+.aa-tabs .item {
     flex: 1;
+    padding: 6px 8px;
+
+    text-align: center;
+    cursor: pointer;
+
+    border: 1px solid var(--color-border-light-primary);
+    border-radius: 4px;
 }
 
-.aa-tabs .active {
+.aa-tabs .item.active {
     font-weight: bold;
+}
+
+.aa-tab-placeholder {
+    padding: 16px;
 }
 
 .aa-core {
@@ -124,15 +135,175 @@
     flex: 1;
 }
 
-.aa-save-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
+.aa-masteries {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
-.aa-save-roll {
+.aa-mastery-section {
+    padding-top: 10px;
+    border-top: 1px solid var(--color-border-light-primary);
+}
+
+.aa-mastery-section:first-of-type {
+    padding-top: 0;
+    border-top: none;
+}
+
+.aa-mastery-section h3 {
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+}
+
+.aa-section-title {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 8px;
+    margin-bottom: 8px;
+}
+
+.aa-section-title h3 {
+    margin: 0;
+}
+
+.aa-section-title button {
+    width: auto;
+}
+
+.aa-save-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px 16px;
+}
+
+.aa-save {
+    display: grid;
+    grid-template-columns: 1fr 50px 40px;
+    gap: 6px;
+    align-items: center;
+}
+
+.aa-save-roll {
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.aa-save-roll:hover {
+    text-decoration: underline;
+}
+
+.aa-save input {
+    text-align: center;
+}
+
+.aa-save strong {
+    text-align: center;
+}
+
+.aa-trackers {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border-light-primary);
+}
+
+.aa-tracker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.aa-tracker label {
+    font-weight: bold;
+    font-size: 0.85rem;
+}
+
+.aa-tracker input {
+    width: 70px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.aa-tracker-value {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.aa-skills-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.aa-skills-title h3 {
+    margin: 0;
+}
+
+.aa-skills-title button {
+    width: auto;
+}
+
+.aa-skill-header,
+.aa-skill-row {
+    display: grid;
+    grid-template-columns:
+        30px
+        minmax(120px, 1fr)
+        65px
+        60px
+        45px
+        30px;
+
+    gap: 6px;
+    align-items: center;
+}
+
+.aa-skill-header {
+    margin-bottom: 4px;
+    text-align: center;
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+.aa-skill-list {
+    display: grid;
+    gap: 5px;
+}
+
+.aa-skill-row input,
+.aa-skill-row select,
+.aa-skill-row strong {
+    text-align: center;
+}
+
+.aa-skill-row input[type="text"] {
+    text-align: left;
+}
+
+.aa-skill-roll,
+.aa-skill-delete {
+    padding: 0;
+}
+
+.aa-empty-skills {
+    opacity: 0.6;
+    font-style: italic;
+}
+
+.aa-natural-20 {
+    color: #2e9d4d;
+}
+
+.aa-natural-1 {
+    color: #c73e3e;
 }
