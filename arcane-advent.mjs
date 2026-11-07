@@ -24,6 +24,20 @@ Hooks.once("init", () => {
             value: []
         }
     };
+
+
+    const DocumentSheetConfig =
+        foundry.applications.apps.DocumentSheetConfig;
+
+    DocumentSheetConfig.registerSheet(
+        foundry.documents.Actor,
+        "arcane-advent",
+        ArcaneCharacterSheet,
+        {
+            types: ["character"],
+            makeDefault: true
+        }
+    );
 });
 
 

@@ -20,6 +20,11 @@ export class ArcaneCharacterSheet
         form: {
             closeOnSubmit: false,
             submitOnChange: true
+        },
+
+        actions: {
+            rollAbility: this._onRollAbility,
+            rollSavingThrow: this._onRollSavingThrow
         }
     };
 
@@ -39,5 +44,27 @@ export class ArcaneCharacterSheet
         context.system = this.actor.system;
 
         return context;
+    }
+
+
+    static async _onRollAbility(event, target) {
+        const abilityKey = target.dataset.ability;
+        const rollMode = this.actor.system.rollMode;
+
+        await this.actor.rollAbility(
+            abilityKey,
+            rollMode
+        );
+    }
+
+
+    static async _onRollSavingThrow(event, target) {
+        const abilityKey = target.dataset.ability;
+        const rollMode = this.actor.system.rollMode;
+
+        await this.actor.rollSavingThrow(
+            abilityKey,
+            rollMode
+        );
     }
 }

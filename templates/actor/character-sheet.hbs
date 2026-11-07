@@ -51,24 +51,216 @@
 
     <main class="aa-core">
 
-        <section class="aa-panel">
+        <section class="aa-panel aa-abilities">
+
             <h2>Caractéristiques</h2>
 
-            <p>
-                On mettra ici Force, Dextérité,
-                Constitution, Intelligence,
-                Sagesse et Charisme.
-            </p>
+            <div class="aa-ability-grid">
+
+                <div class="aa-ability">
+                    <button
+                        type="button"
+                        class="aa-ability-roll"
+                        data-action="rollAbility"
+                        data-ability="strength"
+                    >
+                        Force
+                    </button>
+
+                    <input
+                        type="number"
+                        name="system.abilities.strength.value"
+                        value="{{system.abilities.strength.value}}"
+                    >
+
+                    <span class="aa-modifier">
+                        {{system.abilities.strength.modifier}}
+                    </span>
+                </div>
+
+
+                <div class="aa-ability">
+                    <button
+                        type="button"
+                        class="aa-ability-roll"
+                        data-action="rollAbility"
+                        data-ability="dexterity"
+                    >
+                        Dextérité
+                    </button>
+
+                    <input
+                        type="number"
+                        name="system.abilities.dexterity.value"
+                        value="{{system.abilities.dexterity.value}}"
+                    >
+
+                    <span class="aa-modifier">
+                        {{system.abilities.dexterity.modifier}}
+                    </span>
+                </div>
+
+
+                <div class="aa-ability">
+                    <button
+                        type="button"
+                        class="aa-ability-roll"
+                        data-action="rollAbility"
+                        data-ability="constitution"
+                    >
+                        Constitution
+                    </button>
+
+                    <input
+                        type="number"
+                        name="system.abilities.constitution.value"
+                        value="{{system.abilities.constitution.value}}"
+                    >
+
+                    <span class="aa-modifier">
+                        {{system.abilities.constitution.modifier}}
+                    </span>
+                </div>
+
+
+                <div class="aa-ability">
+                    <button
+                        type="button"
+                        class="aa-ability-roll"
+                        data-action="rollAbility"
+                        data-ability="intelligence"
+                    >
+                        Intelligence
+                    </button>
+
+                    <input
+                        type="number"
+                        name="system.abilities.intelligence.value"
+                        value="{{system.abilities.intelligence.value}}"
+                    >
+
+                    <span class="aa-modifier">
+                        {{system.abilities.intelligence.modifier}}
+                    </span>
+                </div>
+
+
+                <div class="aa-ability">
+                    <button
+                        type="button"
+                        class="aa-ability-roll"
+                        data-action="rollAbility"
+                        data-ability="wisdom"
+                    >
+                        Sagesse
+                    </button>
+
+                    <input
+                        type="number"
+                        name="system.abilities.wisdom.value"
+                        value="{{system.abilities.wisdom.value}}"
+                    >
+
+                    <span class="aa-modifier">
+                        {{system.abilities.wisdom.modifier}}
+                    </span>
+                </div>
+
+
+                <div class="aa-ability">
+                    <button
+                        type="button"
+                        class="aa-ability-roll"
+                        data-action="rollAbility"
+                        data-ability="charisma"
+                    >
+                        Charisme
+                    </button>
+
+                    <input
+                        type="number"
+                        name="system.abilities.charisma.value"
+                        value="{{system.abilities.charisma.value}}"
+                    >
+
+                    <span class="aa-modifier">
+                        {{system.abilities.charisma.modifier}}
+                    </span>
+                </div>
+
+            </div>
+
         </section>
 
 
         <section class="aa-panel">
-            <h2>Maîtrises</h2>
 
-            <p>
-                Jets de sauvegarde, compétences,
-                maîtrises d’équipement et expertises.
-            </p>
+            <h2>Jets de sauvegarde</h2>
+
+            <div class="aa-save-grid">
+
+                <button
+                    type="button"
+                    class="aa-save-roll"
+                    data-action="rollSavingThrow"
+                    data-ability="strength"
+                >
+                    Force
+                    <strong>{{system.abilities.strength.modifier}}</strong>
+                </button>
+
+                <button
+                    type="button"
+                    class="aa-save-roll"
+                    data-action="rollSavingThrow"
+                    data-ability="dexterity"
+                >
+                    Dextérité
+                    <strong>{{system.abilities.dexterity.modifier}}</strong>
+                </button>
+
+                <button
+                    type="button"
+                    class="aa-save-roll"
+                    data-action="rollSavingThrow"
+                    data-ability="constitution"
+                >
+                    Constitution
+                    <strong>{{system.abilities.constitution.modifier}}</strong>
+                </button>
+
+                <button
+                    type="button"
+                    class="aa-save-roll"
+                    data-action="rollSavingThrow"
+                    data-ability="intelligence"
+                >
+                    Intelligence
+                    <strong>{{system.abilities.intelligence.modifier}}</strong>
+                </button>
+
+                <button
+                    type="button"
+                    class="aa-save-roll"
+                    data-action="rollSavingThrow"
+                    data-ability="wisdom"
+                >
+                    Sagesse
+                    <strong>{{system.abilities.wisdom.modifier}}</strong>
+                </button>
+
+                <button
+                    type="button"
+                    class="aa-save-roll"
+                    data-action="rollSavingThrow"
+                    data-ability="charisma"
+                >
+                    Charisme
+                    <strong>{{system.abilities.charisma.modifier}}</strong>
+                </button>
+
+            </div>
+
         </section>
 
 
@@ -79,6 +271,36 @@
 
         <section class="aa-panel">
             <h2>État du personnage</h2>
+
+            <div class="aa-roll-mode">
+                <label for="roll-mode">Jets</label>
+
+                <select
+                    id="roll-mode"
+                    name="system.rollMode"
+                >
+                    <option
+                        value="disadvantage"
+                        {{#if (eq system.rollMode "disadvantage")}}selected{{/if}}
+                    >
+                        Désavantage
+                    </option>
+
+                    <option
+                        value="normal"
+                        {{#if (eq system.rollMode "normal")}}selected{{/if}}
+                    >
+                        Neutre
+                    </option>
+
+                    <option
+                        value="advantage"
+                        {{#if (eq system.rollMode "advantage")}}selected{{/if}}
+                    >
+                        Avantage
+                    </option>
+                </select>
+            </div>
 
             <p>
                 Conditions, blessures, besoins,

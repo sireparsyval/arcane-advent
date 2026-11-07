@@ -73,3 +73,66 @@
 .aa-panel h2 {
     margin-top: 0;
 }
+
+.aa-ability-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.aa-ability {
+    display: grid;
+    grid-template-columns: 1fr 50px 40px;
+    gap: 6px;
+    align-items: center;
+}
+
+.aa-ability input {
+    text-align: center;
+}
+
+.aa-modifier {
+    text-align: center;
+    font-weight: bold;
+}
+
+.aa-ability-roll {
+    background: none;
+    border: none;
+    padding: 0;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+}
+
+.aa-ability-roll:hover {
+    text-decoration: underline;
+}
+
+.aa-roll-mode {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.aa-roll-mode label {
+    font-weight: bold;
+}
+
+.aa-roll-mode select {
+    flex: 1;
+}
+
+.aa-save-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.aa-save-roll {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+}
