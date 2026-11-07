@@ -1,0 +1,75 @@
+.arcane-advent.character-sheet .window-content {
+    padding: 0;
+}
+
+.aa-character {
+    height: 100%;
+    padding: 16px;
+    overflow: auto;
+}
+
+.aa-header {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.aa-portrait {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.aa-identity {
+    flex: 1;
+}
+
+.aa-name {
+    width: 100%;
+    font-size: 2rem;
+    font-weight: bold;
+}
+
+.aa-resource {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.aa-resource input {
+    width: 70px;
+    text-align: center;
+}
+
+.aa-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.aa-tabs button {
+    flex: 1;
+}
+
+.aa-tabs .active {
+    font-weight: bold;
+}
+
+.aa-core {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.aa-panel {
+    padding: 12px;
+    border: 1px solid var(--color-border-light-primary);
+    border-radius: 6px;
+}
+
+.aa-panel h2 {
+    margin-top: 0;
+}

@@ -1,6 +1,10 @@
-export class WeaponData extends foundry.abstract.TypeDataModel {
+import { BaseItemData } from "./base-item-data.mjs";
+
+export class WeaponData extends BaseItemData {
 
     static defineSchema() {
-        return {};
+        return {
+            ...super.defineSchema()
+        };
     }
 }

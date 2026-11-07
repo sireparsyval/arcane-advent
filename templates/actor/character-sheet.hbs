@@ -1,0 +1,91 @@
+<div class="aa-character">
+
+    <header class="aa-header">
+
+        <img
+            class="aa-portrait"
+            src="{{actor.img}}"
+            alt="{{actor.name}}"
+        >
+
+        <div class="aa-identity">
+
+            <input
+                class="aa-name"
+                type="text"
+                name="name"
+                value="{{actor.name}}"
+            >
+
+            <div class="aa-resource">
+                <span>Conscience</span>
+
+                <input
+                    type="number"
+                    name="system.consciousness.value"
+                    value="{{system.consciousness.value}}"
+                >
+
+                <span>/</span>
+
+                <input
+                    type="number"
+                    name="system.consciousness.max"
+                    value="{{system.consciousness.max}}"
+                >
+            </div>
+
+        </div>
+
+    </header>
+
+
+    <nav class="aa-tabs">
+        <button type="button" class="active">Cœur</button>
+        <button type="button">Équipement</button>
+        <button type="button">Arcanologie</button>
+        <button type="button">Informations</button>
+        <button type="button">Options</button>
+    </nav>
+
+
+    <main class="aa-core">
+
+        <section class="aa-panel">
+            <h2>Caractéristiques</h2>
+
+            <p>
+                On mettra ici Force, Dextérité,
+                Constitution, Intelligence,
+                Sagesse et Charisme.
+            </p>
+        </section>
+
+
+        <section class="aa-panel">
+            <h2>Maîtrises</h2>
+
+            <p>
+                Jets de sauvegarde, compétences,
+                maîtrises d’équipement et expertises.
+            </p>
+        </section>
+
+
+        <section class="aa-panel">
+            <h2>Aptitudes</h2>
+        </section>
+
+
+        <section class="aa-panel">
+            <h2>État du personnage</h2>
+
+            <p>
+                Conditions, blessures, besoins,
+                climat et moral.
+            </p>
+        </section>
+
+    </main>
+
+</div>
