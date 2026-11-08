@@ -28,7 +28,25 @@ export class ArcaneCharacterSheet
 
             addSkill: this._onAddSkill,
             deleteSkill: this._onDeleteSkill,
-            rollSkill: this._onRollSkill
+            rollSkill: this._onRollSkill,
+
+            addEquipment: this._onAddEquipment,
+            toggleEquipment: this._onToggleEquipment,
+            deleteEquipment: this._onDeleteEquipment,
+
+            rollWeaponAttack: this._onRollWeaponAttack,
+            rollWeaponDamage: this._onRollWeaponDamage,
+
+            toggleEquipmentProperty: this._onToggleEquipmentProperty,
+
+            rollWeaponBonusDamage: this._onRollWeaponBonusDamage,
+            rollWeaponVersatileDamage: this._onRollWeaponVersatileDamage,
+
+            addExpertise: this._onAddExpertise,
+            deleteExpertise: this._onDeleteExpertise,
+
+            addWeaponDamageType: this._onAddWeaponDamageType,
+            removeWeaponDamageType: this._onRemoveWeaponDamageType
         }
     };
 
@@ -69,7 +87,128 @@ export class ArcaneCharacterSheet
                         + skill.system.mastery
                 };
             });
+        
+        const equipmentTypes = [
+            "weapon",
+            "shield",
+            "protection",
+            "accessory"
+        ];
 
+        const equipment = this.actor.items.filter(
+            item => equipmentTypes.includes(item.type)
+        );
+
+
+        context.equipment = {
+
+            weapons: equipment
+                .filter(
+                    item =>
+                        item.type === "weapon"
+                        && item.system.equipped
+                )
+                .map(item => {
+
+                    const ability =
+                        this.actor.getWeaponAbilityData(item);
+
+                    const properties =
+                        item.system.properties;
+
+                    const expertiseBonus =
+                        this.actor.getExpertiseBonus(
+                            "weaponClass",
+                            item.system.weaponClass
+                        );
+
+                    return {
+                        id: item.id,
+                        name: item.name,
+                        system: item.system,
+
+                        attackAbility:
+                            ability.label,
+
+                        expertiseBonus,
+
+                        attackTotal:
+                            ability.modifier
+                            + expertiseBonus,
+
+                        damageTypes: [...item.system.damageTypes],
+
+                        properties: {
+                            twoHanded:
+                                properties.has("twoHanded"),
+
+                            finesse:
+                                properties.has("finesse"),
+
+                            thrown:
+                                properties.has("thrown"),
+
+                            light:
+                                properties.has("light"),
+
+                            heavy:
+                                properties.has("heavy"),
+
+                            versatile:
+                                properties.has("versatile"),
+
+                            ammunition:
+                                properties.has("ammunition")
+                        }
+                    };
+                }),
+
+            shields: equipment
+                .filter(item =>
+                    item.type === "shield"
+                    && item.system.equipped
+                )
+                .map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    system: item.system,
+
+                    expertiseBonus:
+                        this.actor.getExpertiseBonus(
+                            "shieldClass",
+                            item.system.shieldClass
+                        )
+                })),
+
+            protections: equipment.filter(
+                item =>
+                    item.type === "protection"
+                    && item.system.equipped
+            ),
+
+            accessories: equipment.filter(
+                item =>
+                    item.type === "accessory"
+                    && item.system.equipped
+            ),
+
+            inventory: equipment.filter(
+                item => !item.system.equipped
+            )
+        };
+
+        context.expertises = this.actor.items
+            .filter(item =>
+                item.type === "expertise"
+            )
+            .map(expertise => ({
+                id: expertise.id,
+                name: expertise.name,
+                domain: expertise.system.domain,
+                target: expertise.system.target,
+                bonus: expertise.system.bonus
+            }));
+        
         return context;
     }
 
@@ -185,6 +324,30 @@ export class ArcaneCharacterSheet
                 this._onSkillEdit.bind(this)
             );
         }
+
+        const equipmentFields =
+            this.element.querySelectorAll(
+                "[data-equipment-edit]"
+            );
+
+        for (const field of equipmentFields) {
+            field.addEventListener(
+                "change",
+                this._onEquipmentEdit.bind(this)
+            );
+        }
+
+        const expertiseFields =
+            this.element.querySelectorAll(
+                "[data-expertise-edit]"
+            );
+
+        for (const field of expertiseFields) {
+            field.addEventListener(
+                "change",
+                this._onExpertiseEdit.bind(this)
+            );
+        }
     }
 
 
@@ -214,6 +377,301 @@ export class ArcaneCharacterSheet
 
         await skill.update({
             [skillField]: value
+        });
+    }
+
+    static async _onAddEquipment(event, target) {
+
+        const type =
+            target.dataset.equipmentType;
+
+
+        const validTypes = [
+            "weapon",
+            "shield",
+            "protection",
+            "accessory"
+        ];
+
+
+        if (!validTypes.includes(type)) {
+            return;
+        }
+
+
+        const names = {
+            weapon: "Nouvelle arme",
+            shield: "Nouveau bouclier",
+            protection: "Nouvelle protection",
+            accessory: "Nouvel accessoire"
+        };
+
+
+        await this.actor.createEmbeddedDocuments(
+            "Item",
+            [
+                {
+                    name: names[type],
+                    type,
+
+                    system: {
+                        equipped: false
+                    }
+                }
+            ]
+        );
+    }
+
+    static async _onToggleEquipment(event, target) {
+        const itemId = target.dataset.itemId;
+
+        const item = this.actor.items.get(itemId);
+
+        if (!item) return;
+
+        await item.update({
+            "system.equipped": !item.system.equipped
+        });
+    }
+    
+    static async _onDeleteEquipment(event, target) {
+        const itemId = target.dataset.itemId;
+
+        if (!itemId) return;
+
+        await this.actor.deleteEmbeddedDocuments(
+            "Item",
+            [itemId]
+        );
+    }
+
+    async _onEquipmentEdit(event) {
+        const field = event.currentTarget;
+
+        const itemId = field.dataset.itemId;
+        const itemField = field.dataset.itemField;
+
+        const item =
+            this.actor.items.get(itemId);
+
+        if (!item) return;
+
+
+        let value;
+
+
+        if (field.type === "checkbox") {
+            value = field.checked;
+        }
+
+        else if (field.type === "number") {
+            value = Number(field.value) || 0;
+        }
+
+        else {
+            value = field.value;
+        }
+
+
+        await item.update({
+            [itemField]: value
+        });
+    }
+
+    static async _onRollWeaponAttack(event, target) {
+        const weaponId = target.dataset.itemId;
+        const rollMode = this._getRollMode();
+
+        await this.actor.rollWeaponAttack(
+            weaponId,
+            rollMode
+        );
+    }
+
+
+    static async _onRollWeaponDamage(event, target) {
+        const weaponId = target.dataset.itemId;
+
+        await this.actor.rollWeaponDamage(
+            weaponId
+        );
+    }
+
+    static async _onToggleEquipmentProperty(
+        event,
+        target
+    ) {
+        const itemId = target.dataset.itemId;
+        const property = target.dataset.property;
+
+        const item =
+            this.actor.items.get(itemId);
+
+        if (!item || !property) return;
+
+
+        const properties =
+            new Set(item.system.properties);
+
+
+        if (properties.has(property)) {
+            properties.delete(property);
+        }
+        else {
+            properties.add(property);
+        }
+
+
+        await item.update({
+            "system.properties": [...properties]
+        });
+    }
+
+
+    static async _onRollWeaponBonusDamage(
+        event,
+        target
+    ) {
+        const weaponId = target.dataset.itemId;
+
+        await this.actor.rollWeaponDamage(
+            weaponId,
+            {
+                bonusAction: true
+            }
+        );
+    }
+
+
+    static async _onRollWeaponVersatileDamage(
+        event,
+        target
+    ) {
+        const weaponId = target.dataset.itemId;
+
+        await this.actor.rollWeaponDamage(
+            weaponId,
+            {
+                versatile: true
+            }
+        );
+    }
+
+    static async _onAddExpertise(event, target) {
+        await this.actor.createEmbeddedDocuments(
+            "Item",
+            [
+                {
+                    name: "Nouvelle expertise",
+                    type: "expertise",
+
+                    system: {
+                        domain: "weaponClass",
+                        target: "",
+                        bonus: 0
+                    }
+                }
+            ]
+        );
+    }
+
+
+    static async _onDeleteExpertise(event, target) {
+        const expertiseId =
+            target.dataset.expertiseId;
+
+        if (!expertiseId) return;
+
+        await this.actor.deleteEmbeddedDocuments(
+            "Item",
+            [expertiseId]
+        );
+    }
+
+    async _onExpertiseEdit(event) {
+        const field = event.currentTarget;
+
+        const expertiseId =
+            field.dataset.expertiseId;
+
+        const expertiseField =
+            field.dataset.expertiseField;
+
+        const expertise =
+            this.actor.items.get(expertiseId);
+
+        if (!expertise) return;
+
+
+        let value = field.value;
+
+        if (field.type === "number") {
+            value = Number(value) || 0;
+        }
+
+
+        await expertise.update({
+            [expertiseField]: value
+        });
+    }
+
+    static async _onAddWeaponDamageType(
+        event,
+        target
+    ) {
+        const itemId = target.dataset.itemId;
+
+        const weapon =
+            this.actor.items.get(itemId);
+
+        if (!weapon || weapon.type !== "weapon") {
+            return;
+        }
+
+        const input =
+            this.element.querySelector(
+                `[data-damage-type-input][data-item-id="${itemId}"]`
+            );
+
+        if (!input) return;
+
+        const damageType =
+            input.value.trim().toLowerCase();
+
+        if (!damageType) return;
+
+        const damageTypes =
+            new Set(weapon.system.damageTypes);
+
+        damageTypes.add(damageType);
+
+        await weapon.update({
+            "system.damageTypes": [...damageTypes]
+        });
+    }
+
+
+    static async _onRemoveWeaponDamageType(
+        event,
+        target
+    ) {
+        const itemId = target.dataset.itemId;
+        const damageType = target.dataset.damageType;
+
+        const weapon =
+            this.actor.items.get(itemId);
+
+        if (!weapon || weapon.type !== "weapon") {
+            return;
+        }
+
+        const damageTypes =
+            new Set(weapon.system.damageTypes);
+
+        damageTypes.delete(damageType);
+
+        await weapon.update({
+            "system.damageTypes": [...damageTypes]
         });
     }
 }

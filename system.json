@@ -42,7 +42,11 @@
 
         "Item": {
             "weapon": {},
-            "skill": {}
+            "shield": {},
+            "protection": {},
+            "accessory": {},
+            "skill": {},
+            "expertise": {}
         }
     }
 }

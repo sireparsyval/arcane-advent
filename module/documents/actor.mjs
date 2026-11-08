@@ -207,4 +207,185 @@ export class ArcaneActor extends Actor {
             `Jet de ${skill.name}`
         );
     }
+    async rollWeaponAttack(
+        weaponId,
+        mode = "normal"
+    ) {
+        const weapon = this.items.get(weaponId);
+
+        if (!weapon || weapon.type !== "weapon") {
+            return;
+        }
+
+        const ability =
+            this.getWeaponAbilityData(weapon);
+
+        const expertiseBonus =
+            this.getExpertiseBonus(
+                "weaponClass",
+                weapon.system.weaponClass
+            );
+
+
+        const modifier =
+            ability.modifier
+            + expertiseBonus;
+
+        return this._rollD20(
+            modifier,
+            mode,
+            `Attaque — ${weapon.name}`
+        );
+    }
+
+    async rollWeaponDamage(
+        weaponId,
+        {
+            applyModifier = true,
+            versatile = false,
+            bonusAction = false
+        } = {}
+    ) {
+        const weapon = this.items.get(weaponId);
+
+        if (!weapon || weapon.type !== "weapon") {
+            return;
+        }
+
+
+        const baseFormula = versatile
+            ? weapon.system.versatile.damageFormula.trim()
+            : weapon.system.damageFormula.trim();
+
+
+        if (!baseFormula) {
+            return;
+        }
+
+
+        const ability =
+            this.getWeaponAbilityData(weapon);
+
+
+        let formula = baseFormula;
+
+
+        // Attaque bonus avec une arme Légère :
+        // les bonus positifs sont ignorés,
+        // mais un modificateur négatif reste appliqué.
+        if (bonusAction) {
+
+            if (ability.modifier < 0) {
+                formula += ` - ${Math.abs(ability.modifier)}`;
+            }
+        }
+
+
+        // Attaque normale : modificateur complet.
+        else if (applyModifier) {
+
+            if (ability.modifier > 0) {
+                formula += ` + ${ability.modifier}`;
+            }
+
+            else if (ability.modifier < 0) {
+                formula += ` - ${Math.abs(ability.modifier)}`;
+            }
+        }
+
+
+        const roll =
+            new foundry.dice.Roll(formula);
+
+        await roll.evaluate();
+
+
+        let flavor = `Dégâts — ${weapon.name}`;
+
+        if (versatile) {
+            flavor =
+                `Dégâts polyvalents — ${weapon.name}`;
+        }
+
+        else if (bonusAction) {
+            flavor =
+                `Dégâts d'attaque bonus — ${weapon.name}`;
+        }
+
+
+        await roll.toMessage({
+            speaker:
+                foundry.documents.ChatMessage.getSpeaker({
+                    actor: this
+                }),
+
+            flavor
+        });
+
+
+        return roll;
+    }
+
+    getWeaponAbilityData(weapon) {
+        const strength =
+            this.system.abilities.strength.modifier;
+
+        const dexterity =
+            this.system.abilities.dexterity.modifier;
+
+        const finesse =
+            weapon.system.properties.has("finesse");
+
+
+        // Sans Finesse : toujours Force.
+        if (!finesse) {
+            return {
+                key: "strength",
+                label: "FOR",
+                modifier: strength
+            };
+        }
+
+
+        // Finesse : meilleur résultat entre FOR et DEX.
+        if (dexterity > strength) {
+            return {
+                key: "dexterity",
+                label: "DEX",
+                modifier: dexterity
+            };
+        }
+
+
+        // En cas d'égalité, on reste sur FOR.
+        return {
+            key: "strength",
+            label: "FOR",
+            modifier: strength
+        };
+    }
+
+    getExpertiseBonus(domain, target) {
+        const normalizedTarget =
+            target?.trim().toLowerCase();
+
+        if (!normalizedTarget) {
+            return 0;
+        }
+
+
+        return this.items
+            .filter(item =>
+                item.type === "expertise"
+                && item.system.domain === domain
+                && item.system.target
+                    .trim()
+                    .toLowerCase() === normalizedTarget
+            )
+            .reduce(
+                (total, expertise) =>
+                    total + expertise.system.bonus,
+                0
+            );
+    }
 }
