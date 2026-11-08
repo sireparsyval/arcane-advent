@@ -35,6 +35,10 @@ export class ArcaneCharacterSheet
             toggleEquipment: this._onToggleEquipment,
             deleteEquipment: this._onDeleteEquipment,
 
+            toggleProtectionZone: this._onToggleProtectionZone,
+            addProtectionReduction: this._onAddProtectionReduction,
+            removeProtectionReduction: this._onRemoveProtectionReduction,
+
             rollWeaponAttack: this._onRollWeaponAttack,
             rollWeaponDamage: this._onRollWeaponDamage,
 
@@ -181,11 +185,40 @@ export class ArcaneCharacterSheet
                         )
                 })),
 
-            protections: equipment.filter(
-                item =>
+            protections: equipment
+                .filter(item =>
                     item.type === "protection"
                     && item.system.equipped
-            ),
+                )
+                .map(item => ({
+
+                    id: item.id,
+                    name: item.name,
+                    system: item.system,
+
+                    zones: {
+                        head:
+                            item.system.zones.has("head"),
+
+                        torso:
+                            item.system.zones.has("torso"),
+
+                        arms:
+                            item.system.zones.has("arms"),
+
+                        legs:
+                            item.system.zones.has("legs")
+                    },
+
+                    damageReductions:
+                        Object.entries(
+                            item.system.damageReductions ?? {}
+                        )
+                        .map(([type, value]) => ({
+                            type,
+                            value
+                        }))
+                })),
 
             accessories: equipment.filter(
                 item =>
@@ -883,6 +916,159 @@ export class ArcaneCharacterSheet
 
         await weapon.update({
             "system.damageTypes": [...damageTypes]
+        });
+    }
+
+    static async _onToggleProtectionZone(
+        event,
+        target
+    ) {
+        const itemId =
+            target.dataset.itemId;
+
+        const zone =
+            target.dataset.zone;
+
+
+        const protection =
+            this.actor.items.get(itemId);
+
+
+        if (
+            !protection
+            || protection.type !== "protection"
+            || !zone
+        ) {
+            return;
+        }
+
+
+        const zones =
+            new Set(protection.system.zones);
+
+
+        if (zones.has(zone)) {
+            zones.delete(zone);
+        }
+        else {
+            zones.add(zone);
+        }
+
+
+        await protection.update({
+            "system.zones": [...zones]
+        });
+    }
+
+    static async _onAddProtectionReduction(
+        event,
+        target
+    ) {
+        const itemId =
+            target.dataset.itemId;
+
+
+        const protection =
+            this.actor.items.get(itemId);
+
+
+        if (
+            !protection
+            || protection.type !== "protection"
+        ) {
+            return;
+        }
+
+
+        const typeInput =
+            this.element.querySelector(
+                `[data-reduction-type-input][data-item-id="${itemId}"]`
+            );
+
+
+        const valueInput =
+            this.element.querySelector(
+                `[data-reduction-value-input][data-item-id="${itemId}"]`
+            );
+
+
+        if (!typeInput || !valueInput) {
+            return;
+        }
+
+
+        const type =
+            typeInput.value
+                .trim()
+                .toLowerCase()
+                .replace(/\./g, "");
+
+
+        const value =
+            Math.max(
+                0,
+                Number(valueInput.value) || 0
+            );
+
+
+        if (!type) {
+            return;
+        }
+
+
+        const reductions = {
+            ...protection.system.damageReductions
+        };
+
+
+        reductions[type] = value;
+
+
+        await protection.update({
+            "system.damageReductions":
+                reductions
+        });
+
+
+        typeInput.value = "";
+        valueInput.value = "";
+    }
+
+    static async _onRemoveProtectionReduction(
+        event,
+        target
+    ) {
+        const itemId =
+            target.dataset.itemId;
+
+        const damageType =
+            target.dataset.damageType;
+
+
+        const protection =
+            this.actor.items.get(itemId);
+
+
+        if (
+            !protection
+            || protection.type !== "protection"
+            || !damageType
+        ) {
+            return;
+        }
+
+
+        const reductions = {
+            ...protection.system.damageReductions
+        };
+
+
+        delete reductions[damageType];
+
+
+        await protection.update({
+            "system.damageReductions":
+                reductions
         });
     }
 }

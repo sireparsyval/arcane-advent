@@ -1536,37 +1536,215 @@
 
                     <h3>Protections équipées</h3>
 
+
                     <div class="aa-equipment-list">
 
                         {{#each equipment.protections}}
 
-                            <div class="aa-equipment-row">
+                            <div class="aa-protection-card">
 
-                                <input
-                                    type="text"
-                                    value="{{name}}"
-                                    data-equipment-edit
-                                    data-item-id="{{id}}"
-                                    data-item-field="name"
-                                >
 
-                                <button
-                                    type="button"
-                                    data-action="toggleEquipment"
-                                    data-item-id="{{id}}"
-                                >
-                                    Déséquiper
-                                </button>
+                                <!-- ========================== -->
+                                <!-- IDENTITÉ                   -->
+                                <!-- ========================== -->
 
-                                <button
-                                    type="button"
-                                    data-action="deleteEquipment"
-                                    data-item-id="{{id}}"
-                                >
-                                    ×
-                                </button>
+                                <div class="aa-protection-main">
+
+                                    <input
+                                        class="aa-protection-name"
+                                        type="text"
+                                        value="{{name}}"
+                                        data-equipment-edit
+                                        data-item-id="{{id}}"
+                                        data-item-field="name"
+                                    >
+
+
+                                    <label class="aa-protection-class">
+
+                                        <span>Classe</span>
+
+                                        <input
+                                            type="text"
+                                            value="{{system.armorClass}}"
+                                            placeholder="ex : Plaque"
+                                            data-equipment-edit
+                                            data-item-id="{{id}}"
+                                            data-item-field="system.armorClass"
+                                        >
+
+                                    </label>
+
+
+                                    <label class="aa-protection-defense">
+
+                                        <span>DEF</span>
+
+                                        <input
+                                            type="number"
+                                            value="{{system.defenseBonus}}"
+                                            data-equipment-edit
+                                            data-item-id="{{id}}"
+                                            data-item-field="system.defenseBonus"
+                                        >
+
+                                    </label>
+
+
+                                    <button
+                                        type="button"
+                                        data-action="toggleEquipment"
+                                        data-item-id="{{id}}"
+                                        title="Déséquiper"
+                                    >
+                                        ↓
+                                    </button>
+
+
+                                    <button
+                                        type="button"
+                                        data-action="deleteEquipment"
+                                        data-item-id="{{id}}"
+                                        title="Supprimer"
+                                    >
+                                        ×
+                                    </button>
+
+                                </div>
+
+
+                                <!-- ========================== -->
+                                <!-- ZONES                      -->
+                                <!-- ========================== -->
+
+                                <div class="aa-protection-zones">
+
+                                    <strong>Zones :</strong>
+
+
+                                    <button
+                                        type="button"
+                                        class="{{#if zones.head}}active{{/if}}"
+                                        data-action="toggleProtectionZone"
+                                        data-item-id="{{id}}"
+                                        data-zone="head"
+                                    >
+                                        Tête
+                                    </button>
+
+
+                                    <button
+                                        type="button"
+                                        class="{{#if zones.torso}}active{{/if}}"
+                                        data-action="toggleProtectionZone"
+                                        data-item-id="{{id}}"
+                                        data-zone="torso"
+                                    >
+                                        Torse
+                                    </button>
+
+
+                                    <button
+                                        type="button"
+                                        class="{{#if zones.arms}}active{{/if}}"
+                                        data-action="toggleProtectionZone"
+                                        data-item-id="{{id}}"
+                                        data-zone="arms"
+                                    >
+                                        Bras
+                                    </button>
+
+
+                                    <button
+                                        type="button"
+                                        class="{{#if zones.legs}}active{{/if}}"
+                                        data-action="toggleProtectionZone"
+                                        data-item-id="{{id}}"
+                                        data-zone="legs"
+                                    >
+                                        Jambes
+                                    </button>
+
+                                </div>
+
+
+                                <!-- ========================== -->
+                                <!-- RÉDUCTIONS                 -->
+                                <!-- ========================== -->
+
+                                <div class="aa-protection-reductions">
+
+                                    <strong>
+                                        Réductions :
+                                    </strong>
+
+
+                                    {{#each damageReductions}}
+
+                                        <span class="aa-reduction-entry">
+
+                                            <span class="aa-reduction-type">
+                                                {{type}}
+                                            </span>
+
+
+                                            <input
+                                                type="number"
+                                                value="{{value}}"
+                                                min="0"
+                                                data-equipment-edit
+                                                data-item-id="{{../id}}"
+                                                data-item-field="system.damageReductions.{{type}}"
+                                            >
+
+
+                                            <button
+                                                type="button"
+                                                data-action="removeProtectionReduction"
+                                                data-item-id="{{../id}}"
+                                                data-damage-type="{{type}}"
+                                                title="Supprimer"
+                                            >
+                                                ×
+                                            </button>
+
+                                        </span>
+
+                                    {{/each}}
+
+
+                                    <input
+                                        class="aa-reduction-new-type"
+                                        type="text"
+                                        placeholder="Tranchant..."
+                                        data-reduction-type-input
+                                        data-item-id="{{id}}"
+                                    >
+
+
+                                    <input
+                                        class="aa-reduction-new-value"
+                                        type="number"
+                                        min="0"
+                                        placeholder="0"
+                                        data-reduction-value-input
+                                        data-item-id="{{id}}"
+                                    >
+
+
+                                    <button
+                                        type="button"
+                                        data-action="addProtectionReduction"
+                                        data-item-id="{{id}}"
+                                        title="Ajouter une réduction"
+                                    >
+                                        +
+                                    </button>
+
+                                </div>
 
                             </div>
+
 
                         {{else}}
 
@@ -1579,7 +1757,6 @@
                     </div>
 
                 </section>
-
 
                 <!-- ===================== -->
                 <!-- ACCESSOIRES ÉQUIPÉS   -->

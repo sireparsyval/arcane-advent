@@ -307,17 +307,55 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
 
         // Pour l'instant, aucune protection locale
         // n'est encore branchée.
+        const protectionBonuses = {
+            head: 0,
+            torso: 0,
+            arms: 0,
+            legs: 0
+        };
+
+
+        for (const item of this.parent.items) {
+
+            if (
+                item.type !== "protection"
+                || !item.system.equipped
+            ) {
+                continue;
+            }
+
+
+            for (const zone of item.system.zones) {
+
+                if (!(zone in protectionBonuses)) {
+                    continue;
+                }
+
+
+                protectionBonuses[zone] +=
+                    item.system.defenseBonus;
+            }
+        }
+
+
         this.defense.zones.head =
-            this.defense.base;
+            this.defense.base
+            + protectionBonuses.head;
+
 
         this.defense.zones.torso =
-            this.defense.base;
+            this.defense.base
+            + protectionBonuses.torso;
+
 
         this.defense.zones.arms =
-            this.defense.base;
+            this.defense.base
+            + protectionBonuses.arms;
+
 
         this.defense.zones.legs =
-            this.defense.base;
+            this.defense.base
+            + protectionBonuses.legs;
 
         const hasPerceptionSkill =
             this.parent.items.some(item =>

@@ -795,3 +795,161 @@ input[data-damage-type-input] {
 .aa-guard-section button {
     width: auto;
 }
+
+
+/* ========================================================= */
+/* PROTECTIONS                                               */
+/* ========================================================= */
+
+.aa-protection-card {
+    display: grid;
+    gap: 7px;
+
+    padding: 8px;
+
+    border:
+        1px solid var(--color-border-light-primary);
+
+    border-radius: 5px;
+}
+
+
+/* --------------------------------------------------------- */
+/* IDENTITÉ                                                  */
+/* --------------------------------------------------------- */
+
+.aa-protection-main {
+    display: grid;
+
+    grid-template-columns:
+        minmax(220px, 1.4fr)
+        minmax(220px, 1fr)
+        90px
+        32px
+        32px;
+
+    gap: 6px;
+    align-items: center;
+}
+
+
+.aa-protection-name {
+    width: 100%;
+    min-width: 0;
+}
+
+
+.aa-protection-class,
+.aa-protection-defense {
+    display: flex;
+    align-items: center;
+
+    gap: 5px;
+}
+
+
+.aa-protection-class input {
+    width: 100%;
+    min-width: 0;
+}
+
+
+.aa-protection-defense input {
+    width: 50px;
+
+    text-align: center;
+}
+
+
+.aa-protection-main button {
+    width: 32px;
+    min-width: 32px;
+
+    padding: 0;
+}
+
+
+/* --------------------------------------------------------- */
+/* ZONES                                                     */
+/* --------------------------------------------------------- */
+
+.aa-protection-zones {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+
+    gap: 5px;
+}
+
+
+.aa-protection-zones button {
+    width: auto;
+
+    opacity: 0.55;
+}
+
+
+.aa-protection-zones button.active {
+    opacity: 1;
+    font-weight: bold;
+}
+
+
+/* --------------------------------------------------------- */
+/* RÉDUCTIONS                                                */
+/* --------------------------------------------------------- */
+
+.aa-protection-reductions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+
+    gap: 5px;
+}
+
+
+.aa-reduction-entry {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 4px;
+
+    padding: 2px 5px;
+
+    border:
+        1px solid var(--color-border-light-primary);
+
+    border-radius: 5px;
+}
+
+
+.aa-reduction-entry input[type="number"] {
+    width: 45px;
+
+    text-align: center;
+}
+
+
+.aa-reduction-entry button {
+    width: auto;
+    min-width: 0;
+
+    padding: 0 3px;
+}
+
+
+.aa-reduction-type {
+    white-space: nowrap;
+}
+
+
+.aa-reduction-new-type {
+    width: 130px;
+}
+
+
+.aa-reduction-new-value {
+    width: 50px;
+
+    text-align: center;
+}
