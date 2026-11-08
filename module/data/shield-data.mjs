@@ -1,4 +1,5 @@
 const {
+    BooleanField,
     NumberField,
     StringField
 } = foundry.data.fields;
@@ -24,6 +25,12 @@ export class ShieldData extends EquipmentData {
                 nullable: false,
                 integer: true,
                 initial: 0
+            }),
+
+            guardEnabled: new BooleanField({
+                required: true,
+                nullable: false,
+                initial: false
             })
         };
     }

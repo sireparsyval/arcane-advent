@@ -388,4 +388,122 @@ export class ArcaneActor extends Actor {
                 0
             );
     }
+
+async rollGuard(itemId) {
+
+    const item =
+        this.items.get(itemId);
+
+    if (!item || !item.system.equipped) {
+        return;
+    }
+
+
+    const strength =
+        this.system.abilities.strength.modifier;
+
+    const dexterity =
+        this.system.abilities.dexterity.modifier;
+
+
+    let formula;
+    let data;
+    let expertiseBonus = 0;
+
+
+    // ==========================
+    // ARME À DEUX MAINS
+    // ==========================
+
+    if (item.type === "weapon") {
+
+        if (
+            !item.system.properties.has("twoHanded")
+            || !item.system.guardEnabled
+        ) {
+            return;
+        }
+
+
+        expertiseBonus =
+            this.getExpertiseBonus(
+                "weaponClass",
+                item.system.weaponClass
+            );
+
+
+        // Une bonne DEX n'aide pas.
+        // Une mauvaise DEX pénalise.
+        const dexPenalty =
+            Math.min(dexterity, 0);
+
+
+        formula =
+            "10 + @strength + @expertise + @dexPenalty";
+
+        data = {
+            strength,
+            expertise: expertiseBonus,
+            dexPenalty
+        };
+    }
+
+
+    // ==========================
+    // BOUCLIER
+    // ==========================
+
+    else if (item.type === "shield") {
+
+        if (!item.system.guardEnabled) {
+            return;
+        }
+
+
+        expertiseBonus =
+            this.getExpertiseBonus(
+                "shieldClass",
+                item.system.shieldClass
+            );
+
+
+        formula =
+            "10 + @strength + @defense + @expertise";
+
+        data = {
+            strength,
+            defense: item.system.defenseBonus,
+            expertise: expertiseBonus
+        };
+    }
+
+
+    else {
+        return;
+    }
+
+
+    const roll =
+        new foundry.dice.Roll(
+            formula,
+            data
+        );
+
+
+    await roll.evaluate();
+
+
+    await roll.toMessage({
+        speaker:
+            foundry.documents.ChatMessage.getSpeaker({
+                actor: this
+            }),
+
+        flavor:
+            `Garde — ${item.name}`
+    });
+
+
+    return roll;
+}
 }

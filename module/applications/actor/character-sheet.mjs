@@ -25,6 +25,7 @@ export class ArcaneCharacterSheet
         actions: {
             rollAbility: this._onRollAbility,
             rollSavingThrow: this._onRollSavingThrow,
+            rollGuard: this._onRollGuard,
 
             addSkill: this._onAddSkill,
             deleteSkill: this._onDeleteSkill,
@@ -197,6 +198,107 @@ export class ArcaneCharacterSheet
             )
         };
 
+        context.guardSources = [];
+
+
+        // ==========================
+        // ARMES À DEUX MAINS
+        // ==========================
+
+        for (const weapon of this.actor.items) {
+
+            if (
+                weapon.type !== "weapon"
+                || !weapon.system.equipped
+                || !weapon.system.properties.has("twoHanded")
+                || !weapon.system.guardEnabled
+            ) {
+                continue;
+            }
+
+
+            const expertiseBonus =
+                this.actor.getExpertiseBonus(
+                    "weaponClass",
+                    weapon.system.weaponClass
+                );
+
+
+            const strength =
+                this.actor.system
+                    .abilities
+                    .strength
+                    .modifier;
+
+            const dexterity =
+                this.actor.system
+                    .abilities
+                    .dexterity
+                    .modifier;
+
+
+            const guardValue =
+                10
+                + strength
+                + expertiseBonus
+                + Math.min(dexterity, 0);
+
+
+            context.guardSources.push({
+                id: weapon.id,
+                name: weapon.name,
+                type: "weapon",
+                label: "Arme",
+                value: guardValue
+            });
+        }
+
+
+        // ==========================
+        // BOUCLIERS
+        // ==========================
+
+        for (const shield of this.actor.items) {
+
+            if (
+                shield.type !== "shield"
+                || !shield.system.equipped
+                || !shield.system.guardEnabled
+            ) {
+                continue;
+            }
+
+
+            const expertiseBonus =
+                this.actor.getExpertiseBonus(
+                    "shieldClass",
+                    shield.system.shieldClass
+                );
+
+
+            const strength =
+                this.actor.system
+                    .abilities
+                    .strength
+                    .modifier;
+
+
+            const guardValue =
+                10
+                + strength
+                + shield.system.defenseBonus
+                + expertiseBonus;
+
+
+            context.guardSources.push({
+                id: shield.id,
+                name: shield.name,
+                type: "shield",
+                label: "Bouclier",
+                value: guardValue
+            });
+        }
+
         context.expertises = this.actor.items
             .filter(item =>
                 item.type === "expertise"
@@ -243,6 +345,20 @@ export class ArcaneCharacterSheet
             abilityKey,
             rollMode
         );
+    }
+
+
+    static async _onRollGuard(
+        event,
+        target
+    ) {
+        const itemId =
+            target.dataset.itemId;
+
+        if (!itemId) return;
+
+
+        await this.actor.rollGuard(itemId);
     }
 
 
@@ -422,16 +538,76 @@ export class ArcaneCharacterSheet
         );
     }
 
-    static async _onToggleEquipment(event, target) {
-        const itemId = target.dataset.itemId;
+    static async _onToggleEquipment(
+        event,
+        target
+    ) {
+        const itemId =
+            target.dataset.itemId;
 
-        const item = this.actor.items.get(itemId);
+        const item =
+            this.actor.items.get(itemId);
 
         if (!item) return;
 
-        await item.update({
-            "system.equipped": !item.system.equipped
-        });
+
+        const willEquip =
+            !item.system.equipped;
+
+        const updates = [{
+            _id: item.id,
+            "system.equipped": willEquip
+        }];
+
+        // ==========================
+        // ÉQUIPE UN BOUCLIER
+        // ==========================
+
+        if (
+            willEquip
+            && item.type === "shield"
+        ) {
+
+            const twoHandedWeapons =
+                this.actor.items.filter(other =>
+                    other.type === "weapon"
+                    && other.system.equipped
+                    && other.system.properties.has("twoHanded")
+                );
+
+
+            updates.push(...twoHandedWeapons.map(weapon => ({
+                _id: weapon.id,
+                "system.equipped": false
+            })));
+        }
+
+
+        // ==========================
+        // ÉQUIPE UNE ARME 2 MAINS
+        // ==========================
+
+        if (
+            willEquip
+            && item.type === "weapon"
+            && item.system.properties.has("twoHanded")
+        ) {
+
+            const shields =
+                this.actor.items.filter(other =>
+                    other.type === "shield"
+                    && other.system.equipped
+                );
+
+
+            updates.push(...shields.map(shield => ({
+                _id: shield.id,
+                "system.equipped": false
+            })));
+        }
+
+
+        await this.actor.updateEmbeddedDocuments("Item", updates);
     }
     
     static async _onDeleteEquipment(event, target) {
@@ -446,6 +622,8 @@ export class ArcaneCharacterSheet
     }
 
     async _onEquipmentEdit(event) {
+        event.stopPropagation();
+
         const field = event.currentTarget;
 
         const itemId = field.dataset.itemId;
@@ -521,10 +699,41 @@ export class ArcaneCharacterSheet
             properties.add(property);
         }
 
-
-        await item.update({
+        const update = {
+            _id: item.id,
             "system.properties": [...properties]
-        });
+        };
+        const updates = [update];
+
+        if (
+            property === "twoHanded"
+            && properties.has("twoHanded")
+            && item.system.equipped
+        ) {
+
+            const shields =
+                this.actor.items.filter(other =>
+                    other.type === "shield"
+                    && other.system.equipped
+                );
+
+
+            updates.push(...shields.map(shield => ({
+                _id: shield.id,
+                "system.equipped": false
+            })));
+        }
+
+
+        if (
+            property === "twoHanded"
+            && !properties.has("twoHanded")
+        ) {
+            update["system.guardEnabled"] = false;
+        }
+
+
+        await this.actor.updateEmbeddedDocuments("Item", updates);
     }
 
 
@@ -589,6 +798,8 @@ export class ArcaneCharacterSheet
     }
 
     async _onExpertiseEdit(event) {
+        event.stopPropagation();
+
         const field = event.currentTarget;
 
         const expertiseId =

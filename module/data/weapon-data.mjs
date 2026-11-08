@@ -42,6 +42,12 @@ export class WeaponData extends EquipmentData {
                 }
             ),
 
+            guardEnabled: new BooleanField({
+                required: true,
+                nullable: false,
+                initial: false
+            }),
+
             range: new NumberField({
                 required: true,
                 nullable: false,

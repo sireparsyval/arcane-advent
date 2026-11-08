@@ -129,8 +129,16 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
                 })
             }),
 
-            trackers: new SchemaField({
-                defense: new NumberField({
+            defense: new SchemaField({
+
+                mode: new StringField({
+                    required: true,
+                    nullable: false,
+                    blank: false,
+                    initial: "dex"
+                }),
+
+                base: new NumberField({
                     required: true,
                     nullable: false,
                     integer: true,
@@ -138,6 +146,67 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
                     persisted: false
                 }),
 
+                abilityModifier: new NumberField({
+                    required: true,
+                    nullable: false,
+                    integer: true,
+                    initial: 0,
+                    persisted: false
+                }),
+
+                abilityLabel: new StringField({
+                    required: true,
+                    nullable: false,
+                    blank: true,
+                    initial: "",
+                    persisted: false
+                }),
+
+                shieldBonus: new NumberField({
+                    required: true,
+                    nullable: false,
+                    integer: true,
+                    initial: 0,
+                    persisted: false
+                }),
+
+                zones: new SchemaField({
+
+                    head: new NumberField({
+                        required: true,
+                        nullable: false,
+                        integer: true,
+                        initial: 10,
+                        persisted: false
+                    }),
+
+                    torso: new NumberField({
+                        required: true,
+                        nullable: false,
+                        integer: true,
+                        initial: 10,
+                        persisted: false
+                    }),
+
+                    arms: new NumberField({
+                        required: true,
+                        nullable: false,
+                        integer: true,
+                        initial: 10,
+                        persisted: false
+                    }),
+
+                    legs: new NumberField({
+                        required: true,
+                        nullable: false,
+                        integer: true,
+                        initial: 10,
+                        persisted: false
+                    })
+                })
+            }),
+
+            trackers: new SchemaField({
                 passivePerception: new NumberField({
                     required: true,
                     nullable: false,
@@ -174,8 +243,81 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
                 Math.floor((ability.value - 10) / 2);
         }
 
-        this.trackers.defense =
-            10 + this.abilities.dexterity.modifier;
+        const dex =
+            this.abilities.dexterity.modifier;
+
+        const con =
+            this.abilities.constitution.modifier;
+
+
+        switch (this.defense.mode) {
+
+            case "con":
+                this.defense.abilityModifier = con;
+                this.defense.abilityLabel = "CON";
+                break;
+
+
+            case "best":
+
+                if (dex > con) {
+                    this.defense.abilityModifier = dex;
+                    this.defense.abilityLabel = "DEX";
+                }
+
+                else if (con > dex) {
+                    this.defense.abilityModifier = con;
+                    this.defense.abilityLabel = "CON";
+                }
+
+                else {
+                    this.defense.abilityModifier = dex;
+                    this.defense.abilityLabel = "DEX / CON";
+                }
+
+                break;
+
+
+            case "dex":
+            default:
+                this.defense.abilityModifier = dex;
+                this.defense.abilityLabel = "DEX";
+                break;
+        }
+
+
+        this.defense.shieldBonus =
+            this.parent.items
+                .filter(item =>
+                    item.type === "shield"
+                    && item.system.equipped
+                )
+                .reduce(
+                    (total, shield) =>
+                        total + shield.system.defenseBonus,
+                    0
+                );
+
+
+        this.defense.base =
+            10
+            + this.defense.abilityModifier
+            + this.defense.shieldBonus;
+
+
+        // Pour l'instant, aucune protection locale
+        // n'est encore branchée.
+        this.defense.zones.head =
+            this.defense.base;
+
+        this.defense.zones.torso =
+            this.defense.base;
+
+        this.defense.zones.arms =
+            this.defense.base;
+
+        this.defense.zones.legs =
+            this.defense.base;
 
         const hasPerceptionSkill =
             this.parent.items.some(item =>

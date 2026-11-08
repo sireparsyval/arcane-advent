@@ -251,16 +251,139 @@
 
                     </div>
 
-                    <div class="aa-trackers">
+                    <section class="aa-defense-panel">
 
-                        <div class="aa-tracker">
-                            <label>DÉF</label>
+                        <div class="aa-defense-header">
 
-                            <strong>
-                                {{system.trackers.defense}}
-                            </strong>
+                            <h3>Défense</h3>
+
+
+                            <label>
+                                Base
+
+                                <select name="system.defense.mode">
+
+                                    <option
+                                        value="dex"
+                                        {{#if (eq system.defense.mode "dex")}}
+                                            selected
+                                        {{/if}}
+                                    >
+                                        DEX
+                                    </option>
+
+
+                                    <option
+                                        value="con"
+                                        {{#if (eq system.defense.mode "con")}}
+                                            selected
+                                        {{/if}}
+                                    >
+                                        CON
+                                    </option>
+
+
+                                    <option
+                                        value="best"
+                                        {{#if (eq system.defense.mode "best")}}
+                                            selected
+                                        {{/if}}
+                                    >
+                                        Meilleur
+                                    </option>
+
+                                </select>
+                            </label>
+
+
+                            <span class="aa-defense-base">
+
+                                {{system.defense.abilityLabel}}
+
+                                {{#if system.defense.shieldBonus}}
+                                    + Bouclier {{system.defense.shieldBonus}}
+                                {{/if}}
+
+                            </span>
+
                         </div>
 
+
+                        <div class="aa-defense-zones">
+
+                            <div class="aa-defense-zone">
+
+                                <span>Tête</span>
+
+                                <strong>
+                                    {{system.defense.zones.head}}
+                                </strong>
+
+                            </div>
+
+
+                            <div class="aa-defense-zone">
+
+                                <span>Torse</span>
+
+                                <strong>
+                                    {{system.defense.zones.torso}}
+                                </strong>
+
+                            </div>
+
+
+                            <div class="aa-defense-zone">
+
+                                <span>Bras</span>
+
+                                <strong>
+                                    {{system.defense.zones.arms}}
+                                </strong>
+
+                            </div>
+
+
+                            <div class="aa-defense-zone">
+
+                                <span>Jambes</span>
+
+                                <strong>
+                                    {{system.defense.zones.legs}}
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+
+                        {{#if guardSources.length}}
+
+                            <div class="aa-guard-section">
+
+                                <strong>Garde</strong>
+
+
+                                {{#each guardSources}}
+
+                                    <button
+                                        type="button"
+                                        data-action="rollGuard"
+                                        data-item-id="{{id}}"
+                                        title="Garde avec {{name}}"
+                                    >
+                                        🛡️ {{name}} — {{value}}
+                                    </button>
+
+                                {{/each}}
+
+                            </div>
+
+                        {{/if}}
+
+                    </section>
+
+                    <div class="aa-trackers">
 
                         <div class="aa-tracker">
                             <label>PER</label>
@@ -793,7 +916,7 @@
                         <button
                             type="button"
                             data-action="addEquipment"
-                            data-item-type="weapon"
+                            data-equipment-type="weapon"
                         >
                             + Arme
                         </button>
@@ -809,7 +932,7 @@
                         <button
                             type="button"
                             data-action="addEquipment"
-                            data-item-type="protection"
+                            data-equipment-type="protection"
                         >
                             + Protection
                         </button>
@@ -817,7 +940,7 @@
                         <button
                             type="button"
                             data-action="addEquipment"
-                            data-item-type="accessory"
+                            data-equipment-type="accessory"
                         >
                             + Accessoire
                         </button>
@@ -835,434 +958,465 @@
 
                         {{#each equipment.weapons}}
 
-                            <div class="aa-weapon-card">
+                        <div class="aa-weapon-card">
 
+                            <!-- ========================== -->
+                            <!-- LIGNE 1 : IDENTITÉ         -->
+                            <!-- ========================== -->
 
-                                <!-- ========================== -->
-                                <!-- DONNÉES PRINCIPALES        -->
-                                <!-- ========================== -->
+                            <div class="aa-weapon-identity">
 
-                                <div class="aa-weapon-main">
+                                <input
+                                    class="aa-weapon-name"
+                                    type="text"
+                                    value="{{name}}"
+                                    data-equipment-edit
+                                    data-item-id="{{id}}"
+                                    data-item-field="name"
+                                >
+
+                                <label class="aa-weapon-class">
+                                    <span>Classe</span>
 
                                     <input
                                         type="text"
-                                        value="{{name}}"
+                                        value="{{system.weaponClass}}"
+                                        placeholder="ex : Épée"
                                         data-equipment-edit
                                         data-item-id="{{id}}"
-                                        data-item-field="name"
+                                        data-item-field="system.weaponClass"
                                     >
+                                </label>
+
+                            </div>
 
 
-                                    <span
-                                        class="aa-weapon-ability"
-                                        title="Caractéristique utilisée"
+                            <!-- ========================== -->
+                            <!-- LIGNE 2 : COMBAT           -->
+                            <!-- ========================== -->
+
+                            <div class="aa-weapon-combat">
+
+                                <span
+                                    class="aa-weapon-ability"
+                                    title="Caractéristique utilisée"
+                                >
+                                    {{attackAbility}}
+                                </span>
+
+
+                                <span
+                                    class="aa-weapon-expertise"
+                                    title="Bonus d'Expertise"
+                                >
+                                    Exp. {{expertiseBonus}}
+                                </span>
+
+
+                                <button
+                                    type="button"
+                                    data-action="rollWeaponAttack"
+                                    data-item-id="{{id}}"
+                                    title="Jet d'attaque"
+                                >
+                                    🎲 {{attackTotal}}
+                                </button>
+
+
+                                <label class="aa-weapon-damage">
+                                    <span>Dégâts</span>
+
+                                    <input
+                                        type="text"
+                                        value="{{system.damageFormula}}"
+                                        placeholder="1d6"
+                                        data-equipment-edit
+                                        data-item-id="{{id}}"
+                                        data-item-field="system.damageFormula"
                                     >
-                                        {{attackAbility}}
+                                </label>
+
+
+                                <button
+                                    type="button"
+                                    data-action="rollWeaponDamage"
+                                    data-item-id="{{id}}"
+                                    title="Jet de dégâts"
+                                >
+                                    🎲
+                                </button>
+
+
+                                <label class="aa-weapon-range">
+                                    <span>Portée</span>
+
+                                    <input
+                                        type="number"
+                                        value="{{system.range}}"
+                                        data-equipment-edit
+                                        data-item-id="{{id}}"
+                                        data-item-field="system.range"
+                                    >
+
+                                    <span>m</span>
+                                </label>
+
+
+                                <button
+                                    type="button"
+                                    data-action="toggleEquipment"
+                                    data-item-id="{{id}}"
+                                    title="Déséquiper"
+                                >
+                                    ↓
+                                </button>
+
+
+                                <button
+                                    type="button"
+                                    data-action="deleteEquipment"
+                                    data-item-id="{{id}}"
+                                    title="Supprimer"
+                                >
+                                    ×
+                                </button>
+
+                            </div>
+
+
+                            <!-- ========================== -->
+                            <!-- LIGNE 3 : TYPES DE DÉGÂTS  -->
+                            <!-- ========================== -->
+
+                            <div class="aa-weapon-damage-types">
+
+                                <strong>Types :</strong>
+
+                                {{#each damageTypes}}
+
+                                    <span class="aa-damage-type">
+
+                                        {{this}}
+
+                                        <button
+                                            type="button"
+                                            data-action="removeWeaponDamageType"
+                                            data-item-id="{{../id}}"
+                                            data-damage-type="{{this}}"
+                                            title="Retirer"
+                                        >
+                                            ×
+                                        </button>
+
                                     </span>
 
+                                {{/each}}
+
+
+                                <input
+                                    type="text"
+                                    placeholder="Tranchant..."
+                                    data-damage-type-input
+                                    data-item-id="{{id}}"
+                                >
+
+
+                                <button
+                                    type="button"
+                                    data-action="addWeaponDamageType"
+                                    data-item-id="{{id}}"
+                                    title="Ajouter un type de dégâts"
+                                >
+                                    +
+                                </button>
+
+                            </div>
+
+
+                            <!-- ========================== -->
+                            <!-- LIGNE 4 : PROPRIÉTÉS       -->
+                            <!-- ========================== -->
+
+                            <div class="aa-weapon-properties">
+
+                                <button
+                                    type="button"
+                                    class="{{#if properties.twoHanded}}active{{/if}}"
+                                    data-action="toggleEquipmentProperty"
+                                    data-item-id="{{id}}"
+                                    data-property="twoHanded"
+                                >
+                                    Deux mains
+                                </button>
+
+
+                                <button
+                                    type="button"
+                                    class="{{#if properties.finesse}}active{{/if}}"
+                                    data-action="toggleEquipmentProperty"
+                                    data-item-id="{{id}}"
+                                    data-property="finesse"
+                                >
+                                    Finesse
+                                </button>
+
+
+                                <button
+                                    type="button"
+                                    class="{{#if properties.thrown}}active{{/if}}"
+                                    data-action="toggleEquipmentProperty"
+                                    data-item-id="{{id}}"
+                                    data-property="thrown"
+                                >
+                                    Lancer
+                                </button>
+
+
+                                <button
+                                    type="button"
+                                    class="{{#if properties.light}}active{{/if}}"
+                                    data-action="toggleEquipmentProperty"
+                                    data-item-id="{{id}}"
+                                    data-property="light"
+                                >
+                                    Légère
+                                </button>
+
+
+                                <button
+                                    type="button"
+                                    class="{{#if properties.heavy}}active{{/if}}"
+                                    data-action="toggleEquipmentProperty"
+                                    data-item-id="{{id}}"
+                                    data-property="heavy"
+                                >
+                                    Lourde
+                                </button>
+
+
+                                <button
+                                    type="button"
+                                    class="{{#if properties.versatile}}active{{/if}}"
+                                    data-action="toggleEquipmentProperty"
+                                    data-item-id="{{id}}"
+                                    data-property="versatile"
+                                >
+                                    Polyvalente
+                                </button>
+
+
+                                <button
+                                    type="button"
+                                    class="{{#if properties.ammunition}}active{{/if}}"
+                                    data-action="toggleEquipmentProperty"
+                                    data-item-id="{{id}}"
+                                    data-property="ammunition"
+                                >
+                                    Munitions
+                                </button>
+
+                            </div>
+
+
+                            <!-- GARDE -->
+
+                            {{#if properties.twoHanded}}
+
+                                <div class="aa-weapon-property-config">
 
                                     <label>
-                                        Classe
-
                                         <input
-                                            type="text"
-                                            value="{{system.weaponClass}}"
-                                            placeholder="ex : Épée"
+                                            type="checkbox"
+                                            {{#if system.guardEnabled}}checked{{/if}}
                                             data-equipment-edit
                                             data-item-id="{{id}}"
-                                            data-item-field="system.weaponClass"
+                                            data-item-field="system.guardEnabled"
                                         >
+
+                                        Utilisable pour la Garde
                                     </label>
 
+                                </div>
 
-                                    <span
-                                        class="aa-weapon-expertise"
-                                        title="Bonus d'expertise"
-                                    >
-                                        Exp. {{expertiseBonus}}
-                                    </span>
+                            {{/if}}
 
+
+                            <!-- LANCER -->
+
+                            {{#if properties.thrown}}
+
+                                <div class="aa-weapon-property-config">
+
+                                    <strong>Lancer</strong>
+
+                                    <label>
+                                        Portée normale
+
+                                        <input
+                                            type="number"
+                                            value="{{system.thrown.normalRange}}"
+                                            data-equipment-edit
+                                            data-item-id="{{id}}"
+                                            data-item-field="system.thrown.normalRange"
+                                        >
+
+                                        m
+                                    </label>
+
+                                    <label>
+                                        Portée longue
+
+                                        <input
+                                            type="number"
+                                            value="{{system.thrown.longRange}}"
+                                            data-equipment-edit
+                                            data-item-id="{{id}}"
+                                            data-item-field="system.thrown.longRange"
+                                        >
+
+                                        m
+                                    </label>
+
+                                </div>
+
+                            {{/if}}
+
+
+                            <!-- LÉGÈRE -->
+
+                            {{#if properties.light}}
+
+                                <div class="aa-weapon-property-config">
+
+                                    <strong>Légère</strong>
 
                                     <button
                                         type="button"
-                                        data-action="rollWeaponAttack"
+                                        data-action="rollWeaponBonusDamage"
                                         data-item-id="{{id}}"
-                                        title="Attaque"
                                     >
-                                        🎲 {{attackTotal}}
+                                        🎲 Dégâts d'attaque bonus
                                     </button>
 
+                                </div>
+
+                            {{/if}}
+
+
+                            <!-- LOURDE -->
+
+                            {{#if properties.heavy}}
+
+                                <div class="aa-weapon-property-config">
+
+                                    <strong>Lourde</strong>
+
+                                    <label>
+                                        FOR minimum
+
+                                        <input
+                                            type="number"
+                                            value="{{system.heavy.strengthRequirement}}"
+                                            data-equipment-edit
+                                            data-item-id="{{id}}"
+                                            data-item-field="system.heavy.strengthRequirement"
+                                        >
+                                    </label>
+
+                                </div>
+
+                            {{/if}}
+
+
+                            <!-- POLYVALENTE -->
+
+                            {{#if properties.versatile}}
+
+                                <div class="aa-weapon-property-config">
+
+                                    <strong>Polyvalente</strong>
 
                                     <label>
                                         Dégâts
 
                                         <input
                                             type="text"
-                                            value="{{system.damageFormula}}"
-                                            placeholder="1d6"
+                                            value="{{system.versatile.damageFormula}}"
+                                            placeholder="1d8"
                                             data-equipment-edit
                                             data-item-id="{{id}}"
-                                            data-item-field="system.damageFormula"
+                                            data-item-field="system.versatile.damageFormula"
                                         >
                                     </label>
 
-
                                     <button
                                         type="button"
-                                        data-action="rollWeaponDamage"
+                                        data-action="rollWeaponVersatileDamage"
                                         data-item-id="{{id}}"
-                                        title="Dégâts"
                                     >
                                         🎲
                                     </button>
 
+                                </div>
+
+                            {{/if}}
+
+
+                            <!-- MUNITIONS -->
+
+                            {{#if properties.ammunition}}
+
+                                <div class="aa-weapon-property-config">
+
+                                    <strong>Munitions</strong>
 
                                     <label>
-                                        Portée
+                                        Portée normale
 
                                         <input
                                             type="number"
-                                            value="{{system.range}}"
+                                            value="{{system.ammunition.normalRange}}"
                                             data-equipment-edit
                                             data-item-id="{{id}}"
-                                            data-item-field="system.range"
+                                            data-item-field="system.ammunition.normalRange"
                                         >
+
+                                        m
                                     </label>
 
-                                    <span>m</span>
 
-
-                                    <button
-                                        type="button"
-                                        data-action="toggleEquipment"
-                                        data-item-id="{{id}}"
-                                        title="Déséquiper"
-                                    >
-                                        ↓
-                                    </button>
-
-
-                                    <button
-                                        type="button"
-                                        data-action="deleteEquipment"
-                                        data-item-id="{{id}}"
-                                        title="Supprimer"
-                                    >
-                                        ×
-                                    </button>
-
-
-                                    <div class="aa-weapon-damage-types">
-
-                                        <strong>Types :</strong>
-
-                                        {{#each damageTypes}}
-
-                                            <span class="aa-damage-type">
-
-                                                {{this}}
-
-                                                <button
-                                                    type="button"
-                                                    data-action="removeWeaponDamageType"
-                                                    data-item-id="{{../id}}"
-                                                    data-damage-type="{{this}}"
-                                                >
-                                                    ×
-                                                </button>
-
-                                            </span>
-
-                                        {{/each}}
+                                    <label>
+                                        Portée longue
 
                                         <input
-                                            type="text"
-                                            placeholder="Tranchant..."
-                                            data-damage-type-input
+                                            type="number"
+                                            value="{{system.ammunition.longRange}}"
+                                            data-equipment-edit
                                             data-item-id="{{id}}"
+                                            data-item-field="system.ammunition.longRange"
                                         >
 
-                                        <button
-                                            type="button"
-                                            data-action="addWeaponDamageType"
-                                            data-item-id="{{id}}"
-                                        >
-                                            +
-                                        </button>
+                                        m
+                                    </label>
 
-                                    </div>
-                                    
+
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            {{#if system.ammunition.loading}}checked{{/if}}
+                                            data-equipment-edit
+                                            data-item-id="{{id}}"
+                                            data-item-field="system.ammunition.loading"
+                                        >
+
+                                        Chargement
+                                    </label>
 
                                 </div>
 
+                            {{/if}}
 
-                                <!-- ========================== -->
-                                <!-- PROPRIÉTÉS                 -->
-                                <!-- ========================== -->
-
-                                <div class="aa-weapon-properties">
-
-                                    <button
-                                        type="button"
-                                        class="{{#if properties.twoHanded}}active{{/if}}"
-                                        data-action="toggleEquipmentProperty"
-                                        data-item-id="{{id}}"
-                                        data-property="twoHanded"
-                                    >
-                                        Deux mains
-                                    </button>
-
-
-                                    <button
-                                        type="button"
-                                        class="{{#if properties.finesse}}active{{/if}}"
-                                        data-action="toggleEquipmentProperty"
-                                        data-item-id="{{id}}"
-                                        data-property="finesse"
-                                    >
-                                        Finesse
-                                    </button>
-
-
-                                    <button
-                                        type="button"
-                                        class="{{#if properties.thrown}}active{{/if}}"
-                                        data-action="toggleEquipmentProperty"
-                                        data-item-id="{{id}}"
-                                        data-property="thrown"
-                                    >
-                                        Lancer
-                                    </button>
-
-
-                                    <button
-                                        type="button"
-                                        class="{{#if properties.light}}active{{/if}}"
-                                        data-action="toggleEquipmentProperty"
-                                        data-item-id="{{id}}"
-                                        data-property="light"
-                                    >
-                                        Légère
-                                    </button>
-
-
-                                    <button
-                                        type="button"
-                                        class="{{#if properties.heavy}}active{{/if}}"
-                                        data-action="toggleEquipmentProperty"
-                                        data-item-id="{{id}}"
-                                        data-property="heavy"
-                                    >
-                                        Lourde
-                                    </button>
-
-
-                                    <button
-                                        type="button"
-                                        class="{{#if properties.versatile}}active{{/if}}"
-                                        data-action="toggleEquipmentProperty"
-                                        data-item-id="{{id}}"
-                                        data-property="versatile"
-                                    >
-                                        Polyvalente
-                                    </button>
-
-
-                                    <button
-                                        type="button"
-                                        class="{{#if properties.ammunition}}active{{/if}}"
-                                        data-action="toggleEquipmentProperty"
-                                        data-item-id="{{id}}"
-                                        data-property="ammunition"
-                                    >
-                                        Munitions
-                                    </button>
-
-                                </div>
-
-
-                                <!-- ========================== -->
-                                <!-- LANCER                     -->
-                                <!-- ========================== -->
-
-                                {{#if properties.thrown}}
-
-                                    <div class="aa-weapon-property-config">
-
-                                        <strong>Lancer</strong>
-
-                                        <label>
-                                            Portée normale
-
-                                            <input
-                                                type="number"
-                                                value="{{system.thrown.normalRange}}"
-                                                data-equipment-edit
-                                                data-item-id="{{id}}"
-                                                data-item-field="system.thrown.normalRange"
-                                            >
-                                            m
-                                        </label>
-
-                                        <label>
-                                            Portée longue
-
-                                            <input
-                                                type="number"
-                                                value="{{system.thrown.longRange}}"
-                                                data-equipment-edit
-                                                data-item-id="{{id}}"
-                                                data-item-field="system.thrown.longRange"
-                                            >
-                                            m
-                                        </label>
-
-                                    </div>
-
-                                {{/if}}
-
-
-                                <!-- ========================== -->
-                                <!-- LÉGÈRE                     -->
-                                <!-- ========================== -->
-
-                                {{#if properties.light}}
-
-                                    <div class="aa-weapon-property-config">
-
-                                        <strong>Légère</strong>
-
-                                        <button
-                                            type="button"
-                                            data-action="rollWeaponBonusDamage"
-                                            data-item-id="{{id}}"
-                                        >
-                                            🎲 Dégâts d'attaque bonus
-                                        </button>
-
-                                    </div>
-
-                                {{/if}}
-
-
-                                <!-- ========================== -->
-                                <!-- LOURDE                     -->
-                                <!-- ========================== -->
-
-                                {{#if properties.heavy}}
-
-                                    <div class="aa-weapon-property-config">
-
-                                        <strong>Lourde</strong>
-
-                                        <label>
-                                            FOR minimum
-
-                                            <input
-                                                type="number"
-                                                value="{{system.heavy.strengthRequirement}}"
-                                                data-equipment-edit
-                                                data-item-id="{{id}}"
-                                                data-item-field="system.heavy.strengthRequirement"
-                                            >
-                                        </label>
-
-                                    </div>
-
-                                {{/if}}
-
-
-                                <!-- ========================== -->
-                                <!-- POLYVALENTE                -->
-                                <!-- ========================== -->
-
-                                {{#if properties.versatile}}
-
-                                    <div class="aa-weapon-property-config">
-
-                                        <strong>Polyvalente</strong>
-
-                                        <label>
-                                            Dégâts
-
-                                            <input
-                                                type="text"
-                                                value="{{system.versatile.damageFormula}}"
-                                                placeholder="1d8"
-                                                data-equipment-edit
-                                                data-item-id="{{id}}"
-                                                data-item-field="system.versatile.damageFormula"
-                                            >
-                                        </label>
-
-                                        <button
-                                            type="button"
-                                            data-action="rollWeaponVersatileDamage"
-                                            data-item-id="{{id}}"
-                                        >
-                                            🎲
-                                        </button>
-
-                                    </div>
-
-                                {{/if}}
-
-
-                                <!-- ========================== -->
-                                <!-- MUNITIONS + CHARGEMENT     -->
-                                <!-- ========================== -->
-
-                                {{#if properties.ammunition}}
-
-                                    <div class="aa-weapon-property-config">
-
-                                        <strong>Munitions</strong>
-
-                                        <label>
-                                            Portée normale
-
-                                            <input
-                                                type="number"
-                                                value="{{system.ammunition.normalRange}}"
-                                                data-equipment-edit
-                                                data-item-id="{{id}}"
-                                                data-item-field="system.ammunition.normalRange"
-                                            >
-                                            m
-                                        </label>
-
-
-                                        <label>
-                                            Portée longue
-
-                                            <input
-                                                type="number"
-                                                value="{{system.ammunition.longRange}}"
-                                                data-equipment-edit
-                                                data-item-id="{{id}}"
-                                                data-item-field="system.ammunition.longRange"
-                                            >
-                                            m
-                                        </label>
-
-
-                                        <label>
-                                            <input
-                                                type="checkbox"
-                                                {{#if system.ammunition.loading}}checked{{/if}}
-                                                data-equipment-edit
-                                                data-item-id="{{id}}"
-                                                data-item-field="system.ammunition.loading"
-                                            >
-
-                                            Chargement
-                                        </label>
-
-                                    </div>
-
-                                {{/if}}
-
-                            </div>
+                        </div>
 
 
                         {{else}}
@@ -1291,61 +1445,75 @@
 
                         {{#each equipment.shields}}
 
-                            <div class="aa-shield-row">
+                        <div class="aa-shield-row">
+
+                            <input
+                                type="text"
+                                value="{{name}}"
+                                data-equipment-edit
+                                data-item-id="{{id}}"
+                                data-item-field="name"
+                            >
+
+                            <label>
+                                Classe
 
                                 <input
                                     type="text"
-                                    value="{{name}}"
+                                    value="{{system.shieldClass}}"
                                     data-equipment-edit
                                     data-item-id="{{id}}"
-                                    data-item-field="name"
+                                    data-item-field="system.shieldClass"
                                 >
+                            </label>
 
-                                <label>
-                                    Classe
+                            <label>
+                                DEF
 
-                                    <input
-                                        type="text"
-                                        value="{{system.shieldClass}}"
-                                        data-equipment-edit
-                                        data-item-id="{{id}}"
-                                        data-item-field="system.shieldClass"
-                                    >
-                                </label>
-
-                                <label>
-                                    DEF
-
-                                    <input
-                                        type="number"
-                                        value="{{system.defenseBonus}}"
-                                        data-equipment-edit
-                                        data-item-id="{{id}}"
-                                        data-item-field="system.defenseBonus"
-                                    >
-                                </label>
-
-                                <span>
-                                    Exp. {{expertiseBonus}}
-                                </span>
-
-                                <button
-                                    type="button"
-                                    data-action="toggleEquipment"
+                                <input
+                                    type="number"
+                                    value="{{system.defenseBonus}}"
+                                    data-equipment-edit
                                     data-item-id="{{id}}"
+                                    data-item-field="system.defenseBonus"
                                 >
-                                    ↓
-                                </button>
+                            </label>
 
-                                <button
-                                    type="button"
-                                    data-action="deleteEquipment"
+                            <span class="aa-shield-expertise">
+                                Exp. {{expertiseBonus}}
+                            </span>
+
+                            <label class="aa-shield-guard">
+                                <input
+                                    type="checkbox"
+                                    {{#if system.guardEnabled}}checked{{/if}}
+                                    data-equipment-edit
                                     data-item-id="{{id}}"
+                                    data-item-field="system.guardEnabled"
                                 >
-                                    ×
-                                </button>
 
-                            </div>
+                                Garde
+                            </label>
+
+                            <button
+                                type="button"
+                                data-action="toggleEquipment"
+                                data-item-id="{{id}}"
+                                title="Déséquiper"
+                            >
+                                ↓
+                            </button>
+
+                            <button
+                                type="button"
+                                data-action="deleteEquipment"
+                                data-item-id="{{id}}"
+                                title="Supprimer"
+                            >
+                                ×
+                            </button>
+
+                        </div>
 
                         {{else}}
 
