@@ -59,7 +59,8 @@ export class ArcaneCharacterSheet
     static PARTS = {
         body: {
             template:
-                "systems/arcane-advent/templates/actor/character-sheet.hbs"
+                "systems/arcane-advent/templates/actor/character-sheet.hbs",
+            scrollable: [""]
         }
     };
 
@@ -343,6 +344,21 @@ export class ArcaneCharacterSheet
                 target: expertise.system.target,
                 bonus: expertise.system.bonus
             }));
+
+        context.deathSaves = {
+
+            successes: [
+                this.actor.system.deathSaves.successes >= 1,
+                this.actor.system.deathSaves.successes >= 2,
+                this.actor.system.deathSaves.successes >= 3
+            ],
+
+            failures: [
+                this.actor.system.deathSaves.failures >= 1,
+                this.actor.system.deathSaves.failures >= 2,
+                this.actor.system.deathSaves.failures >= 3
+            ]
+        };
         
         return context;
     }
@@ -495,6 +511,18 @@ export class ArcaneCharacterSheet
             field.addEventListener(
                 "change",
                 this._onExpertiseEdit.bind(this)
+            );
+        }
+
+        const deathSaveFields =
+            this.element.querySelectorAll(
+                "[data-death-save]"
+            );
+
+        for (const field of deathSaveFields) {
+            field.addEventListener(
+                "change",
+                this._onDeathSaveChange.bind(this)
             );
         }
     }
@@ -1069,6 +1097,38 @@ export class ArcaneCharacterSheet
         await protection.update({
             "system.damageReductions":
                 reductions
+        });
+    }
+
+    async _onDeathSaveChange(event) {
+
+        const field =
+            event.currentTarget;
+
+        const type =
+            field.dataset.deathSave;
+
+        const index =
+            Number(field.dataset.deathSaveIndex);
+
+
+        if (
+            !["successes", "failures"].includes(type)
+            || !index
+        ) {
+            return;
+        }
+
+
+        const value =
+            field.checked
+                ? index
+                : index - 1;
+
+
+        await this.actor.update({
+            [`system.deathSaves.${type}`]:
+                value
         });
     }
 }

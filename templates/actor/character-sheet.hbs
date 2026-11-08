@@ -17,42 +17,6 @@
                 value="{{actor.name}}"
             >
 
-            <div class="aa-resource">
-                <span>Conscience</span>
-
-                <input
-                    type="number"
-                    name="system.consciousness.value"
-                    value="{{system.consciousness.value}}"
-                >
-
-                <span>/</span>
-
-                <input
-                    type="number"
-                    name="system.consciousness.max"
-                    value="{{system.consciousness.max}}"
-                >
-            </div>
-
-            <div class="aa-resource">
-                <span>Fièvre</span>
-
-                <input
-                    type="number"
-                    name="system.fever.value"
-                    value="{{system.fever.value}}"
-                >
-
-                <span>/</span>
-
-                <input
-                    type="number"
-                    name="system.fever.max"
-                    value="{{system.fever.max}}"
-                >
-            </div>
-
         </div>
 
     </header>
@@ -112,9 +76,304 @@
 
             <main class="aa-core">
 
+                <div class="aa-core-column">
+
+                <section class="aa-panel aa-status">
+
+                    <h2 class="aa-status-title">
+                        Statut
+                    </h2>
+
+
+                    <div class="aa-status-grid">
+
+                        <!-- ========================== -->
+                        <!-- PdC                        -->
+                        <!-- ========================== -->
+
+                        <div class="aa-status-card aa-status-consciousness">
+
+                            <strong class="aa-status-heading">
+                                <span class="aa-status-icon" aria-hidden="true">❤️</span>
+                                <span>Points de Conscience</span>
+                            </strong>
+
+                            <div class="aa-status-content">
+
+                                <div class="aa-status-values aa-status-values-large">
+
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        name="system.consciousness.value"
+                                        value="{{system.consciousness.value}}"
+                                    >
+
+                                    <span>/</span>
+
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        name="system.consciousness.max"
+                                        value="{{system.consciousness.max}}"
+                                    >
+
+                                </div>
+
+                                <div class="aa-status-bar">
+
+                                    <div
+                                        class="aa-status-bar-fill"
+                                        style="width: {{system.consciousness.percentage}}%;"
+                                    ></div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- ========================== -->
+                        <!-- Dés de Conscience          -->
+                        <!-- ========================== -->
+
+                        <div class="aa-status-card">
+
+                            <strong class="aa-status-heading">
+                                <span class="aa-status-icon" aria-hidden="true">🎲</span>
+                                <span>Dés de Conscience</span>
+                            </strong>
+
+                            <div class="aa-status-content">
+
+                                <div class="aa-status-values">
+
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        name="system.consciousnessDice.value"
+                                        value="{{system.consciousnessDice.value}}"
+                                    >
+
+                                    <span>/</span>
+
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        name="system.consciousnessDice.max"
+                                        value="{{system.consciousnessDice.max}}"
+                                    >
+
+                                </div>
+
+                                <input
+                                    class="aa-consciousness-die-formula"
+                                    type="text"
+                                    name="system.consciousnessDice.formula"
+                                    value="{{system.consciousnessDice.formula}}"
+                                    placeholder="1d8 + 2"
+                                >
+
+                            </div>
+
+                        </div>
+
+                        <!-- ========================== -->
+                        <!-- Barrière                   -->
+                        <!-- ========================== -->
+
+                        <div class="aa-status-card">
+
+                            <strong class="aa-status-heading">
+                                <span class="aa-status-icon" aria-hidden="true">🛡️</span>
+                                <span>Points de Barrière</span>
+                            </strong>
+
+                            <div class="aa-status-content">
+
+                                <div class="aa-status-single-value">
+
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        name="system.barrier"
+                                        value="{{system.barrier}}"
+                                    >
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- ========================== -->
+                        <!-- PdF                        -->
+                        <!-- ========================== -->
+
+                        <div class="aa-status-card aa-status-fever">
+
+                            <strong class="aa-status-heading">
+                                <span class="aa-status-icon" aria-hidden="true">⚡</span>
+                                <span>Points de Fièvre</span>
+                            </strong>
+
+                            <div class="aa-status-content">
+
+                                <div class="aa-status-values aa-status-values-large">
+
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        name="system.fever.value"
+                                        value="{{system.fever.value}}"
+                                    >
+
+                                    <span>/</span>
+
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        name="system.fever.max"
+                                        value="{{system.fever.max}}"
+                                    >
+
+                                </div>
+
+                                <div class="aa-status-bar">
+
+                                    <div
+                                        class="aa-status-bar-fill"
+                                        style="width: {{system.fever.percentage}}%;"
+                                    ></div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- ========================== -->
+                        <!-- JS contre la mort          -->
+                        <!-- ========================== -->
+
+                        <div class="aa-status-card">
+
+                            <strong class="aa-status-heading">
+                                <span class="aa-status-icon" aria-hidden="true">☠️</span>
+                                <span>Contre-la-Mort</span>
+                            </strong>
+
+                            <div class="aa-status-content">
+
+                                <div class="aa-death-saves">
+
+                                    <div class="aa-death-save-group">
+
+                                        <span>
+                                            Réussites
+                                        </span>
+
+                                        <div class="aa-death-save-boxes">
+
+                                            <input
+                                                type="checkbox"
+                                                {{#if deathSaves.successes.[0]}}checked{{/if}}
+                                                data-death-save="successes"
+                                                data-death-save-index="1"
+                                            >
+
+                                            <input
+                                                type="checkbox"
+                                                {{#if deathSaves.successes.[1]}}checked{{/if}}
+                                                data-death-save="successes"
+                                                data-death-save-index="2"
+                                            >
+
+                                            <input
+                                                type="checkbox"
+                                                {{#if deathSaves.successes.[2]}}checked{{/if}}
+                                                data-death-save="successes"
+                                                data-death-save-index="3"
+                                            >
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="aa-death-save-group">
+
+                                        <span>
+                                            Échecs
+                                        </span>
+
+                                        <div class="aa-death-save-boxes">
+
+                                            <input
+                                                type="checkbox"
+                                                {{#if deathSaves.failures.[0]}}checked{{/if}}
+                                                data-death-save="failures"
+                                                data-death-save-index="1"
+                                            >
+
+                                            <input
+                                                type="checkbox"
+                                                {{#if deathSaves.failures.[1]}}checked{{/if}}
+                                                data-death-save="failures"
+                                                data-death-save-index="2"
+                                            >
+
+                                            <input
+                                                type="checkbox"
+                                                {{#if deathSaves.failures.[2]}}checked{{/if}}
+                                                data-death-save="failures"
+                                                data-death-save-index="3"
+                                            >
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <!-- ========================== -->
+                        <!-- Miséricorde                -->
+                        <!-- ========================== -->
+
+                        <div class="aa-status-card">
+
+                            <strong class="aa-status-heading">
+                                <span class="aa-status-icon" aria-hidden="true">💫</span>
+                                <span>Points de Miséricorde</span>
+                            </strong>
+
+                            <div class="aa-status-content">
+
+                                <div class="aa-status-single-value">
+
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        name="system.mercy"
+                                        value="{{system.mercy}}"
+                                    >
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
                 <section class="aa-panel aa-abilities">
 
-                    <h2>Caractéristiques</h2>
+                    <h2><span class="aa-heading-icon" aria-hidden="true">💪</span>Caractéristiques</h2>
 
                     <div class="aa-ability-grid">
 
@@ -255,13 +514,13 @@
 
                         <div class="aa-defense-header">
 
-                            <h3>Défense</h3>
+                            <h3><span class="aa-heading-icon" aria-hidden="true">🛡️</span>Défense</h3>
 
 
                             <label>
                                 Base
 
-                                <select name="system.defense.mode">
+                                <select name="system.defense.mode" title="↑ DEX/CON : utilise le meilleur des deux modificateurs">
 
                                     <option
                                         value="dex"
@@ -289,22 +548,18 @@
                                             selected
                                         {{/if}}
                                     >
-                                        Meilleur
+                                        ↑ DEX/CON
                                     </option>
 
                                 </select>
                             </label>
 
 
-                            <span class="aa-defense-base">
-
-                                {{system.defense.abilityLabel}}
-
-                                {{#if system.defense.shieldBonus}}
+                            {{#if system.defense.shieldBonus}}
+                                <span class="aa-defense-base">
                                     + Bouclier {{system.defense.shieldBonus}}
-                                {{/if}}
-
-                            </span>
+                                </span>
+                            {{/if}}
 
                         </div>
 
@@ -386,7 +641,7 @@
                     <div class="aa-trackers">
 
                         <div class="aa-tracker">
-                            <label>PER</label>
+                            <label>Perception</label>
 
                             <strong>
                                 {{system.trackers.passivePerception}}
@@ -395,7 +650,7 @@
 
 
                         <div class="aa-tracker">
-                            <label>INI</label>
+                            <label>Initiative</label>
 
                             <strong>
                                 {{system.trackers.initiative}}
@@ -404,7 +659,7 @@
 
 
                         <div class="aa-tracker">
-                            <label>VIT</label>
+                            <label>Vitesse</label>
 
                             <div class="aa-tracker-value">
                                 <input
@@ -422,9 +677,13 @@
                 </section>
 
 
+                </div>
+
+                <div class="aa-core-column">
+
                 <section class="aa-panel aa-masteries">
 
-                    <h2>Maîtrises</h2>
+                    <h2><span class="aa-heading-icon" aria-hidden="true">📚</span>Maîtrises</h2>
 
 
                     <!-- ========================= -->
@@ -433,7 +692,7 @@
 
                     <section class="aa-mastery-section">
 
-                        <h3>Jets de sauvegarde</h3>
+                        <h3><span class="aa-heading-icon" aria-hidden="true">🎲</span>Jets de sauvegarde</h3>
 
                         <div class="aa-save-grid">
 
@@ -581,7 +840,7 @@
 
                         <div class="aa-section-title">
 
-                            <h3>Compétences</h3>
+                            <h3><span class="aa-heading-icon" aria-hidden="true">🧭</span>Compétences</h3>
 
                             <button
                                 type="button"
@@ -727,7 +986,7 @@
 
                         <div class="aa-section-title">
 
-                            <h3>Expertises</h3>
+                            <h3><span class="aa-heading-icon" aria-hidden="true">🏅</span>Expertises</h3>
 
                             <button
                                 type="button"
@@ -852,12 +1111,12 @@
 
 
                 <section class="aa-panel">
-                    <h2>Aptitudes</h2>
+                    <h2><span class="aa-heading-icon" aria-hidden="true">✨</span>Aptitudes</h2>
                 </section>
 
 
                 <section class="aa-panel">
-                    <h2>État du personnage</h2>
+                    <h2><span class="aa-heading-icon" aria-hidden="true">🩹</span>Conditions</h2>
 
                     <div class="aa-roll-mode">
                         <label for="roll-mode">Jets</label>
@@ -895,6 +1154,8 @@
                     </p>
                 </section>
 
+                </div>
+
             </main>
 
         </section>
@@ -909,7 +1170,7 @@
             <div class="aa-equipment-tab">
 
                 <div class="aa-equipment-heading">
-                    <h2>Équipement</h2>
+                    <h2><span class="aa-heading-icon" aria-hidden="true">🎒</span>Équipement</h2>
 
                     <div class="aa-equipment-create">
 
@@ -951,7 +1212,7 @@
 
                 <section class="aa-equipment-section">
 
-                    <h3>Armes équipées</h3>
+                    <h3><span class="aa-heading-icon" aria-hidden="true">⚔️</span>Armes équipées</h3>
 
 
                     <div class="aa-equipment-list">
@@ -1439,7 +1700,7 @@
 
                 <section class="aa-equipment-section">
 
-                    <h3>Boucliers équipés</h3>
+                    <h3><span class="aa-heading-icon" aria-hidden="true">🛡️</span>Boucliers équipés</h3>
 
                     <div class="aa-equipment-list">
 
@@ -1534,7 +1795,7 @@
 
                 <section class="aa-equipment-section">
 
-                    <h3>Protections équipées</h3>
+                    <h3><span class="aa-heading-icon" aria-hidden="true">🥋</span>Protections équipées</h3>
 
 
                     <div class="aa-equipment-list">
@@ -1764,7 +2025,7 @@
 
                 <section class="aa-equipment-section">
 
-                    <h3>Accessoires équipés</h3>
+                    <h3><span class="aa-heading-icon" aria-hidden="true">💍</span>Accessoires équipés</h3>
 
                     <div class="aa-equipment-list">
 
@@ -1817,7 +2078,7 @@
 
                 <section class="aa-equipment-section aa-inventory">
 
-                    <h3>Inventaire</h3>
+                    <h3><span class="aa-heading-icon" aria-hidden="true">📦</span>Inventaire</h3>
 
                     <div class="aa-equipment-list">
 
@@ -1878,7 +2139,7 @@
             data-tab="arcanology"
         >
             <div class="aa-tab-placeholder">
-                <h2>Arcanologie</h2>
+                <h2><span class="aa-heading-icon" aria-hidden="true">🔮</span>Arcanologie</h2>
                 <p>À construire.</p>
             </div>
         </section>
@@ -1890,7 +2151,7 @@
             data-tab="information"
         >
             <div class="aa-tab-placeholder">
-                <h2>Informations</h2>
+                <h2><span class="aa-heading-icon" aria-hidden="true">📜</span>Informations</h2>
                 <p>À construire.</p>
             </div>
         </section>
@@ -1902,7 +2163,7 @@
             data-tab="options"
         >
             <div class="aa-tab-placeholder">
-                <h2>Options</h2>
+                <h2><span class="aa-heading-icon" aria-hidden="true">⚙️</span>Options</h2>
                 <p>À construire.</p>
             </div>
         </section>

@@ -129,6 +129,72 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
                 })
             }),
 
+            consciousnessDice: new SchemaField({
+
+                value: new NumberField({
+                    required: true,
+                    nullable: false,
+                    integer: true,
+                    min: 0,
+                    initial: 0
+                }),
+
+                max: new NumberField({
+                    required: true,
+                    nullable: false,
+                    integer: true,
+                    min: 0,
+                    initial: 0
+                }),
+
+                formula: new StringField({
+                    required: true,
+                    nullable: false,
+                    blank: true,
+                    initial: "1d8"
+                })
+            }),
+
+
+            barrier: new NumberField({
+                required: true,
+                nullable: false,
+                integer: true,
+                min: 0,
+                initial: 0
+            }),
+
+
+            deathSaves: new SchemaField({
+
+                successes: new NumberField({
+                    required: true,
+                    nullable: false,
+                    integer: true,
+                    min: 0,
+                    max: 3,
+                    initial: 0
+                }),
+
+                failures: new NumberField({
+                    required: true,
+                    nullable: false,
+                    integer: true,
+                    min: 0,
+                    max: 3,
+                    initial: 0
+                })
+            }),
+
+
+            mercy: new NumberField({
+                required: true,
+                nullable: false,
+                integer: true,
+                min: 0,
+                initial: 0
+            }),
+
             defense: new SchemaField({
 
                 mode: new StringField({
