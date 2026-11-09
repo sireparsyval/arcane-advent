@@ -664,8 +664,10 @@ export class ArcaneCharacterSheet
         if (trait?.type !== "trait" || aptitude?.type !== "aptitude"
             || aptitude.system.traitId !== trait.id) return;
 
-        const content = document.createElement("p");
-        content.textContent = `Retirer l’aptitude « ${aptitude.name} », liée au Trait « ${trait.name} » ?`;
+        const content = document.createElement("div");
+        const message = document.createElement("p");
+        message.textContent = `Retirer l’aptitude « ${aptitude.name} », liée au Trait « ${trait.name} » ?`;
+        content.append(message);
         const confirmed = await foundry.applications.api.DialogV2.confirm({
             window: { title: "Retirer l’aptitude liée" },
             content, modal: true, rejectClose: false,
