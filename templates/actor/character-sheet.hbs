@@ -424,10 +424,16 @@
                                             aria-label="Champs facultatifs de {{name}}" title="Champs facultatifs">
                                             <i class="fa-solid fa-gear" aria-hidden="true"></i>
                                         </button>
-                                        <button type="button" data-action="deleteAptitude" data-item-id="{{id}}"
-                                            aria-label="Retirer {{name}}" title="Retirer l’aptitude">
-                                            <i class="fa-solid fa-trash" aria-hidden="true"></i>
-                                        </button>
+                                        {{#if linkedTraitId}}
+                                            <button type="button" data-action="goToLinkedTrait" data-trait-id="{{linkedTraitId}}"
+                                                class="aa-aptitude-origin" title="Gérer depuis le Trait {{linkedTraitName}}"
+                                                aria-label="Voir le Trait {{linkedTraitName}}">↳ Trait</button>
+                                        {{else}}
+                                            <button type="button" data-action="deleteAptitude" data-item-id="{{id}}"
+                                                aria-label="Retirer {{name}}" title="Retirer l’aptitude">
+                                                <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                            </button>
+                                        {{/if}}
                                     </div>
                                 </div>
                                 <div class="aa-aptitude-config" data-aptitude-config="{{id}}" {{#unless configOpen}}hidden{{/unless}}>
@@ -437,12 +443,23 @@
                                     {{/each}}
                                     <button type="button" class="aa-aptitude-add-roll" data-action="editAptitudeRoll" data-item-id="{{id}}"
                                         aria-label="Ajouter un jet" title="Ajouter un jet">+🎲</button>
+                                    <label class="aa-aptitude-requirements-editor">
+                                        <span>Conditions requises</span>
+                                        <textarea rows="2" data-aptitude-field="requirements" data-item-id="{{id}}"
+                                            placeholder="Conditions nécessaires pour utiliser cette Aptitude…">{{system.requirements}}</textarea>
+                                    </label>
                                 </div>
                             {{else}}
                                 <div class="aa-aptitude-identity">
                                     <strong>{{name}}</strong>
                                     <span class="aa-condition-level">{{categoryLabel}} · Niv. {{system.level}} ({{system.level}} PdF)</span>
                                 </div>
+                            {{/if}}
+                            {{#if linkedTraitName}}
+                                <div class="aa-aptitude-origin-label">↳ Trait : {{linkedTraitName}}</div>
+                            {{/if}}
+                            {{#if system.requirements}}
+                                <div class="aa-requirements-note"><strong>Conditions requises :</strong> {{system.requirements}}</div>
                             {{/if}}
                             <div class="aa-aptitude-optional">
                                 {{#each options}}
@@ -1312,6 +1329,88 @@
 
                     </section>
 
+                </section>
+
+                <section class="aa-panel aa-traits-panel">
+                    <div class="aa-condition-heading aa-aptitude-heading">
+                        <h2 class="aa-status-title"><span class="aa-heading-icon" aria-hidden="true">🧬</span>Traits</h2>
+                        {{#if canEditState}}
+                            <button type="button" data-action="addTrait" aria-label="Ajouter un Trait" title="Ajouter un Trait">
+                                <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                            </button>
+                        {{/if}}
+                    </div>
+
+                    {{#each traits}}
+                        <div class="aa-trait-row" data-trait-row="{{id}}" data-sheet-sort-drop="{{id}}">
+                            <div class="aa-trait-identity">
+                                {{#if @root.canEditState}}
+                                    <span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}"
+                                        aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>
+                                    <input class="aa-trait-name" type="text" value="{{name}}" required pattern=".*\S.*"
+                                        data-trait-field="name" data-trait-id="{{id}}" aria-label="Nom du Trait">
+                                    <div class="aa-trait-actions">
+                                        <button type="button" data-action="toggleTraitConfig" aria-expanded="{{configOpen}}"
+                                            aria-label="Options de {{name}}" title="Options et Aptitudes liées">
+                                            <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                                        </button>
+                                        <button type="button" data-action="deleteTrait" data-trait-id="{{id}}"
+                                            aria-label="Retirer {{name}}" title="Retirer le Trait">
+                                            <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                {{else}}
+                                    <strong>{{name}}</strong>
+                                {{/if}}
+                            </div>
+
+                            {{#if system.requirements}}
+                                <div class="aa-requirements-note"><strong>Conditions requises :</strong> {{system.requirements}}</div>
+                            {{/if}}
+
+                            {{#if @root.canEditState}}
+                                <div class="aa-trait-config" data-trait-config="{{id}}" {{#unless configOpen}}hidden{{/unless}}>
+                                    <label class="aa-trait-requirements-editor">
+                                        <span>Conditions requises (facultatives)</span>
+                                        <textarea rows="2" data-trait-field="requirements" data-trait-id="{{id}}"
+                                            placeholder="Circonstances dans lesquelles ce Trait s'applique…">{{system.requirements}}</textarea>
+                                    </label>
+                                    <div class="aa-trait-links-heading">
+                                        <strong>Aptitudes liées</strong>
+                                        <button type="button" data-action="createLinkedAptitude" data-trait-id="{{id}}"
+                                            title="Créer une aptitude associée à ce Trait">+ Aptitude</button>
+                                    </div>
+                                    <div class="aa-trait-links">
+                                        {{#each linkedAptitudes}}
+                                            <div class="aa-trait-link-row">
+                                                <span>{{name}} <small>· {{categoryLabel}}</small></span>
+                                                <button type="button" data-action="deleteLinkedAptitude"
+                                                    data-trait-id="{{../id}}" data-item-id="{{id}}"
+                                                    aria-label="Supprimer l'aptitude {{name}}" title="Supprimer cette aptitude liée">
+                                                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                                </button>
+                                            </div>
+                                        {{else}}
+                                            <small>Aucune Aptitude liée à ce Trait.</small>
+                                        {{/each}}
+                                    </div>
+                                </div>
+                            {{/if}}
+
+                            <details data-trait-description="{{id}}" {{#if descriptionOpen}}open{{/if}}>
+                                <summary>Exceptions et particularités</summary>
+                                {{#if @root.canEditState}}
+                                    <textarea rows="4" data-trait-field="description" data-trait-id="{{id}}"
+                                        aria-label="Description et exceptions de {{name}}"
+                                        placeholder="Particularités, exceptions aux règles et effets du Trait…">{{system.description}}</textarea>
+                                {{else}}
+                                    <p>{{#if system.description}}{{system.description}}{{else}}Aucune description.{{/if}}</p>
+                                {{/if}}
+                            </details>
+                        </div>
+                    {{else}}
+                        <p class="aa-condition-empty">Aucun Trait.</p>
+                    {{/each}}
                 </section>
 
                 </div>
