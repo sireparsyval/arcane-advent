@@ -398,9 +398,9 @@
                     </div>
                     {{#each aptitudes}}
                         <div class="aa-condition-row aa-aptitude-row" data-sheet-sort-drop="{{id}}">
-                            {{#if @root.canEditState}}<span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}" aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>{{/if}}
                             {{#if @root.canEditState}}
                                 <div class="aa-aptitude-identity">
+                                    <span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}" aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>
                                     <label class="aa-aptitude-type">
                                         <span>Type</span>
                                         <select data-aptitude-field="category" data-item-id="{{id}}">
