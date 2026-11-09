@@ -1,6 +1,10 @@
 import { BaseItemData } from "./base-item-data.mjs";
 
-const { NumberField, StringField } = foundry.data.fields;
+const { BooleanField, NumberField, SchemaField, StringField } = foundry.data.fields;
+
+export const ALTERATION_DURATION_UNITS = Object.freeze({
+    turns: "tours", minutes: "minutes", hours: "heures", days: "jours"
+});
 
 export const INJURY_ZONES = Object.freeze({
     "": "Générale / non précisée",
@@ -21,6 +25,12 @@ export class AlterationData extends BaseItemData {
                 integer: true,
                 min: 0,
                 initial: 1
+            }),
+            duration: new SchemaField({
+                enabled: new BooleanField({ required: true, nullable: false, initial: false }),
+                remaining: new NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 }),
+                unit: new StringField({ required: true, nullable: false,
+                    choices: Object.keys(ALTERATION_DURATION_UNITS), initial: "turns" })
             })
         };
     }

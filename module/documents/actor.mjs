@@ -1,4 +1,4 @@
-import { buildInventory, canPlaceInContainer, EQUIPMENT_TYPES, isInventoryItem } from "../inventory.mjs";
+import { buildInventory, canPlaceInContainer, EQUIPMENT_TYPES, isInventoryContainer, isInventoryItem } from "../inventory.mjs";
 import { getEquipmentConflictType } from "./item.mjs";
 
 const EXPERTISE_EQUIPMENT_TYPES = {
@@ -7,6 +7,22 @@ const EXPERTISE_EQUIPMENT_TYPES = {
     armorClass: ["protection"],
     toolObject: ["weapon", "shield", "protection", "accessory"]
 };
+
+const SORT_SPACING = 100000;
+
+// Reindex only a single visual group. Item.sort is a built-in, persisted Foundry field.
+function orderedSiblingUpdates(siblings, item, relativeToId = null, position = "after") {
+    const ordered = [...siblings].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+        .filter(entry => entry.id !== item.id);
+    const targetIndex = relativeToId ? ordered.findIndex(entry => entry.id === relativeToId) : -1;
+    if (relativeToId && targetIndex < 0) return null;
+    const index = relativeToId ? targetIndex + (position === "after" ? 1 : 0) : ordered.length;
+    ordered.splice(index, 0, item);
+    return ordered.map((entry, position) => ({
+        _id: entry.id,
+        sort: (position + 1) * SORT_SPACING
+    })).filter(update => update._id === item.id || ordered.find(entry => entry.id === update._id)?.sort !== update.sort);
+}
 
 export class ArcaneActor extends Actor {
 
@@ -23,8 +39,51 @@ export class ArcaneActor extends Actor {
         return operation;
     }
 
-    moveInventoryItem(itemId, containerId) {
-        return this.updateInventoryItem(itemId, { "system.containerId": containerId });
+    // Drop before/after a sibling, drop inside a container, or move to root/container end.
+    moveInventoryItem(itemId, containerId, { relativeToId = null, position = "after" } = {}) {
+        return this.#queueInventoryOperation(async () => {
+            const item = this.items.get(itemId);
+            const relative = relativeToId ? this.items.get(relativeToId) : null;
+            if (!isInventoryItem(item) || (relativeToId && (!isInventoryItem(relative)
+                || relative.id === item.id || relative.system.equipped))) return;
+
+            const destination = relative ? (relative.system.containerId || null) : (containerId || null);
+            if (destination && !isInventoryContainer(this.items.get(destination))) return;
+            if (!canPlaceInContainer(this.items, itemId, destination)) {
+                ui.notifications.warn("Ce déplacement créerait un cycle ou viserait un contenant invalide.");
+                return;
+            }
+
+            const siblings = this.items.filter(entry => isInventoryItem(entry) && !entry.system.equipped
+                && (entry.system.containerId || null) === destination);
+            const updates = orderedSiblingUpdates(siblings, item, relativeToId, position);
+            if (!updates) return;
+
+            const moved = updates.find(update => update._id === itemId);
+            moved.system = { containerId: destination };
+            if (EQUIPMENT_TYPES.includes(item.type)) moved.system.equipped = false;
+
+            const result = await this.updateEmbeddedDocuments("Item", updates);
+            return result.find(document => document.id === itemId);
+        });
+    }
+
+    // Aptitudes, compétences, expertises and each equipped equipment category.
+    reorderSheetItem(itemId, relativeToId, position = "before") {
+        return this.#queueInventoryOperation(async () => {
+            const item = this.items.get(itemId);
+            const relative = this.items.get(relativeToId);
+            const types = ["aptitude", "skill", "expertise", ...EQUIPMENT_TYPES];
+            if (!item || !relative || item.id === relative.id || item.type !== relative.type
+                || !types.includes(item.type) || !["before", "after"].includes(position)) return;
+            const equipment = EQUIPMENT_TYPES.includes(item.type);
+            if (equipment && (!item.system.equipped || !relative.system.equipped)) return;
+
+            const siblings = this.items.filter(entry => entry.type === item.type
+                && (!equipment || entry.system.equipped));
+            const updates = orderedSiblingUpdates(siblings, item, relativeToId, position);
+            if (updates?.length) await this.updateEmbeddedDocuments("Item", updates);
+        });
     }
 
     setEquipmentEquipped(itemId, equipped) {
