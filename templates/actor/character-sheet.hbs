@@ -634,11 +634,13 @@
                                 FOR
                             </button>
 
-                            <input
-                                type="number"
-                                name="system.abilities.strength.value"
-                                value="{{system.abilities.strength.value}}"
-                            >
+                            <div class="aa-ability-score">
+                                <input type="number" name="system.abilities.strength.value"
+                                    value="{{system.abilities.strength.value}}">
+                                {{#if system.modifierTotals.strength}}
+                                    <small title="Valeur effective après bonus/malus">→ {{system.abilities.strength.effective}}</small>
+                                {{/if}}
+                            </div>
 
                             <span class="aa-modifier">
                                 {{system.abilities.strength.modifier}}
@@ -656,11 +658,13 @@
                                 DEX
                             </button>
 
-                            <input
-                                type="number"
-                                name="system.abilities.dexterity.value"
-                                value="{{system.abilities.dexterity.value}}"
-                            >
+                            <div class="aa-ability-score">
+                                <input type="number" name="system.abilities.dexterity.value"
+                                    value="{{system.abilities.dexterity.value}}">
+                                {{#if system.modifierTotals.dexterity}}
+                                    <small title="Valeur effective après bonus/malus">→ {{system.abilities.dexterity.effective}}</small>
+                                {{/if}}
+                            </div>
 
                             <span class="aa-modifier">
                                 {{system.abilities.dexterity.modifier}}
@@ -678,11 +682,13 @@
                                 CON
                             </button>
 
-                            <input
-                                type="number"
-                                name="system.abilities.constitution.value"
-                                value="{{system.abilities.constitution.value}}"
-                            >
+                            <div class="aa-ability-score">
+                                <input type="number" name="system.abilities.constitution.value"
+                                    value="{{system.abilities.constitution.value}}">
+                                {{#if system.modifierTotals.constitution}}
+                                    <small title="Valeur effective après bonus/malus">→ {{system.abilities.constitution.effective}}</small>
+                                {{/if}}
+                            </div>
 
                             <span class="aa-modifier">
                                 {{system.abilities.constitution.modifier}}
@@ -700,11 +706,13 @@
                                 INT
                             </button>
 
-                            <input
-                                type="number"
-                                name="system.abilities.intelligence.value"
-                                value="{{system.abilities.intelligence.value}}"
-                            >
+                            <div class="aa-ability-score">
+                                <input type="number" name="system.abilities.intelligence.value"
+                                    value="{{system.abilities.intelligence.value}}">
+                                {{#if system.modifierTotals.intelligence}}
+                                    <small title="Valeur effective après bonus/malus">→ {{system.abilities.intelligence.effective}}</small>
+                                {{/if}}
+                            </div>
 
                             <span class="aa-modifier">
                                 {{system.abilities.intelligence.modifier}}
@@ -722,11 +730,13 @@
                                 SAG
                             </button>
 
-                            <input
-                                type="number"
-                                name="system.abilities.wisdom.value"
-                                value="{{system.abilities.wisdom.value}}"
-                            >
+                            <div class="aa-ability-score">
+                                <input type="number" name="system.abilities.wisdom.value"
+                                    value="{{system.abilities.wisdom.value}}">
+                                {{#if system.modifierTotals.wisdom}}
+                                    <small title="Valeur effective après bonus/malus">→ {{system.abilities.wisdom.effective}}</small>
+                                {{/if}}
+                            </div>
 
                             <span class="aa-modifier">
                                 {{system.abilities.wisdom.modifier}}
@@ -744,11 +754,13 @@
                                 CHA
                             </button>
 
-                            <input
-                                type="number"
-                                name="system.abilities.charisma.value"
-                                value="{{system.abilities.charisma.value}}"
-                            >
+                            <div class="aa-ability-score">
+                                <input type="number" name="system.abilities.charisma.value"
+                                    value="{{system.abilities.charisma.value}}">
+                                {{#if system.modifierTotals.charisma}}
+                                    <small title="Valeur effective après bonus/malus">→ {{system.abilities.charisma.effective}}</small>
+                                {{/if}}
+                            </div>
 
                             <span class="aa-modifier">
                                 {{system.abilities.charisma.modifier}}
@@ -885,6 +897,9 @@
                                 >
 
                                 <span>m</span>
+                                {{#if system.modifierTotals.speed}}
+                                    <small class="aa-speed-effective" title="Vitesse effective après bonus/malus">→ {{system.trackers.effectiveSpeed}} m</small>
+                                {{/if}}
                             </div>
                         </div>
 
