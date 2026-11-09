@@ -1,4 +1,5 @@
 import { ARCANE_NEEDS } from "../../config.mjs";
+import { VOLUME_LABELS, ENCUMBRANCE_STAGES } from "../../encumbrance.mjs";
 import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedModifier } from "../../modifiers.mjs";
 import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
 import {
@@ -12,6 +13,29 @@ import {
 
 const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
+
+const IDENTITY_GENDERS = Object.freeze({
+    masculine: "Masculin",
+    feminine: "Féminin",
+    unknown: "Inconnu"
+});
+const AGE_ESTIMATES = Object.freeze({
+    unknown: "Inconnu",
+    infant: "Nourrisson",
+    child: "Enfant",
+    adolescent: "Adolescent",
+    youngAdult: "Jeune adulte",
+    adult: "Adulte",
+    elderly: "Âgé",
+    venerable: "Vénérable"
+});
+const IDENTITY_TEXT_FIELDS = new Set(["title", "ethnicity", "alignment"]);
+const IDENTITY_NUMBER_FIELDS = new Set(["ageNumber", "heightMeters", "bodyWeightKg"]);
+const IDENTITY_SELECT_FIELDS = new Set(["gender", "volume", "ageMode", "ageEstimate"]);
+const BIOGRAPHY_FIELDS = new Set([
+    "feature", "motivation", "habit", "family", "raisedBy", "quest",
+    "personality", "ideals", "bonds", "flaws"
+]);
 
 const INVENTORY_DRAG_TYPE = "application/x-arcane-advent-inventory-item";
 const SHEET_SORT_DRAG_TYPE = "application/x-arcane-advent-sheet-sort";
@@ -237,6 +261,9 @@ export class ArcaneCharacterSheet
         context.activeSheetTab = this._activeTab ?? "core";
 
         context.canEditState = this.isEditable;
+        context.genderOptions = IDENTITY_GENDERS;
+        context.volumeOptions = VOLUME_LABELS;
+        context.ageEstimateOptions = AGE_ESTIMATES;
         context.defenseModes = Object.entries(DEFENSE_MODE_LABELS).map(([key, label]) => ({
             key,
             label,
@@ -390,6 +417,19 @@ export class ArcaneCharacterSheet
             weightLabel: formatWeight(item.system.weight ?? 0)
         });
         const { roots, totalWeight } = this.actor.inventory;
+        const load = this.actor.system.encumbrance;
+        const encumbranceStage = ENCUMBRANCE_STAGES[load.stage] ?? ENCUMBRANCE_STAGES.free;
+        context.encumbrance = {
+            currentLabel: formatWeight(load.carried),
+            maxLabel: formatWeight(load.maximum),
+            percentageLabel: new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(load.percentage),
+            barWidth: Math.min(100, Math.max(0, load.percentage)),
+            stage: load.stage,
+            label: encumbranceStage.label,
+            instruction: encumbranceStage.instruction,
+            effectiveSpeedLabel: new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 })
+                .format(this.actor.system.trackers.effectiveSpeed)
+        };
         context.inventory = {
             totalLabel: formatWeight(totalWeight),
             showWeights: this._showInventoryWeights,
@@ -1143,6 +1183,12 @@ export class ArcaneCharacterSheet
         for (const field of this.element.querySelectorAll("[data-aptitude-field]")) {
             field.addEventListener("change", this._onAptitudeEdit.bind(this));
         }
+        for (const field of this.element.querySelectorAll("[data-identity-field]")) {
+            field.addEventListener("change", this._onIdentityEdit.bind(this));
+        }
+        for (const field of this.element.querySelectorAll("[data-biography-field]")) {
+            field.addEventListener("change", this._onBiographyEdit.bind(this));
+        }
         for (const field of this.element.querySelectorAll("[data-trait-field]")) {
             field.addEventListener("change", this._onTraitEdit.bind(this));
         }
@@ -1205,6 +1251,43 @@ export class ArcaneCharacterSheet
         }
     }
 
+
+    async _onIdentityEdit(event) {
+        event.stopPropagation();
+        if (!this.isEditable) return;
+        const field = event.currentTarget;
+        const key = field.dataset.identityField;
+        if (!field.reportValidity() || !(
+            IDENTITY_TEXT_FIELDS.has(key) || IDENTITY_NUMBER_FIELDS.has(key) || IDENTITY_SELECT_FIELDS.has(key)
+        )) return;
+
+        const identity = this.actor.system.identity;
+        let value = IDENTITY_NUMBER_FIELDS.has(key) ? field.valueAsNumber : field.value.trim();
+        if (IDENTITY_NUMBER_FIELDS.has(key) && (!Number.isFinite(value) || value < 0
+            || (key === "ageNumber" && !Number.isSafeInteger(value)))) {
+            ui.notifications.warn("La valeur de cette information est invalide.");
+            return;
+        }
+        if (IDENTITY_SELECT_FIELDS.has(key)) {
+            const choices = key === "gender" ? IDENTITY_GENDERS
+                : key === "volume" ? VOLUME_LABELS
+                : key === "ageEstimate" ? AGE_ESTIMATES : { estimated: "Estimation", number: "Numérique" };
+            if (!Object.hasOwn(choices, value)) return;
+        }
+        if (identity[key] !== value) await this.actor.update({ [`system.identity.${key}`]: value });
+    }
+
+    async _onBiographyEdit(event) {
+        event.stopPropagation();
+        if (!this.isEditable) return;
+        const field = event.currentTarget;
+        const key = field.dataset.biographyField;
+        if (!BIOGRAPHY_FIELDS.has(key)) return;
+        const value = field.value.trim();
+        if (this.actor.system.biography[key] !== value) {
+            await this.actor.update({ [`system.biography.${key}`]: value });
+        }
+    }
 
     async _onAptitudeEdit(event) {
         event.stopPropagation();
