@@ -57,25 +57,78 @@
 {{/inline}}
 <div class="aa-character">
 
-    <header class="aa-header">
-
-        <img
-            class="aa-portrait"
-            src="{{actor.img}}"
-            alt="{{actor.name}}"
-        >
-
-        <div class="aa-identity">
-
-            <input
-                class="aa-name"
-                type="text"
-                name="name"
-                value="{{actor.name}}"
-            >
-
+    <header class="aa-header aa-character-header">
+        <div class="aa-header-portrait-block">
+            <img class="aa-portrait" src="{{actor.img}}" alt="Portrait de {{actor.name}}">
+            <input class="aa-name" type="text" name="name" value="{{actor.name}}"
+                aria-label="Nom du personnage" {{#unless canEditState}}readonly{{/unless}}>
+            <input class="aa-character-title" type="text" data-identity-field="title"
+                value="{{system.identity.title}}" placeholder="Titre ou appellation (facultatif)"
+                aria-label="Titre ou appellation" {{#unless canEditState}}readonly{{/unless}}>
         </div>
 
+        <div class="aa-header-fields">
+            <label class="aa-header-field">
+                <span>Ethnie</span>
+                <input type="text" data-identity-field="ethnicity" value="{{system.identity.ethnicity}}"
+                    placeholder="Ethnie du personnage" {{#unless canEditState}}readonly{{/unless}}>
+            </label>
+            <label class="aa-header-field">
+                <span>Genre</span>
+                <select data-identity-field="gender" {{#unless canEditState}}disabled{{/unless}}>
+                    {{#each genderOptions}}
+                        <option value="{{@key}}" {{#if (eq @key ../system.identity.gender)}}selected{{/if}}>{{this}}</option>
+                    {{/each}}
+                </select>
+            </label>
+            <label class="aa-header-field">
+                <span>Volume</span>
+                <select data-identity-field="volume" {{#unless canEditState}}disabled{{/unless}}>
+                    {{#each volumeOptions}}
+                        <option value="{{@key}}" {{#if (eq @key ../system.identity.volume)}}selected{{/if}}>{{this}}</option>
+                    {{/each}}
+                </select>
+            </label>
+            <div class="aa-header-field">
+                <span>Âge</span>
+                <div class="aa-age-controls">
+                    <select data-identity-field="ageMode" aria-label="Mode d'âge" {{#unless canEditState}}disabled{{/unless}}>
+                        <option value="estimated" {{#if (eq system.identity.ageMode "estimated")}}selected{{/if}}>Estimation</option>
+                        <option value="number" {{#if (eq system.identity.ageMode "number")}}selected{{/if}}>Exact</option>
+                    </select>
+                    {{#if (eq system.identity.ageMode "number")}}
+                        <input type="number" min="0" step="1" data-identity-field="ageNumber"
+                            value="{{system.identity.ageNumber}}" aria-label="Âge exact en années"
+                            {{#unless canEditState}}readonly{{/unless}}>
+                    {{else}}
+                        <select data-identity-field="ageEstimate" aria-label="Âge estimé" {{#unless canEditState}}disabled{{/unless}}>
+                            {{#each ageEstimateOptions}}
+                                <option value="{{@key}}" {{#if (eq @key ../system.identity.ageEstimate)}}selected{{/if}}>{{this}}</option>
+                            {{/each}}
+                        </select>
+                    {{/if}}
+                </div>
+            </div>
+            <div class="aa-header-physical">
+                <label class="aa-header-field">
+                    <span>Taille (m)</span>
+                    <input type="number" min="0" step="any" data-identity-field="heightMeters"
+                        value="{{system.identity.heightMeters}}" aria-label="Taille en mètres"
+                        {{#unless canEditState}}readonly{{/unless}}>
+                </label>
+                <label class="aa-header-field">
+                    <span>Poids corporel (kg)</span>
+                    <input type="number" min="0" step="any" data-identity-field="bodyWeightKg"
+                        value="{{system.identity.bodyWeightKg}}" aria-label="Poids corporel sans équipement"
+                        {{#unless canEditState}}readonly{{/unless}}>
+                </label>
+            </div>
+            <label class="aa-header-field">
+                <span>Alignement</span>
+                <input type="text" data-identity-field="alignment" value="{{system.identity.alignment}}"
+                    placeholder="Ex. : Chaotique Bon" {{#unless canEditState}}readonly{{/unless}}>
+            </label>
+        </div>
     </header>
 
 
@@ -1737,6 +1790,22 @@
                 </section>
 
                 <section class="aa-equipment-section">
+                    <div class="aa-encumbrance-block aa-load-{{encumbrance.stage}}">
+                        <div class="aa-encumbrance-heading">
+                            <h3><span class="aa-heading-icon" aria-hidden="true">⚖️</span> Encombrement</h3>
+                            <strong>{{encumbrance.currentLabel}} / {{encumbrance.maxLabel}}</strong>
+                        </div>
+                        <div class="aa-encumbrance-meter" role="progressbar" aria-label="Charge utilisée"
+                            aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{encumbrance.barWidth}}"
+                            title="{{encumbrance.percentageLabel}} % de la capacité">
+                            <div class="aa-encumbrance-fill" style="width: {{encumbrance.barWidth}}%"></div>
+                        </div>
+                        <div class="aa-encumbrance-summary">
+                            <strong>{{encumbrance.label}} · {{encumbrance.percentageLabel}} %</strong>
+                            <span>Vitesse effective : {{encumbrance.effectiveSpeedLabel}} m</span>
+                        </div>
+                        <p class="aa-encumbrance-instruction">{{encumbrance.instruction}}</p>
+                    </div>
                     <header class="aa-inventory-heading">
                         <h3><span class="aa-heading-icon" aria-hidden="true">📦</span>Inventaire</h3>
                         <strong class="aa-inventory-weight" title="Équipement porté inclus">Charge totale · {{inventory.totalLabel}}</strong>
@@ -1840,9 +1909,95 @@
             data-group="sheet"
             data-tab="information"
         >
-            <div class="aa-tab-placeholder">
-                <h2><span class="aa-heading-icon" aria-hidden="true">📜</span>Informations</h2>
-                <p>À construire.</p>
+            <div class="aa-information-layout">
+                <section class="aa-panel aa-info-details">
+                    <h2 class="aa-status-title">Détails du personnage</h2>
+                    <p class="aa-info-intro">Les informations physiques sont partagées avec l'en-tête de la fiche.</p>
+                    <div class="aa-info-details-list">
+                        <div class="aa-info-row">
+                            <span>Âge</span>
+                            <div class="aa-age-controls">
+                                <select data-identity-field="ageMode" aria-label="Âge : mode" {{#unless canEditState}}disabled{{/unless}}>
+                                    <option value="estimated" {{#if (eq system.identity.ageMode "estimated")}}selected{{/if}}>Estimation</option>
+                                    <option value="number" {{#if (eq system.identity.ageMode "number")}}selected{{/if}}>Exact</option>
+                                </select>
+                                {{#if (eq system.identity.ageMode "number")}}
+                                    <input type="number" min="0" step="1" data-identity-field="ageNumber"
+                                        value="{{system.identity.ageNumber}}" aria-label="Âge en années"
+                                        {{#unless canEditState}}readonly{{/unless}}>
+                                {{else}}
+                                    <select data-identity-field="ageEstimate" aria-label="Âge approximatif" {{#unless canEditState}}disabled{{/unless}}>
+                                        {{#each ageEstimateOptions}}
+                                            <option value="{{@key}}" {{#if (eq @key ../system.identity.ageEstimate)}}selected{{/if}}>{{this}}</option>
+                                        {{/each}}
+                                    </select>
+                                {{/if}}
+                            </div>
+                        </div>
+                        <label class="aa-info-row">
+                            <span>Volume</span>
+                            <select data-identity-field="volume" {{#unless canEditState}}disabled{{/unless}}>
+                                {{#each volumeOptions}}
+                                    <option value="{{@key}}" {{#if (eq @key ../system.identity.volume)}}selected{{/if}}>{{this}}</option>
+                                {{/each}}
+                            </select>
+                        </label>
+                        <div class="aa-info-row aa-info-measures">
+                            <label><span>Taille (m)</span>
+                                <input type="number" min="0" step="any" data-identity-field="heightMeters"
+                                    value="{{system.identity.heightMeters}}" {{#unless canEditState}}readonly{{/unless}}>
+                            </label>
+                            <label><span>Poids corporel (kg)</span>
+                                <input type="number" min="0" step="any" data-identity-field="bodyWeightKg"
+                                    value="{{system.identity.bodyWeightKg}}" {{#unless canEditState}}readonly{{/unless}}>
+                            </label>
+                        </div>
+                        <label class="aa-info-row"><span>Particularité</span>
+                            <textarea rows="2" data-biography-field="feature" placeholder="Tatouage, cicatrice, signe distinctif…"
+                                {{#unless canEditState}}readonly{{/unless}}>{{system.biography.feature}}</textarea>
+                        </label>
+                        <label class="aa-info-row"><span>Motivation</span>
+                            <textarea rows="2" data-biography-field="motivation" placeholder="Qu'est-ce qui le pousse à agir ?"
+                                {{#unless canEditState}}readonly{{/unless}}>{{system.biography.motivation}}</textarea>
+                        </label>
+                        <label class="aa-info-row"><span>Habitude</span>
+                            <textarea rows="2" data-biography-field="habit" placeholder="Tic ou comportement récurrent"
+                                {{#unless canEditState}}readonly{{/unless}}>{{system.biography.habit}}</textarea>
+                        </label>
+                        <label class="aa-info-row"><span>Famille</span>
+                            <textarea rows="2" data-biography-field="family" placeholder="Famille, situation familiale…"
+                                {{#unless canEditState}}readonly{{/unless}}>{{system.biography.family}}</textarea>
+                        </label>
+                        <label class="aa-info-row"><span>Éducation</span>
+                            <textarea rows="2" data-biography-field="raisedBy" placeholder="Par qui a-t-il été élevé ?"
+                                {{#unless canEditState}}readonly{{/unless}}>{{system.biography.raisedBy}}</textarea>
+                        </label>
+                        <label class="aa-info-row"><span>Quête</span>
+                            <textarea rows="3" data-biography-field="quest" placeholder="Quel objectif personnel poursuit-il ?"
+                                {{#unless canEditState}}readonly{{/unless}}>{{system.biography.quest}}</textarea>
+                        </label>
+                    </div>
+                </section>
+                <section class="aa-panel aa-info-psychology">
+                    <h2 class="aa-status-title">Psychologie</h2>
+                    <label><span>Traits de personnalité</span>
+                        <textarea rows="4" data-biography-field="personality"
+                            placeholder="Comment se comporte-t-il au quotidien ?"
+                            {{#unless canEditState}}readonly{{/unless}}>{{system.biography.personality}}</textarea>
+                    </label>
+                    <label><span>Idéaux</span>
+                        <textarea rows="4" data-biography-field="ideals" placeholder="Quelles valeurs défend-il ?"
+                            {{#unless canEditState}}readonly{{/unless}}>{{system.biography.ideals}}</textarea>
+                    </label>
+                    <label><span>Attachements</span>
+                        <textarea rows="4" data-biography-field="bonds" placeholder="À qui ou à quoi tient-il ?"
+                            {{#unless canEditState}}readonly{{/unless}}>{{system.biography.bonds}}</textarea>
+                    </label>
+                    <label><span>Défauts</span>
+                        <textarea rows="4" data-biography-field="flaws" placeholder="Quelles sont ses faiblesses de caractère ?"
+                            {{#unless canEditState}}readonly{{/unless}}>{{system.biography.flaws}}</textarea>
+                    </label>
+                </section>
             </div>
         </section>
 
@@ -1880,6 +2035,19 @@
                         {{/each}}
                     </div>
                 {{/each}}
+                <div class="aa-manual-carrying">
+                    <h3>Charge maximale</h3>
+                    <label>
+                        <span>Bonus / malus manuel (kg)</span>
+                        <input type="number" step="any" name="system.carryingCapacityBonusKg"
+                            value="{{system.carryingCapacityBonusKg}}" aria-label="Bonus ou malus à la charge maximale"
+                            {{#unless canEditState}}readonly{{/unless}}>
+                    </label>
+                    <p class="aa-options-explanation">
+                        Ajouté après le coefficient de Volume. Peut représenter un Trait racial ou une particularité.
+                        Charge maximale actuelle : <strong>{{encumbrance.maxLabel}}</strong>.
+                    </p>
+                </div>
                 <p class="aa-options-explanation">Les bonus/malus des conditions se modifient dans leur propre fenêtre d'édition, dans l'onglet Cœur.</p>
             </section>
         </section>
