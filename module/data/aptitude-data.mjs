@@ -80,6 +80,9 @@ export class AptitudeData extends BaseItemData {
                 initial: "technique"
             }),
             level: countField(1),
+            // Une aptitude peut être créée depuis les options d'un Trait.
+            traitId: new StringField({ required: true, nullable: false, blank: true, initial: "" }),
+            requirements: new StringField({ required: true, nullable: false, blank: true, initial: "" }),
             // Les anciennes chaînes restent disponibles pour les fiches enregistrées avant les compteurs.
             duration: new StringField({ blank: true, initial: "" }),
             recovery: new StringField({ blank: true, initial: "" }),
