@@ -1673,3 +1673,186 @@ body.detached > .aa-detached-sheet .window-content {
     }
     .aa-modifier-edit-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+
+/* En-tête permanent : portrait, nom et appellation ; données lisibles dans tous les onglets. */
+.aa-character-header {
+    display: grid;
+    grid-template-columns: minmax(165px, 210px) minmax(0, 1fr);
+    align-items: stretch;
+    gap: 15px;
+}
+.aa-header-portrait-block {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+    min-width: 0;
+}
+.aa-header-portrait-block .aa-portrait {
+    display: block;
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    object-position: center 25%;
+    border: 1px solid var(--aa-border);
+    border-radius: 7px;
+}
+.aa-header-portrait-block .aa-name {
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 1.2rem;
+    font-weight: bold;
+    text-align: center;
+}
+.aa-character-title {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 0.83rem;
+    font-style: italic;
+    text-align: center;
+}
+.aa-header-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: center;
+    gap: 10px 12px;
+    min-width: 0;
+}
+.aa-header-field {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: 3px;
+    min-width: 0;
+}
+.aa-header-field > span,
+.aa-info-row > span {
+    color: var(--aa-accent);
+    font-size: .77rem;
+    font-weight: bold;
+}
+.aa-header-field > :is(input, select),
+.aa-age-controls > :is(input, select) {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    height: 29px;
+}
+.aa-age-controls {
+    display: grid;
+    grid-template-columns: minmax(86px, 1fr) minmax(86px, 1fr);
+    gap: 5px;
+    min-width: 0;
+}
+.aa-header-physical {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    min-width: 0;
+}
+
+/* Informations : mêmes champs que l'en-tête pour les valeurs communes, sans duplication persistée. */
+.aa-information-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 13px;
+}
+.aa-info-intro {
+    font-size: .81rem;
+    opacity: .77;
+    margin: 6px 0 10px;
+}
+.aa-info-details-list, .aa-info-psychology { display: grid; gap: 9px; min-width: 0; }
+.aa-info-row {
+    display: grid;
+    grid-template-columns: minmax(90px, 27%) minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+    min-width: 0;
+}
+.aa-info-row :is(textarea, input, select),
+.aa-info-psychology textarea {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.aa-info-row textarea, .aa-info-psychology textarea {
+    resize: vertical;
+    line-height: 1.35;
+}
+.aa-info-measures { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.aa-info-measures label,
+.aa-info-psychology label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+.aa-info-measures label > span, .aa-info-psychology label > span {
+    color: var(--aa-accent);
+    font-size: .8rem;
+    font-weight: bold;
+}
+.aa-info-psychology label { gap: 4px; }
+.aa-info-psychology textarea { min-height: 90px; }
+
+/* Indicateur de charge : les actions/désavantages restent à appliquer manuellement. */
+.aa-encumbrance-block {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid var(--aa-border);
+    border-radius: 6px;
+    background: var(--aa-surface);
+}
+.aa-encumbrance-heading,
+.aa-encumbrance-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.aa-encumbrance-heading h3 { margin: 0; }
+.aa-encumbrance-meter {
+    height: 12px;
+    width: 100%;
+    background: rgba(180, 180, 180, .18);
+    border: 1px solid var(--aa-border);
+    border-radius: 99px;
+    overflow: hidden;
+}
+.aa-encumbrance-fill {
+    height: 100%;
+    background: #6f9e81;
+    border-radius: 99px;
+    transition: width 140ms ease;
+}
+.aa-load-encumbered .aa-encumbrance-fill { background: #c6a35a; }
+.aa-load-overloaded .aa-encumbrance-fill { background: #c98255; }
+.aa-load-immobilized .aa-encumbrance-fill { background: #bb5e51; }
+.aa-encumbrance-summary { font-size: .86rem; }
+.aa-encumbrance-instruction { margin: 0; font-size: .81rem; line-height: 1.35; }
+.aa-manual-carrying { padding-top: 14px; border-top: 1px solid var(--aa-border); }
+.aa-manual-carrying label { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.aa-manual-carrying input { width: 110px; }
+
+@media (max-width: 800px) {
+    .aa-character-header { grid-template-columns: minmax(130px, 170px) minmax(0, 1fr); }
+    .aa-header-fields { gap: 7px; }
+    .aa-header-physical { grid-template-columns: minmax(0, 1fr); }
+    .aa-age-controls { grid-template-columns: minmax(0, 1fr); }
+    .aa-information-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 580px) {
+    .aa-character-header { grid-template-columns: minmax(0, 1fr); }
+    .aa-header-portrait-block { width: min(210px, 100%); justify-self: center; }
+    .aa-header-physical { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .aa-info-row { grid-template-columns: minmax(85px, 25%) minmax(0, 1fr); }
+}
