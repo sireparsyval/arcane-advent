@@ -1,4 +1,5 @@
 import { ARCANE_NEEDS } from "../config.mjs";
+import { modifierSchema, modifierTotals as collectModifierTotals, ABILITY_MODIFIER_KEYS } from "../modifiers.mjs";
 
 const {
     NumberField,
@@ -21,6 +22,13 @@ function abilityField() {
             nullable: false,
             integer: true,
             initial: 0,
+            persisted: false
+        }),
+        effective: new NumberField({
+            required: true,
+            nullable: false,
+            integer: true,
+            initial: 10,
             persisted: false
         })
     });
@@ -51,6 +59,10 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
 
     static defineSchema() {
         return {
+            // Ajustements manuels indépendants des altérations et blessures.
+            manualModifiers: modifierSchema(),
+            // Somme non persistée des modifications de toutes les sources.
+            modifierTotals: modifierSchema({ persisted: false }),
             abilities: new SchemaField({
                 strength: abilityField(),
                 dexterity: abilityField(),
@@ -296,6 +308,13 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
                     nullable: false,
                     min: 0,
                     initial: 0
+                }),
+                effectiveSpeed: new NumberField({
+                    required: true,
+                    nullable: false,
+                    min: 0,
+                    initial: 0,
+                    persisted: false
                 })
             }),
         };
@@ -305,10 +324,15 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
     prepareDerivedData() {
         super.prepareDerivedData();
 
-        // Modificateurs de caractéristiques
-        for (const ability of Object.values(this.abilities)) {
-            ability.modifier =
-                Math.floor((ability.value - 10) / 2);
+        // Tous les effets se cumulent sur les scores AVANT le calcul du modificateur.
+        // Les bonus directs sur les Trackers sont appliqués plus bas, une seule fois.
+        const totals = collectModifierTotals(this.manualModifiers, this.parent?.items);
+        for (const key of Object.keys(totals)) this.modifierTotals[key] = totals[key];
+
+        for (const key of ABILITY_MODIFIER_KEYS) {
+            const ability = this.abilities[key];
+            ability.effective = ability.value + totals[key];
+            ability.modifier = Math.floor((ability.effective - 10) / 2);
         }
 
         const dex =
@@ -372,7 +396,8 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
         this.defense.base =
             10
             + this.defense.abilityModifier
-            + this.defense.shieldBonus;
+            + this.defense.shieldBonus
+            + totals.defense;
 
 
         const protectionBonuses = {
@@ -423,10 +448,14 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
         this.trackers.passivePerception =
             10
             + this.abilities.wisdom.modifier
-            + (hasPerceptionSkill ? 5 : 0);
+            + (hasPerceptionSkill ? 5 : 0)
+            + totals.passivePerception;
 
         this.trackers.initiative =
-            this.abilities.dexterity.modifier;
+            this.abilities.dexterity.modifier + totals.initiative;
+
+        // La vitesse persistée reste sa valeur de base, même après un bonus/malus.
+        this.trackers.effectiveSpeed = Math.max(0, this.trackers.speed + totals.speed);
 
         for (const abilityKey of Object.keys(this.abilities)) {
             this.savingThrows[abilityKey].total =
