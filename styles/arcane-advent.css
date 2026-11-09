@@ -669,6 +669,7 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-skill-row {
     display: grid;
     grid-template-columns:
+        22px
         30px
         minmax(120px, 1fr)
         65px
@@ -1114,6 +1115,7 @@ body.detached > .aa-detached-sheet .window-content {
     display: grid;
 
     grid-template-columns:
+        22px
         minmax(100px, 1fr)
         120px
         minmax(100px, 1fr)
@@ -1455,3 +1457,30 @@ body.detached > .aa-detached-sheet .window-content {
     outline: 2px solid var(--aa-accent);
     outline-offset: 2px;
 }
+
+
+/* Réordonnancement par poignées : une ligne horizontale indique la destination. */
+.aa-sort-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    flex: 0 0 20px;
+    min-width: 20px;
+    height: 25px;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    color: var(--aa-accent);
+    opacity: 0.75;
+}
+.aa-sort-handle:hover { opacity: 1; }
+.aa-sort-handle:active { cursor: grabbing; }
+.aa-sort-before { box-shadow: inset 0 3px 0 var(--aa-accent); }
+.aa-sort-after { box-shadow: inset 0 -3px 0 var(--aa-accent); }
+.aa-aptitude-row > .aa-sort-handle { justify-self: start; }
+.aa-inventory-row.aa-sort-before,
+.aa-inventory-row.aa-sort-after { outline: none; }
+.aa-alteration-duration { display: grid; gap: 8px; }
+.aa-alteration-duration label { display: grid; gap: 4px; }
+.aa-alteration-duration label:first-of-type { display: flex; align-items: center; }
