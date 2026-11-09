@@ -1,9 +1,9 @@
 import { ARCANE_NEEDS } from "../../config.mjs";
 import {
     EQUIPMENT_TYPES, LUQA_DENOMINATIONS, canPlaceInContainer,
-    isInventoryContainer, isInventoryItem, luqaCounters
+    isInventoryContainer, isInventoryItem, luqaCounters, purseCoinWeight
 } from "../../inventory.mjs";
-import { AlterationData, InjuryData, INJURY_ZONES } from "../../data/condition-data.mjs";
+import { AlterationData, InjuryData, INJURY_ZONES, ALTERATION_DURATION_UNITS } from "../../data/condition-data.mjs";
 import {
     APTITUDE_CATEGORIES, APTITUDE_OPTIONS, APTITUDE_DURATION_UNITS, APTITUDE_RECOVERY_UNITS, parseLegacyAptitudeOption
 } from "../../data/aptitude-data.mjs";
@@ -12,6 +12,16 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 const INVENTORY_DRAG_TYPE = "application/x-arcane-advent-inventory-item";
+const SHEET_SORT_DRAG_TYPE = "application/x-arcane-advent-sheet-sort";
+const sortableItems = items => [...items].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+
+// Newly created items always start at the end of their visible group.
+function nextItemSort(actor, group) {
+    const siblings = actor.items.filter(item => group === "inventory"
+        ? isInventoryItem(item) && !item.system.equipped && !item.system.containerId
+        : item.type === group);
+    return Math.max(0, ...siblings.map(item => item.sort ?? 0)) + 100000;
+}
 const INVENTORY_ITEM_NAMES = {
     object: "Nouvel objet",
     container: "Nouveau contenant",
@@ -20,7 +30,9 @@ const INVENTORY_ITEM_NAMES = {
 const WEIGHT_FORMAT = new Intl.NumberFormat("fr-FR", { maximumSignificantDigits: 15 });
 
 function formatWeight(weight) {
-    return `${WEIGHT_FORMAT.format(weight)} kg`;
+    // Affichage tronqué au dixième, sans tronquer les calculs internes.
+    const tenths = Math.floor((weight + Number.EPSILON) * 10) / 10;
+    return `${WEIGHT_FORMAT.format(tenths)} kg`;
 }
 
 function* inventoryRows(roots, collapsed = new Set()) {
@@ -193,6 +205,9 @@ export class ArcaneCharacterSheet
     _showInventoryWeights = true;
     _inventoryDragId = null;
     _inventoryDropTarget = null;
+    _inventoryDropPosition = null;
+    _sheetSortDragId = null;
+    _sheetSortDropTarget = null;
 
 
     get title() {
@@ -240,7 +255,7 @@ export class ArcaneCharacterSheet
         context.aptitudeCategories = APTITUDE_CATEGORIES;
         context.aptitudeDurationUnits = APTITUDE_DURATION_UNITS;
         context.aptitudeRecoveryUnits = APTITUDE_RECOVERY_UNITS;
-        context.aptitudes = this.actor.items.filter(item => item.type === "aptitude").map(item => ({
+        context.aptitudes = sortableItems(this.actor.items.filter(item => item.type === "aptitude")).map(item => ({
             id: item.id,
             name: item.name,
             system: item.system,
@@ -274,7 +289,9 @@ export class ArcaneCharacterSheet
                 name: item.name,
                 severity: item.system.severity,
                 description: item.system.description,
-                zone: item.system.zone ? INJURY_ZONES[item.system.zone] : ""
+                zone: item.system.zone ? INJURY_ZONES[item.system.zone] : "",
+                durationLabel: type === "alteration" && item.system.duration?.enabled
+                    ? `${item.system.duration.remaining} ${ALTERATION_DURATION_UNITS[item.system.duration.unit]}` : ""
             }))
         }));
 
@@ -293,8 +310,8 @@ export class ArcaneCharacterSheet
             };
         });
 
-        context.skills = this.actor.items
-            .filter(item => item.type === "skill")
+        context.skills = sortableItems(this.actor.items
+            .filter(item => item.type === "skill"))
             .map(skill => {
 
                 const ability =
@@ -316,7 +333,7 @@ export class ArcaneCharacterSheet
                 };
             });
         
-        const equipment = this.actor.items.filter(item => EQUIPMENT_TYPES.includes(item.type));
+        const equipment = sortableItems(this.actor.items.filter(item => EQUIPMENT_TYPES.includes(item.type)));
         const equipmentView = item => ({
             id: item.id,
             name: item.name,
@@ -335,12 +352,13 @@ export class ArcaneCharacterSheet
                     name: item.name,
                     depth,
                     container,
+                    isPurse: item.type === "purse",
                     nested: Boolean(item.system.containerId),
                     coins: luqaCounters(item),
                     expanded: !this._collapsedInventory.has(item.id),
                     quantity,
                     canEquip: EQUIPMENT_TYPES.includes(item.type),
-                    showWeight: container || this._showInventoryWeights,
+                    showWeight: container || item.type === "purse" || this._showInventoryWeights,
                     weightLabel: formatWeight(weight),
                     unitWeight: weight,
                     perUnit: quantity > 1
@@ -473,10 +491,10 @@ export class ArcaneCharacterSheet
             });
         }
 
-        context.expertises = this.actor.items
+        context.expertises = sortableItems(this.actor.items
             .filter(item =>
                 item.type === "expertise"
-            )
+            ))
             .map(expertise => ({
                 id: expertise.id,
                 name: expertise.name,
@@ -575,7 +593,7 @@ export class ArcaneCharacterSheet
     static async _onAddAptitude() {
         if (!this.isEditable) return;
         await this.actor.createEmbeddedDocuments("Item", [
-            { name: "Nouvelle aptitude", type: "aptitude" }
+            { name: "Nouvelle aptitude", type: "aptitude", sort: nextItemSort(this.actor, "aptitude") }
         ]);
     }
 
@@ -709,7 +727,8 @@ export class ArcaneCharacterSheet
             {
                 ...previous,
                 severityLabel: section.severityLabel,
-                zones: type === "injury" ? INJURY_ZONES : null
+                zones: type === "injury" ? INJURY_ZONES : null,
+                durationUnits: type === "alteration" ? ALTERATION_DURATION_UNITS : null
             }
         );
 
@@ -735,6 +754,11 @@ export class ArcaneCharacterSheet
                             }
                         };
                         if (type === "injury") data.system.zone = fields.get("zone");
+                        if (type === "alteration") data.system.duration = {
+                            enabled: fields.get("durationEnabled") === "on",
+                            remaining: Number(fields.get("durationRemaining") ?? 0),
+                            unit: fields.get("durationUnit") || "turns"
+                        };
 
                         try {
                             if (item) {
@@ -805,6 +829,7 @@ export class ArcaneCharacterSheet
                 {
                     name: "Nouvelle compétence",
                     type: "skill",
+                    sort: nextItemSort(this.actor, "skill"),
 
                     system: {
                         ability: "strength",
@@ -906,6 +931,8 @@ export class ArcaneCharacterSheet
             );
         }
 
+        if (this.isEditable) this._bindSheetSortListeners();
+
         const equipmentTab = this.element.querySelector(".aa-equipment-tab");
         if (equipmentTab) {
             if (this.isEditable) this._bindInventoryListeners(equipmentTab);
@@ -987,6 +1014,63 @@ export class ArcaneCharacterSheet
         });
     }
 
+    _bindSheetSortListeners() {
+        const root = this.element;
+        root.addEventListener("dragstart", event => {
+            const handle = event.target.closest("[data-sheet-sort-drag]");
+            if (!handle || !event.dataTransfer) return;
+            const id = handle.dataset.sheetSortDrag;
+            const item = this.actor.items.get(id);
+            if (!item) return;
+            event.stopPropagation();
+            this._sheetSortDragId = id;
+            event.dataTransfer.setData(SHEET_SORT_DRAG_TYPE, id);
+            event.dataTransfer.effectAllowed = "move";
+        });
+        root.addEventListener("dragover", event => {
+            if (!event.dataTransfer?.types.includes(SHEET_SORT_DRAG_TYPE)) return;
+            const row = event.target.closest("[data-sheet-sort-drop]");
+            const id = this._sheetSortDragId;
+            const item = this.actor.items.get(id);
+            const target = this.actor.items.get(row?.dataset.sheetSortDrop);
+            const allowed = row && item && target && item.id !== target.id
+                && item.type === target.type;
+            this._sheetSortDropTarget?.classList.remove("aa-sort-before", "aa-sort-after");
+            this._sheetSortDropTarget = allowed ? row : null;
+            if (!allowed) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const position = event.clientY < row.getBoundingClientRect().top + row.getBoundingClientRect().height / 2
+                ? "before" : "after";
+            row.classList.add(position === "before" ? "aa-sort-before" : "aa-sort-after");
+            event.dataTransfer.dropEffect = "move";
+        });
+        root.addEventListener("drop", async event => {
+            if (!event.dataTransfer?.types.includes(SHEET_SORT_DRAG_TYPE)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const target = event.target.closest("[data-sheet-sort-drop]");
+            const row = this._sheetSortDropTarget;
+            const id = this._sheetSortDragId;
+            const position = row?.classList.contains("aa-sort-before") ? "before" : "after";
+            this._clearSheetSort();
+            if (target && row === target && id && id === event.dataTransfer.getData(SHEET_SORT_DRAG_TYPE)) {
+                try {
+                    await this.actor.reorderSheetItem(id, target.dataset.sheetSortDrop, position);
+                } catch (error) {
+                    ui.notifications.error(error.message);
+                }
+            }
+        });
+        root.addEventListener("dragend", () => this._clearSheetSort());
+    }
+
+    _clearSheetSort() {
+        this._sheetSortDragId = null;
+        this._sheetSortDropTarget?.classList.remove("aa-sort-before", "aa-sort-after");
+        this._sheetSortDropTarget = null;
+    }
+
     _bindInventoryListeners(tab) {
         for (const quantity of tab.querySelectorAll("[data-inventory-quantity]")) {
             quantity.addEventListener("change", this._onInventoryQuantity.bind(this));
@@ -1015,14 +1099,27 @@ export class ArcaneCharacterSheet
         });
         tab.addEventListener("dragover", event => {
             if (!event.dataTransfer?.types.includes(INVENTORY_DRAG_TYPE)) return;
+            const row = event.target.closest("[data-inventory-drop]");
+            const itemId = this._inventoryDragId;
+            const targetId = row?.dataset.inventoryDrop;
+            const targetItem = this.actor.items.get(targetId);
+            if (!itemId || !row || itemId === targetId || !isInventoryItem(targetItem)) {
+                this._setInventoryDropTarget(null);
+                return;
+            }
+            const bounds = row.getBoundingClientRect();
+            const offset = (event.clientY - bounds.top) / bounds.height;
+            const position = isInventoryContainer(targetItem) && offset >= 0.25 && offset <= 0.75
+                ? "inside" : offset < 0.5 ? "before" : "after";
+            const destination = position === "inside" ? targetId : (targetItem.system.containerId || null);
+            if (!canPlaceInContainer(this.actor.items, itemId, destination)) {
+                this._setInventoryDropTarget(null);
+                return;
+            }
+            event.preventDefault();
             event.stopPropagation();
-
-            const target = event.target.closest("[data-inventory-drop]");
-            const allowed = target && this._inventoryDragId
-                && canPlaceInContainer(this.actor.items, this._inventoryDragId, target.dataset.inventoryDrop);
-            event.dataTransfer.dropEffect = allowed ? "move" : "none";
-            this._setInventoryDropTarget(allowed ? target : null);
-            if (allowed) event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+            this._setInventoryDropTarget(row, position);
         });
         tab.addEventListener("dragleave", event => {
             if (!this._inventoryDropTarget?.contains(event.relatedTarget)) this._setInventoryDropTarget(null);
@@ -1031,22 +1128,30 @@ export class ArcaneCharacterSheet
             if (!event.dataTransfer?.types.includes(INVENTORY_DRAG_TYPE)) return;
             event.preventDefault();
             event.stopPropagation();
-
-            const target = event.target.closest("[data-inventory-drop]");
+            const row = event.target.closest("[data-inventory-drop]");
             const itemId = this._inventoryDragId;
+            const target = this._inventoryDropTarget;
+            const position = this._inventoryDropPosition;
             this._clearInventoryDrag();
-            if (target && itemId && itemId === event.dataTransfer.getData(INVENTORY_DRAG_TYPE)) {
-                await this._moveInventoryItem(itemId, target.dataset.inventoryDrop);
-            }
+            if (!row || row !== target || !itemId || itemId !== event.dataTransfer.getData(INVENTORY_DRAG_TYPE)) return;
+            const targetId = row.dataset.inventoryDrop;
+            const targetItem = this.actor.items.get(targetId);
+            if (!targetItem) return;
+            const destination = position === "inside" ? targetId : (targetItem.system.containerId || null);
+            await this._moveInventoryItem(itemId, destination, position === "inside" ? {} : {
+                relativeToId: targetId, position
+            });
         });
         tab.addEventListener("dragend", () => this._clearInventoryDrag());
     }
 
-    _setInventoryDropTarget(target) {
-        if (target === this._inventoryDropTarget) return;
-        this._inventoryDropTarget?.classList.remove("aa-inventory-drop-active");
+    _setInventoryDropTarget(target, position = null) {
+        if (target === this._inventoryDropTarget && position === this._inventoryDropPosition) return;
+        this._inventoryDropTarget?.classList.remove("aa-inventory-drop-active", "aa-sort-before", "aa-sort-after");
         this._inventoryDropTarget = target;
-        target?.classList.add("aa-inventory-drop-active");
+        this._inventoryDropPosition = position;
+        if (position === "inside") target?.classList.add("aa-inventory-drop-active");
+        else if (position) target?.classList.add(position === "before" ? "aa-sort-before" : "aa-sort-after");
     }
 
     _clearInventoryDrag() {
@@ -1129,7 +1234,7 @@ export class ArcaneCharacterSheet
         if (!this.isEditable || !Object.hasOwn(INVENTORY_ITEM_NAMES, type)) return;
 
         await this.actor.createEmbeddedDocuments("Item", [
-            { type, name: INVENTORY_ITEM_NAMES[type] }
+            { type, name: INVENTORY_ITEM_NAMES[type], sort: nextItemSort(this.actor, "inventory") }
         ]);
     }
 
@@ -1179,7 +1284,7 @@ export class ArcaneCharacterSheet
         if (isInventoryItem(item) && item.system.containerId) await this._moveInventoryItem(item.id, null);
     }
 
-    async _moveInventoryItem(itemId, containerId) {
+    async _moveInventoryItem(itemId, containerId, placement = {}) {
         if (!this.isEditable) return;
         if (!canPlaceInContainer(this.actor.items, itemId, containerId)) {
             ui.notifications.warn("Ce déplacement n’est plus possible.");
@@ -1192,7 +1297,7 @@ export class ArcaneCharacterSheet
         }
         let updated;
         try {
-            updated = await this.actor.moveInventoryItem(itemId, containerId);
+            updated = await this.actor.moveInventoryItem(itemId, containerId, placement);
         } catch (error) {
             Hooks.onError("ArcaneCharacterSheet#_moveInventoryItem", error, {
                 msg: "Impossible de déplacer l’objet.",
@@ -1245,6 +1350,7 @@ export class ArcaneCharacterSheet
             [{
                 name: names[type],
                 type,
+                sort: nextItemSort(this.actor, type),
                 system: { equipped: equipOnCreate }
             }],
             { render: equipOnCreate }
@@ -1387,6 +1493,7 @@ export class ArcaneCharacterSheet
                 {
                     name: "Nouvelle expertise",
                     type: "expertise",
+                    sort: nextItemSort(this.actor, "expertise"),
 
                     system: {
                         domain: "weaponClass",

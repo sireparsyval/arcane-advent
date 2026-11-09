@@ -82,6 +82,7 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
             ...context,
             system,
             isObject: type === "object",
+            isPurse: type === "purse",
             isContainer: isInventoryContainer(this.document),
             coins: luqaCounters(this.document),
             isWeapon: type === "weapon",

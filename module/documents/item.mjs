@@ -112,7 +112,7 @@ export class ArcaneItem extends Item {
     static async _preDeleteOperation(documents, operation, user) {
         if (await super._preDeleteOperation(documents, operation, user) === false) return false;
         const actor = operation.parent ?? documents[0]?.actor;
-        if (actor?.type !== "character" || !documents.some(isInventoryContainer)) return;
+        if (actor?.type !== "character" || !documents.some(item => isInventoryContainer(item) || item.type === "purse")) return;
 
         const deleted = new Set(documents.map(item => item.id));
         const remaining = new Map();
