@@ -1,7 +1,7 @@
 export const EQUIPMENT_TYPES = ["weapon", "shield", "protection", "accessory"];
 // Une bourse transporte uniquement des Luqa, pas des objets.
 const CONTAINER_TYPES = ["container"];
-export const INVENTORY_TYPES = [...EQUIPMENT_TYPES, "object", ...CONTAINER_TYPES];
+export const INVENTORY_TYPES = [...EQUIPMENT_TYPES, "object", "purse", ...CONTAINER_TYPES];
 
 export const LUQA_DENOMINATIONS = [
     { key: "copper", symbol: "₤c", label: "Luqa de cuivre" },
