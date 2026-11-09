@@ -1,5 +1,29 @@
 import { canPlaceInContainer, EQUIPMENT_TYPES, isInventoryContainer, isInventoryItem } from "../inventory.mjs";
 
+// Autorisation locale et temporaire pour une suppression initiée depuis les options du Trait.
+const authorizedLinkedDeletes = new WeakMap();
+
+export async function removeLinkedAptitudeFromTrait(actor, traitId, aptitudeId) {
+    const trait = actor?.items.get(traitId);
+    const aptitude = actor?.items.get(aptitudeId);
+    if (trait?.type !== "trait" || aptitude?.type !== "aptitude"
+        || aptitude.system.traitId !== traitId) return [];
+
+    let allowed = authorizedLinkedDeletes.get(actor);
+    if (!allowed) {
+        allowed = new Set();
+        authorizedLinkedDeletes.set(actor, allowed);
+    }
+    allowed.add(aptitudeId);
+    try {
+        return await actor.deleteEmbeddedDocuments("Item", [aptitudeId]);
+    } finally {
+        allowed.delete(aptitudeId);
+        if (!allowed.size) authorizedLinkedDeletes.delete(actor);
+    }
+}
+
+
 export function getEquipmentConflictType(type, properties) {
     if (type === "shield") return "weapon";
     if (type === "weapon" && hasTwoHandedProperty(properties)) return "shield";
@@ -122,7 +146,7 @@ export class ArcaneItem extends Item {
             for (const aptitude of linkedAptitudes) {
                 if (!deletedIds.has(aptitude.id)) continue;
                 if (deletedIds.has(aptitude.system.traitId)
-                    || operation.arcaneTraitAptitudeId === aptitude.system.traitId) continue;
+                    || authorizedLinkedDeletes.get(actor)?.has(aptitude.id)) continue;
                 ui.notifications.warn("Cette aptitude est liée à un Trait : supprimez-la depuis les options de ce Trait.");
                 return false;
             }
