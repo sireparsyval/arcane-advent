@@ -344,6 +344,7 @@ export class ArcaneCharacterSheet
                     name: item.name,
                     depth,
                     container,
+                    isPurse: item.type === "purse",
                     nested: Boolean(item.system.containerId),
                     coins: luqaCounters(item),
                     expanded: !this._collapsedInventory.has(item.id),
