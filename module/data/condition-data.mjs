@@ -1,4 +1,5 @@
 import { BaseItemData } from "./base-item-data.mjs";
+import { modifierSchema } from "../modifiers.mjs";
 
 const { BooleanField, NumberField, SchemaField, StringField } = foundry.data.fields;
 
@@ -14,18 +15,20 @@ export const INJURY_ZONES = Object.freeze({
     legs: "Jambes"
 });
 
-export class AlterationData extends BaseItemData {
-
+class ConditionData extends BaseItemData {
     static defineSchema() {
         return {
             ...super.defineSchema(),
-            severity: new NumberField({
-                required: true,
-                nullable: false,
-                integer: true,
-                min: 0,
-                initial: 1
-            }),
+            // La gravité/intensité n'est plus un indice : chaque effet agit directement.
+            modifiers: modifierSchema()
+        };
+    }
+}
+
+export class AlterationData extends ConditionData {
+    static defineSchema() {
+        return {
+            ...super.defineSchema(),
             duration: new SchemaField({
                 enabled: new BooleanField({ required: true, nullable: false, initial: false }),
                 remaining: new NumberField({ required: true, nullable: false, integer: true, min: 0, initial: 0 }),
@@ -36,8 +39,7 @@ export class AlterationData extends BaseItemData {
     }
 }
 
-export class InjuryData extends AlterationData {
-
+export class InjuryData extends ConditionData {
     static defineSchema() {
         return {
             ...super.defineSchema(),
