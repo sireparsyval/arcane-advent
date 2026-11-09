@@ -1,4 +1,5 @@
 import { ARCANE_NEEDS } from "../../config.mjs";
+import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
 import {
     EQUIPMENT_TYPES, LUQA_DENOMINATIONS, canPlaceInContainer,
     isInventoryContainer, isInventoryItem, luqaCounters, purseCoinWeight
@@ -675,9 +676,8 @@ export class ArcaneCharacterSheet
         });
         if (!confirmed) return;
         if (this.actor.items.get(aptitude.id)?.system.traitId !== trait.id) return;
-        await this.actor.deleteEmbeddedDocuments("Item", [aptitude.id], {
-            arcaneTraitAptitudeId: trait.id
-        });
+        const deleted = await removeLinkedAptitudeFromTrait(this.actor, trait.id, aptitude.id);
+        if (!deleted.length) ui.notifications.warn("L’aptitude liée n’a pas pu être supprimée.");
     }
 
     static async _onDeleteTrait(event, target) {
@@ -727,12 +727,24 @@ export class ArcaneCharacterSheet
             }
             try {
                 if (keepAptitudes) {
-                    await this.actor.updateEmbeddedDocuments("Item", live.map(item => ({
+                    const detached = await this.actor.updateEmbeddedDocuments("Item", live.map(item => ({
                         _id: item.id, "system.traitId": ""
                     })));
-                    await this.actor.deleteEmbeddedDocuments("Item", [trait.id]);
+                    if (detached.length !== live.length) {
+                        ui.notifications.error("Impossible de délier toutes les Aptitudes. Le Trait a été conservé.");
+                        return;
+                    }
+                    const removed = await this.actor.deleteEmbeddedDocuments("Item", [trait.id]);
+                    if (removed.length !== 1) {
+                        ui.notifications.error("Le Trait n’a pas été supprimé.");
+                        return;
+                    }
                 } else {
-                    await this.actor.deleteEmbeddedDocuments("Item", [trait.id, ...live.map(item => item.id)]);
+                    const removed = await this.actor.deleteEmbeddedDocuments("Item", [trait.id, ...live.map(item => item.id)]);
+                    if (removed.length !== live.length + 1) {
+                        ui.notifications.error("Le Trait et ses Aptitudes liées n’ont pas pu être supprimés.");
+                        return;
+                    }
                 }
                 await app.close();
             } catch (error) {
