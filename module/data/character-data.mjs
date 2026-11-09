@@ -1,5 +1,5 @@
 import { ARCANE_NEEDS } from "../config.mjs";
-import { modifierSchema, modifierTotals as collectModifierTotals, ABILITY_MODIFIER_KEYS } from "../modifiers.mjs";
+import { modifierSchema, modifierTotals as collectModifierTotals, ABILITY_MODIFIER_KEYS, abilityScoreModifier } from "../modifiers.mjs";
 
 const {
     NumberField,
@@ -332,7 +332,7 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
         for (const key of ABILITY_MODIFIER_KEYS) {
             const ability = this.abilities[key];
             ability.effective = ability.value + totals[key];
-            ability.modifier = Math.floor((ability.effective - 10) / 2);
+            ability.modifier = abilityScoreModifier(ability.value, totals[key]);
         }
 
         const dex =
