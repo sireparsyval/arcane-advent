@@ -46,6 +46,11 @@ export function modifierTotals(manual, items) {
     return totals;
 }
 
+// Même conversion qu'avant, mais après ajout des bonus/malus au score.
+export function abilityScoreModifier(base, adjustment = 0) {
+    return Math.floor((base + adjustment - 10) / 2);
+}
+
 export function signedModifier(value) {
     return value > 0 ? `+${value}` : String(value);
 }
