@@ -20,6 +20,28 @@
         </label>
     {{/if}}
 
+    {{#if durationUnits}}
+        <fieldset class="aa-alteration-duration">
+            <legend>Durée de l'altération</legend>
+            <label>
+                <input type="checkbox" name="durationEnabled" {{#if system.duration.enabled}}checked{{/if}}>
+                Durée limitée
+            </label>
+            <label>
+                Durée restante
+                <input type="number" name="durationRemaining" value="{{system.duration.remaining}}" min="0" step="1" required>
+            </label>
+            <label>
+                Unité
+                <select name="durationUnit">
+                    {{#each durationUnits}}
+                        <option value="{{@key}}" {{#if (eq @key ../system.duration.unit)}}selected{{/if}}>{{this}}</option>
+                    {{/each}}
+                </select>
+            </label>
+        </fieldset>
+    {{/if}}
+
     <label>
         Description
         <textarea name="description" rows="4">{{system.description}}</textarea>
