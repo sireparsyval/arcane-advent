@@ -32,7 +32,7 @@ export function modifierSchema({ persisted = true } = {}) {
                 integer: key !== "speed", persisted
             })
         ])
-    ));
+    ), { persisted });
 }
 
 export function modifierTotals(manual, items) {
