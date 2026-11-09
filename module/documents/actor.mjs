@@ -1,3 +1,6 @@
+import { buildInventory, canPlaceInContainer, EQUIPMENT_TYPES, isInventoryItem } from "../inventory.mjs";
+import { getEquipmentConflictType } from "./item.mjs";
+
 const EXPERTISE_EQUIPMENT_TYPES = {
     weaponClass: ["weapon"],
     shieldClass: ["shield"],
@@ -6,6 +9,72 @@ const EXPERTISE_EQUIPMENT_TYPES = {
 };
 
 export class ArcaneActor extends Actor {
+
+    #inventoryOperation = Promise.resolve();
+
+    get inventory() {
+        return buildInventory(this.items);
+    }
+
+    // Resolve destinations and equipment conflicts against the latest local state.
+    #queueInventoryOperation(callback) {
+        const operation = this.#inventoryOperation.then(callback);
+        this.#inventoryOperation = operation.catch(() => {});
+        return operation;
+    }
+
+    moveInventoryItem(itemId, containerId) {
+        return this.updateInventoryItem(itemId, { "system.containerId": containerId });
+    }
+
+    setEquipmentEquipped(itemId, equipped) {
+        if (!EQUIPMENT_TYPES.includes(this.items.get(itemId)?.type)) return;
+        return this.updateInventoryItem(itemId, { "system.equipped": equipped });
+    }
+
+    updateInventoryItem(itemId, changes) {
+        return this.#queueInventoryOperation(async () => {
+            const item = this.items.get(itemId);
+            if (!item || !isInventoryItem(item)) return;
+
+            const update = foundry.utils.expandObject(changes);
+            const system = update.system ??= {};
+            const containerChanged = Object.hasOwn(system, "containerId");
+            if (containerChanged && !canPlaceInContainer(this.items, itemId, system.containerId)) {
+                ui.notifications.warn("Ce déplacement créerait un cycle ou viserait un contenant invalide.");
+                return;
+            }
+
+            const updates = [{ ...update, _id: itemId }];
+            if (EQUIPMENT_TYPES.includes(item.type)) {
+                if (containerChanged && system.containerId) system.equipped = false;
+                else if (system.equipped) system.containerId = null;
+
+                const equipped = system.equipped ?? item.system.equipped;
+                const properties = system.properties ?? item.system.properties;
+                const conflictType = equipped && getEquipmentConflictType(item.type, properties);
+                if (conflictType && (system.equipped || Object.hasOwn(system, "properties"))) {
+                    for (const other of this.items) {
+                        if (other.type !== conflictType || !other.system.equipped) continue;
+                        if (conflictType === "weapon" && !other.system.properties.has("twoHanded")) continue;
+                        updates.push({ _id: other.id, system: { equipped: false } });
+                    }
+                }
+            }
+
+            const updated = await this.updateEmbeddedDocuments("Item", updates);
+            return updated.find(document => document.id === itemId);
+        });
+    }
+
+    deleteInventoryItem(itemId) {
+        return this.#queueInventoryOperation(async () => {
+            const item = this.items.get(itemId);
+            if (!item || !isInventoryItem(item)) return;
+            const deleted = await this.deleteEmbeddedDocuments("Item", [itemId]);
+            return deleted.includes(item);
+        });
+    }
 
     async modifyConsciousness(amount) {
         const current = this.system.consciousness.value;

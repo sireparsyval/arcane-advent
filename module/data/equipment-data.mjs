@@ -6,7 +6,7 @@ const {
     TypedObjectField
 } = foundry.data.fields;
 
-import { BaseItemData } from "./base-item-data.mjs";
+import { WeightedItemData } from "./inventory-data.mjs";
 
 
 export function damageReductionsField() {
@@ -22,7 +22,7 @@ export function damageReductionsField() {
     );
 }
 
-export class EquipmentData extends BaseItemData {
+export class EquipmentData extends WeightedItemData {
 
     static defineSchema() {
         return {

@@ -1,0 +1,175 @@
+{{#*inline "aaInventoryItemField"}}
+    <label class="form-group">
+        <span class="label">{{label}}</span>
+        <span class="form-fields">
+            <input type="{{type}}" name="{{name}}" value="{{value}}"
+                {{#if min includeZero=true}}min="{{min}}"{{/if}}
+                {{#if step}}step="{{step}}"{{/if}}
+                {{#if required}}required{{/if}}>
+        </span>
+    </label>
+{{/inline}}
+
+{{#*inline "aaInventoryReductionRow"}}
+    <div class="form-group" data-reduction-row>
+        <div class="form-fields">
+            <input type="text" value="{{type}}" placeholder="Type de dégâts" aria-label="Type de dégâts"
+                data-reduction-type required>
+            <input type="number" value="{{value}}" min="0" step="1" aria-label="Réduction"
+                data-reduction-value required>
+            {{#if editable}}
+                <button type="button" class="icon fa-solid fa-xmark" data-action="removeReduction"
+                    title="Retirer cette réduction" aria-label="Retirer cette réduction"></button>
+            {{/if}}
+        </div>
+    </div>
+{{/inline}}
+
+<section class="standard-form scrollable">
+    <fieldset {{#unless editable}}disabled{{/unless}}>
+        <legend>Propriétés</legend>
+        {{> aaInventoryItemField label="Nom" type="text" name="name" value=document.name required=true}}
+        {{#if isContainer}}
+            <p class="hint">Poids propre du contenant&nbsp;: 0 kg. Le poids affiché dans l’inventaire correspond à son contenu.</p>
+        {{else}}
+            {{> aaInventoryItemField label="Poids unitaire (kg)" type="number" name="system.weight"
+                value=system.weight min=0 step="any" required=true}}
+        {{/if}}
+        {{#if isObject}}
+            {{> aaInventoryItemField label="Quantité" type="number" name="system.quantity"
+                value=system.quantity min=1 step="1" required=true}}
+        {{/if}}
+        <label class="form-group">
+            <span class="label">Description</span>
+            <span class="form-fields">
+                <textarea name="system.description" rows="3">{{system.description}}</textarea>
+            </span>
+        </label>
+    </fieldset>
+
+    {{#if coins.length}}
+        <fieldset {{#unless editable}}disabled{{/unless}}>
+            <legend>Luqa</legend>
+            {{#each coins}}
+                {{> aaInventoryItemField label=label type="number" name=field value=value min=0 step="1" required=true}}
+            {{/each}}
+        </fieldset>
+    {{/if}}
+
+    {{#if isWeapon}}
+        <fieldset {{#unless editable}}disabled{{/unless}}>
+            <legend>Arme</legend>
+            {{> aaInventoryItemField label="Classe d’arme" type="text" name="system.weaponClass"
+                value=system.weaponClass}}
+            {{> aaInventoryItemField label="Formule de dégâts" type="text" name="system.damageFormula"
+                value=system.damageFormula}}
+            {{> aaInventoryItemField label="Portée (m)" type="number" name="system.range"
+                value=system.range min=0 step="any" required=true}}
+            <label class="form-group">
+                <span class="label">Types de dégâts (un par ligne)</span>
+                <span class="form-fields">
+                    <textarea rows="2" data-weapon-damage-types>{{damageTypes}}</textarea>
+                </span>
+            </label>
+            <fieldset class="input-grid">
+                <legend>Propriétés de l’arme</legend>
+                {{#each weaponProperties}}
+                    <label class="checkbox">
+                        <input type="checkbox" value="{{key}}" data-weapon-property {{#if checked}}checked{{/if}}>
+                        {{label}}
+                    </label>
+                {{/each}}
+            </fieldset>
+            <label class="checkbox">
+                <input type="checkbox" name="system.guardEnabled" {{#if system.guardEnabled}}checked{{/if}}>
+                Utilisable pour la Garde (avec Deux mains)
+            </label>
+            <fieldset>
+                <legend>Lancer</legend>
+                {{> aaInventoryItemField label="Portée normale (m)" type="number" name="system.thrown.normalRange"
+                    value=system.thrown.normalRange min=0 step="any" required=true}}
+                {{> aaInventoryItemField label="Portée longue (m)" type="number" name="system.thrown.longRange"
+                    value=system.thrown.longRange min=0 step="any" required=true}}
+            </fieldset>
+            <fieldset>
+                <legend>Lourde et Polyvalente</legend>
+                {{> aaInventoryItemField label="FOR minimum" type="number" name="system.heavy.strengthRequirement"
+                    value=system.heavy.strengthRequirement min=0 step="1" required=true}}
+                {{> aaInventoryItemField label="Formule de dégâts polyvalents" type="text" name="system.versatile.damageFormula"
+                    value=system.versatile.damageFormula}}
+            </fieldset>
+            <fieldset>
+                <legend>Munitions</legend>
+                {{> aaInventoryItemField label="Portée normale (m)" type="number" name="system.ammunition.normalRange"
+                    value=system.ammunition.normalRange min=0 step="any" required=true}}
+                {{> aaInventoryItemField label="Portée longue (m)" type="number" name="system.ammunition.longRange"
+                    value=system.ammunition.longRange min=0 step="any" required=true}}
+                <label class="checkbox">
+                    <input type="checkbox" name="system.ammunition.loading" {{#if system.ammunition.loading}}checked{{/if}}>
+                    Chargement
+                </label>
+            </fieldset>
+        </fieldset>
+    {{/if}}
+
+    {{#if isShield}}
+        <fieldset {{#unless editable}}disabled{{/unless}}>
+            <legend>Bouclier</legend>
+            {{> aaInventoryItemField label="Classe de bouclier" type="text" name="system.shieldClass"
+                value=system.shieldClass}}
+            {{> aaInventoryItemField label="Bonus de défense" type="number" name="system.defenseBonus"
+                value=system.defenseBonus step="1" required=true}}
+            <label class="checkbox">
+                <input type="checkbox" name="system.guardEnabled" {{#if system.guardEnabled}}checked{{/if}}>
+                Utilisable pour la Garde
+            </label>
+        </fieldset>
+    {{/if}}
+
+    {{#if isProtection}}
+        <fieldset {{#unless editable}}disabled{{/unless}}>
+            <legend>Protection</legend>
+            {{> aaInventoryItemField label="Classe de protection" type="text" name="system.armorClass"
+                value=system.armorClass}}
+            {{> aaInventoryItemField label="Bonus de défense" type="number" name="system.defenseBonus"
+                value=system.defenseBonus step="1" required=true}}
+            <fieldset class="input-grid">
+                <legend>Zones protégées</legend>
+                {{#each protectionZones}}
+                    <label class="checkbox">
+                        <input type="checkbox" value="{{key}}" data-protection-zone {{#if checked}}checked{{/if}}>
+                        {{label}}
+                    </label>
+                {{/each}}
+            </fieldset>
+        </fieldset>
+    {{/if}}
+
+    {{#if hasReductions}}
+        <fieldset {{#unless editable}}disabled{{/unless}}>
+            <legend>Réductions de dégâts</legend>
+            <div class="flexcol" data-reduction-rows>
+                {{#each reductions}}
+                    {{> aaInventoryReductionRow editable=../editable}}
+                {{/each}}
+            </div>
+            {{#if editable}}
+                <template data-reduction-template>
+                    {{> aaInventoryReductionRow type="" value=0 editable=true}}
+                </template>
+                <button type="button" data-action="addReduction">Ajouter une réduction</button>
+            {{/if}}
+        </fieldset>
+    {{/if}}
+
+    {{#if editable}}
+        <footer class="form-footer">
+            <button type="button" data-action="deleteInventoryItem">
+                <i class="fa-solid fa-trash" aria-hidden="true"></i> Supprimer
+            </button>
+            <button type="submit">
+                <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Enregistrer
+            </button>
+        </footer>
+    {{/if}}
+</section>

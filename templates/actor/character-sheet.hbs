@@ -23,6 +23,36 @@
         </div>
     </div>
 {{/inline}}
+{{#*inline "inventoryWeight"}}
+    <span class="aa-inventory-weight aa-inventory-weight-value"
+        title="{{#if container}}Poids du contenu{{else}}Poids unitaire{{/if}}">
+        {{#if editableWeight}}
+            <input class="aa-inventory-weight-input" type="number" min="0" step="any" inputmode="decimal" required
+                id="aa-weight-{{id}}" value="{{unitWeight}}" data-inventory-weight="{{id}}"
+                aria-label="Poids unitaire en kg · {{name}}">
+            <span class="aa-inventory-weight-unit">kg</span>
+        {{else}}
+            {{weightLabel}}
+        {{/if}}
+        <span class="aa-inventory-weight-suffix">{{#if perUnit}}/u{{/if}}</span>
+    </span>
+{{/inline}}
+{{#*inline "equippedInventoryControls"}}
+    <div class="aa-equipment-actions">
+        {{#if @root.canEditState}}
+            <button type="button" data-action="toggleEquipment" data-item-id="{{id}}"
+                aria-label="Déséquiper" title="Déséquiper">{{#if unequipText}}{{unequipText}}{{else}}↓{{/if}}</button>
+            <button type="button" data-action="moveInventoryItem" data-item-id="{{id}}"
+                data-inventory-drag="{{id}}" draggable="true"
+                aria-label="Déplacer vers un contenant" title="Déplacer vers… (ou glisser)">↪</button>
+            <button type="button" data-action="editInventoryItem" data-item-id="{{id}}"
+                aria-label="Modifier {{name}}" title="Modifier">⚙</button>
+        {{/if}}
+        {{#if @root.inventory.showWeights}}
+            {{> inventoryWeight}}
+        {{/if}}
+    </div>
+{{/inline}}
 <div class="aa-character">
 
     <header class="aa-header">
@@ -1319,12 +1349,7 @@
                                         <input type="text" value="{{system.weaponClass}}" placeholder="Épée"
                                             data-equipment-edit data-item-id="{{id}}" data-item-field="system.weaponClass">
                                     </label>
-                                    <div class="aa-equipment-actions">
-                                        <button type="button" data-action="toggleEquipment" data-item-id="{{id}}"
-                                            aria-label="Déséquiper" title="Déséquiper">↓</button>
-                                        <button type="button" data-action="deleteEquipment" data-item-id="{{id}}"
-                                            aria-label="Supprimer" title="Supprimer">×</button>
-                                    </div>
+                                    {{> equippedInventoryControls}}
                                 </div>
 
                                 <div class="aa-weapon-combat">
@@ -1508,12 +1533,7 @@
                                                 data-equipment-edit data-item-id="{{id}}" data-item-field="system.guardEnabled">
                                             <span>Garde</span>
                                         </label>
-                                        <div class="aa-equipment-actions">
-                                            <button type="button" data-action="toggleEquipment" data-item-id="{{id}}"
-                                                aria-label="Déséquiper" title="Déséquiper">↓</button>
-                                            <button type="button" data-action="deleteEquipment" data-item-id="{{id}}"
-                                                aria-label="Supprimer" title="Supprimer">×</button>
-                                        </div>
+                                        {{> equippedInventoryControls}}
                                     </div>
                                 </div>
                                 {{> damageReductionControls}}
@@ -1547,12 +1567,7 @@
                                             <input type="number" value="{{system.defenseBonus}}"
                                                 data-equipment-edit data-item-id="{{id}}" data-item-field="system.defenseBonus">
                                         </label>
-                                        <div class="aa-equipment-actions">
-                                            <button type="button" data-action="toggleEquipment" data-item-id="{{id}}"
-                                                aria-label="Déséquiper" title="Déséquiper">↓</button>
-                                            <button type="button" data-action="deleteEquipment" data-item-id="{{id}}"
-                                                aria-label="Supprimer" title="Supprimer">×</button>
-                                        </div>
+                                        {{> equippedInventoryControls}}
                                     </div>
                                 </div>
 
@@ -1586,11 +1601,7 @@
                             <div class="aa-equipment-row">
                                 <input type="text" value="{{name}}" aria-label="Nom de l'accessoire"
                                     data-equipment-edit data-item-id="{{id}}" data-item-field="name">
-                                <div class="aa-equipment-actions">
-                                    <button type="button" data-action="toggleEquipment" data-item-id="{{id}}">Déséquiper</button>
-                                    <button type="button" data-action="deleteEquipment" data-item-id="{{id}}"
-                                        aria-label="Supprimer" title="Supprimer">×</button>
-                                </div>
+                                {{> equippedInventoryControls unequipText="Déséquiper"}}
                             </div>
                         {{else}}
                             <p class="aa-empty-equipment">Aucun accessoire équipé.</p>
@@ -1599,24 +1610,85 @@
                 </section>
 
                 <section class="aa-equipment-section">
-                    <h3><span class="aa-heading-icon" aria-hidden="true">📦</span>Inventaire</h3>
-
-                    <div class="aa-equipment-list">
-                        {{#each equipment.inventory}}
-                            <div class="aa-equipment-row">
-                                <input type="text" value="{{name}}" aria-label="Nom de l'objet"
-                                    data-equipment-edit data-item-id="{{id}}" data-item-field="name">
-                                <span class="aa-equipment-stat aa-item-type">{{type}}</span>
-                                <div class="aa-equipment-actions">
-                                    <button type="button" data-action="toggleEquipment" data-item-id="{{id}}">Équiper</button>
-                                    <button type="button" data-action="deleteEquipment" data-item-id="{{id}}"
-                                        aria-label="Supprimer" title="Supprimer">×</button>
-                                </div>
+                    <header class="aa-inventory-heading">
+                        <h3><span class="aa-heading-icon" aria-hidden="true">📦</span>Inventaire</h3>
+                        <strong class="aa-inventory-weight" title="Équipement porté inclus">Charge totale · {{inventory.totalLabel}}</strong>
+                        <button type="button" data-action="toggleInventoryWeights" aria-label="Afficher tous les poids"
+                            aria-pressed="{{inventory.showWeights}}"
+                            title="Affichage des poids · {{#if inventory.showWeights}}Tous les poids{{else}}Contenants seuls{{/if}}">
+                            <span aria-hidden="true">⚖️</span>
+                        </button>
+                        {{#if canEditState}}
+                            <div class="aa-equipment-create">
+                                <button type="button" data-action="addInventoryItem" data-inventory-type="object"
+                                    aria-label="Ajouter un objet" title="Ajouter un objet"><span aria-hidden="true">+💎</span></button>
+                                <button type="button" data-action="addInventoryItem" data-inventory-type="purse"
+                                    aria-label="Ajouter une bourse" title="Ajouter une bourse"><span aria-hidden="true">+💰</span></button>
+                                <button type="button" data-action="addInventoryItem" data-inventory-type="container"
+                                    aria-label="Ajouter un contenant" title="Ajouter un contenant"><span aria-hidden="true">+🪎</span></button>
                             </div>
-                        {{else}}
-                            <p class="aa-empty-equipment">Inventaire vide.</p>
-                        {{/each}}
-                    </div>
+                        {{/if}}
+                    </header>
+
+                    {{#if inventory.rows.length}}
+                        <ul class="aa-inventory-tree" aria-label="Objets et contenants">
+                            {{#each inventory.rows}}
+                                <li class="aa-inventory-row{{#if container}} aa-inventory-container{{/if}}"
+                                    style="--aa-inventory-depth: {{depth}}"
+                                    {{#if container}}data-inventory-drop="{{id}}"{{/if}}
+                                    {{#if @root.canEditState}}draggable="true" data-inventory-drag="{{id}}"{{/if}}>
+                                    {{#if container}}
+                                        <button type="button" class="aa-inventory-disclosure" data-action="toggleInventoryContainer"
+                                            data-item-id="{{id}}" aria-expanded="{{expanded}}"
+                                            aria-label="{{#if expanded}}Replier{{else}}Déplier{{/if}} {{name}}"
+                                            title="{{#if expanded}}Replier{{else}}Déplier{{/if}}">{{#if expanded}}▾{{else}}▸{{/if}}</button>
+                                    {{/if}}
+                                    {{#if quantity}}
+                                        <input class="aa-inventory-quantity" type="number" min="1" step="1" required value="{{quantity}}"
+                                            data-inventory-quantity="{{id}}" aria-label="Quantité de {{name}}"
+                                            {{#unless @root.canEditState}}readonly{{/unless}}>
+                                    {{/if}}
+                                    <span class="aa-inventory-name">{{name}}</span>
+                                    {{#if coins.length}}
+                                        <span class="aa-inventory-coins">
+                                            {{#each coins}}
+                                                <label title="{{label}}">{{symbol}}
+                                                    <input class="aa-inventory-coin-count" type="number" min="0" step="1" required
+                                                        id="aa-luqa-{{../id}}-{{key}}" value="{{value}}"
+                                                        data-item-id="{{../id}}" data-luqa-denomination="{{key}}"
+                                                        aria-label="{{label}} · {{../name}}" {{#unless @root.canEditState}}readonly{{/unless}}>
+                                                </label>
+                                            {{/each}}
+                                        </span>
+                                    {{/if}}
+                                    {{#if @root.canEditState}}
+                                        <div class="aa-equipment-actions">
+                                            {{#if canEquip}}
+                                                <button type="button" data-action="toggleEquipment" data-item-id="{{id}}">↑ Équiper</button>
+                                            {{/if}}
+                                            {{#if nested}}
+                                                <button type="button" data-action="moveInventoryItemToRoot" data-item-id="{{id}}"
+                                                    aria-label="Sortir {{name}} du contenant" title="Remettre hors contenant">↰</button>
+                                            {{/if}}
+                                            <button type="button" data-action="moveInventoryItem" data-item-id="{{id}}"
+                                                aria-label="Déplacer {{name}}" title="Déplacer vers…">↪</button>
+                                            <button type="button" data-action="editInventoryItem" data-item-id="{{id}}"
+                                                aria-label="Modifier {{name}}" title="Modifier">⚙</button>
+                                        </div>
+                                    {{/if}}
+                                    {{#if showWeight}}
+                                        {{#if container}}
+                                            {{> inventoryWeight}}
+                                        {{else}}
+                                            {{> inventoryWeight editableWeight=@root.canEditState}}
+                                        {{/if}}
+                                    {{/if}}
+                                </li>
+                            {{/each}}
+                        </ul>
+                    {{else}}
+                        <p class="aa-empty-equipment">Inventaire vide.</p>
+                    {{/if}}
                 </section>
             </div>
 

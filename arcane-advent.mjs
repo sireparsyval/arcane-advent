@@ -3,6 +3,8 @@ import { WeaponData } from "./module/data/weapon-data.mjs";
 import { ShieldData } from "./module/data/shield-data.mjs";
 import { ProtectionData } from "./module/data/protection-data.mjs";
 import { AccessoryData } from "./module/data/accessory-data.mjs";
+import { ObjectData, ContainerData, PurseData } from "./module/data/inventory-data.mjs";
+import { INVENTORY_TYPES } from "./module/inventory.mjs";
 
 import { SkillData } from "./module/data/skill-data.mjs";
 import { ExpertiseData } from "./module/data/expertise-data.mjs";
@@ -13,6 +15,7 @@ import { ArcaneActor } from "./module/documents/actor.mjs";
 import { ArcaneItem } from "./module/documents/item.mjs";
 
 import { ArcaneCharacterSheet } from "./module/applications/actor/character-sheet.mjs";
+import { ArcaneInventoryItemSheet } from "./module/applications/item/inventory-item-sheet.mjs";
 
 
 Hooks.once("init", () => {
@@ -28,6 +31,9 @@ Hooks.once("init", () => {
     CONFIG.Item.dataModels.shield = ShieldData;
     CONFIG.Item.dataModels.protection = ProtectionData;
     CONFIG.Item.dataModels.accessory = AccessoryData;
+    CONFIG.Item.dataModels.object = ObjectData;
+    CONFIG.Item.dataModels.container = ContainerData;
+    CONFIG.Item.dataModels.purse = PurseData;
 
     CONFIG.Item.dataModels.skill = SkillData;
     CONFIG.Item.dataModels.expertise = ExpertiseData;
@@ -64,6 +70,16 @@ Hooks.once("init", () => {
         {
             types: ["character"],
             makeDefault: true
+        }
+    );
+    DocumentSheetConfig.registerSheet(
+        foundry.documents.Item,
+        "arcane-advent",
+        ArcaneInventoryItemSheet,
+        {
+            types: INVENTORY_TYPES,
+            makeDefault: true,
+            label: "Arcane Advent — Inventaire"
         }
     );
 });

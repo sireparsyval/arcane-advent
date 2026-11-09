@@ -1,4 +1,8 @@
 import { ARCANE_NEEDS } from "../../config.mjs";
+import {
+    EQUIPMENT_TYPES, LUQA_DENOMINATIONS, canPlaceInContainer,
+    isInventoryContainer, isInventoryItem, luqaCounters
+} from "../../inventory.mjs";
 import { AlterationData, InjuryData, INJURY_ZONES } from "../../data/condition-data.mjs";
 import {
     APTITUDE_CATEGORIES, APTITUDE_OPTIONS, APTITUDE_DURATION_UNITS, APTITUDE_RECOVERY_UNITS, parseLegacyAptitudeOption
@@ -6,6 +10,32 @@ import {
 
 const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
+
+const INVENTORY_DRAG_TYPE = "application/x-arcane-advent-inventory-item";
+const INVENTORY_ITEM_NAMES = {
+    object: "Nouvel objet",
+    container: "Nouveau contenant",
+    purse: "Bourse"
+};
+const WEIGHT_FORMAT = new Intl.NumberFormat("fr-FR", { maximumSignificantDigits: 15 });
+
+function formatWeight(weight) {
+    return `${WEIGHT_FORMAT.format(weight)} kg`;
+}
+
+function* inventoryRows(roots, collapsed = new Set()) {
+    const pending = [];
+    for (let i = roots.length - 1; i >= 0; i--) pending.push({ node: roots[i], depth: 0 });
+
+    while (pending.length) {
+        const { node, depth } = pending.pop();
+        yield { ...node, depth };
+        if (collapsed.has(node.item.id)) continue;
+        for (let i = node.children.length - 1; i >= 0; i--) {
+            pending.push({ node: node.children[i], depth: depth + 1 });
+        }
+    }
+}
 
 
 const CONDITION_SECTIONS = {
@@ -132,7 +162,12 @@ export class ArcaneCharacterSheet
 
             addEquipment: this._onAddEquipment,
             toggleEquipment: this._onToggleEquipment,
-            deleteEquipment: this._onDeleteEquipment,
+            addInventoryItem: this._onAddInventoryItem,
+            editInventoryItem: this._onEditInventoryItem,
+            moveInventoryItem: this._onMoveInventoryItem,
+            moveInventoryItemToRoot: this._onMoveInventoryItemToRoot,
+            toggleInventoryContainer: this._onToggleInventoryContainer,
+            toggleInventoryWeights: this._onToggleInventoryWeights,
 
             toggleProtectionZone: this._onToggleProtectionZone,
             addDamageReduction: this._onAddDamageReduction,
@@ -153,6 +188,11 @@ export class ArcaneCharacterSheet
             removeWeaponDamageType: this._onRemoveWeaponDamageType
         }
     };
+
+    _collapsedInventory = new Set();
+    _showInventoryWeights = true;
+    _inventoryDragId = null;
+    _inventoryDropTarget = null;
 
 
     get title() {
@@ -276,16 +316,37 @@ export class ArcaneCharacterSheet
                 };
             });
         
-        const equipmentTypes = [
-            "weapon",
-            "shield",
-            "protection",
-            "accessory"
-        ];
-
-        const equipment = this.actor.items.filter(
-            item => equipmentTypes.includes(item.type)
-        );
+        const equipment = this.actor.items.filter(item => EQUIPMENT_TYPES.includes(item.type));
+        const equipmentView = item => ({
+            id: item.id,
+            name: item.name,
+            system: item.system,
+            weightLabel: formatWeight(item.system.weight ?? 0)
+        });
+        const { roots, totalWeight } = this.actor.inventory;
+        context.inventory = {
+            totalLabel: formatWeight(totalWeight),
+            showWeights: this._showInventoryWeights,
+            rows: Array.from(inventoryRows(roots, this._collapsedInventory), ({ item, depth, weight }) => {
+                const container = isInventoryContainer(item);
+                const quantity = item.type === "object" ? item.system.quantity : null;
+                return {
+                    id: item.id,
+                    name: item.name,
+                    depth,
+                    container,
+                    nested: Boolean(item.system.containerId),
+                    coins: luqaCounters(item),
+                    expanded: !this._collapsedInventory.has(item.id),
+                    quantity,
+                    canEquip: EQUIPMENT_TYPES.includes(item.type),
+                    showWeight: container || this._showInventoryWeights,
+                    weightLabel: formatWeight(weight),
+                    unitWeight: weight,
+                    perUnit: quantity > 1
+                };
+            })
+        };
 
 
         context.equipment = {
@@ -311,9 +372,7 @@ export class ArcaneCharacterSheet
                         );
 
                     return {
-                        id: item.id,
-                        name: item.name,
-                        system: item.system,
+                        ...equipmentView(item),
 
                         attackAbility:
                             ability.label,
@@ -360,9 +419,7 @@ export class ArcaneCharacterSheet
                     && item.system.equipped
                 )
                 .map(item => ({
-                    id: item.id,
-                    name: item.name,
-                    system: item.system,
+                    ...equipmentView(item),
 
                     damageReductions: damageReductionEntries(item),
 
@@ -380,9 +437,7 @@ export class ArcaneCharacterSheet
                 )
                 .map(item => ({
 
-                    id: item.id,
-                    name: item.name,
-                    system: item.system,
+                    ...equipmentView(item),
 
                     zones: {
                         head:
@@ -401,15 +456,9 @@ export class ArcaneCharacterSheet
                     damageReductions: damageReductionEntries(item)
                 })),
 
-            accessories: equipment.filter(
-                item =>
-                    item.type === "accessory"
-                    && item.system.equipped
-            ),
-
-            inventory: equipment.filter(
-                item => !item.system.equipped
-            )
+            accessories: equipment
+                .filter(item => item.type === "accessory" && item.system.equipped)
+                .map(equipmentView)
         };
 
         context.guardSources = [];
@@ -857,6 +906,14 @@ export class ArcaneCharacterSheet
             );
         }
 
+        const equipmentTab = this.element.querySelector(".aa-equipment-tab");
+        if (equipmentTab) {
+            if (this.isEditable) this._bindInventoryListeners(equipmentTab);
+            for (const control of equipmentTab.querySelectorAll(
+                '[data-action="toggleInventoryWeights"], [data-action="toggleInventoryContainer"]'
+            )) control.disabled = false;
+        }
+
         const expertiseFields =
             this.element.querySelectorAll(
                 "[data-expertise-edit]"
@@ -930,21 +987,245 @@ export class ArcaneCharacterSheet
         });
     }
 
+    _bindInventoryListeners(tab) {
+        for (const quantity of tab.querySelectorAll("[data-inventory-quantity]")) {
+            quantity.addEventListener("change", this._onInventoryQuantity.bind(this));
+        }
+        for (const weight of tab.querySelectorAll("[data-inventory-weight]")) {
+            weight.addEventListener("change", this._onInventoryWeight.bind(this));
+            weight.addEventListener("keydown", event => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                weight.blur();
+            });
+        }
+        for (const coin of tab.querySelectorAll("[data-luqa-denomination]")) {
+            coin.addEventListener("change", this._onLuqaCount.bind(this));
+        }
+
+        tab.addEventListener("dragstart", event => {
+            const source = event.target.closest("[data-inventory-drag]");
+            const item = this.actor.items.get(source?.dataset.inventoryDrag);
+            if (!isInventoryItem(item) || !event.dataTransfer) return;
+
+            event.stopPropagation();
+            event.dataTransfer.setData(INVENTORY_DRAG_TYPE, item.id);
+            event.dataTransfer.effectAllowed = "move";
+            this._inventoryDragId = item.id;
+        });
+        tab.addEventListener("dragover", event => {
+            if (!event.dataTransfer?.types.includes(INVENTORY_DRAG_TYPE)) return;
+            event.stopPropagation();
+
+            const target = event.target.closest("[data-inventory-drop]");
+            const allowed = target && this._inventoryDragId
+                && canPlaceInContainer(this.actor.items, this._inventoryDragId, target.dataset.inventoryDrop);
+            event.dataTransfer.dropEffect = allowed ? "move" : "none";
+            this._setInventoryDropTarget(allowed ? target : null);
+            if (allowed) event.preventDefault();
+        });
+        tab.addEventListener("dragleave", event => {
+            if (!this._inventoryDropTarget?.contains(event.relatedTarget)) this._setInventoryDropTarget(null);
+        });
+        tab.addEventListener("drop", async event => {
+            if (!event.dataTransfer?.types.includes(INVENTORY_DRAG_TYPE)) return;
+            event.preventDefault();
+            event.stopPropagation();
+
+            const target = event.target.closest("[data-inventory-drop]");
+            const itemId = this._inventoryDragId;
+            this._clearInventoryDrag();
+            if (target && itemId && itemId === event.dataTransfer.getData(INVENTORY_DRAG_TYPE)) {
+                await this._moveInventoryItem(itemId, target.dataset.inventoryDrop);
+            }
+        });
+        tab.addEventListener("dragend", () => this._clearInventoryDrag());
+    }
+
+    _setInventoryDropTarget(target) {
+        if (target === this._inventoryDropTarget) return;
+        this._inventoryDropTarget?.classList.remove("aa-inventory-drop-active");
+        this._inventoryDropTarget = target;
+        target?.classList.add("aa-inventory-drop-active");
+    }
+
+    _clearInventoryDrag() {
+        this._inventoryDragId = null;
+        this._setInventoryDropTarget(null);
+    }
+
+    async _onInventoryQuantity(event) {
+        event.stopPropagation();
+        if (!this.isEditable) return;
+
+        const field = event.currentTarget;
+        const item = this.actor.items.get(field.dataset.inventoryQuantity);
+        if (item?.type !== "object") return;
+        const quantity = field.valueAsNumber;
+        if (!Number.isSafeInteger(quantity) || quantity < 1) {
+            field.value = item.system.quantity;
+            ui.notifications.warn("La quantité doit être un entier supérieur ou égal à 1.");
+            return;
+        }
+        if (quantity !== item.system.quantity) {
+            await item.update({ "system.quantity": quantity });
+        }
+    }
+
+    async _onInventoryWeight(event) {
+        event.stopPropagation();
+        if (!this.isEditable) return;
+
+        const field = event.currentTarget;
+        const item = this.actor.items.get(field.dataset.inventoryWeight);
+        if (!isInventoryItem(item) || isInventoryContainer(item)) return;
+
+        const weight = field.valueAsNumber;
+        if (!Number.isFinite(weight) || weight < 0) {
+            field.value = item.system.weight;
+            ui.notifications.warn("Le poids doit être un nombre positif ou nul.");
+            return;
+        }
+        if (weight === item.system.weight) return;
+
+        try {
+            const updated = await this.actor.updateInventoryItem(item.id, { "system.weight": weight });
+            if (!updated) field.value = item.system.weight;
+        } catch (error) {
+            field.value = item.system.weight;
+            ui.notifications.error(error.message);
+        }
+    }
+
+    async _onLuqaCount(event) {
+        event.stopPropagation();
+        if (!this.isEditable) return;
+
+        const field = event.currentTarget;
+        const item = this.actor.items.get(field.dataset.itemId);
+        const denomination = field.dataset.luqaDenomination;
+        if (item?.type !== "purse" || !LUQA_DENOMINATIONS.some(({ key }) => key === denomination)) return;
+
+        const count = field.valueAsNumber;
+        const previous = item.system.coins[denomination];
+        if (!Number.isSafeInteger(count) || count < 0) {
+            field.value = previous;
+            ui.notifications.warn("Le nombre de Luqa doit être un entier positif ou nul.");
+            return;
+        }
+        if (count === previous) return;
+
+        try {
+            const updated = await this.actor.updateInventoryItem(item.id, { [`system.coins.${denomination}`]: count });
+            if (!updated) field.value = item.system.coins[denomination];
+        } catch (error) {
+            field.value = item.system.coins[denomination];
+            ui.notifications.error(error.message);
+        }
+    }
+
+    static async _onAddInventoryItem(event, target) {
+        const type = target.dataset.inventoryType;
+        if (!this.isEditable || !Object.hasOwn(INVENTORY_ITEM_NAMES, type)) return;
+
+        await this.actor.createEmbeddedDocuments("Item", [
+            { type, name: INVENTORY_ITEM_NAMES[type] }
+        ]);
+    }
+
+    static async _onEditInventoryItem(event, target) {
+        if (!this.isEditable) return;
+        const item = this.actor.items.get(target.dataset.itemId);
+        if (isInventoryItem(item)) await item.sheet.render({ force: true });
+    }
+
+    static async _onMoveInventoryItem(event, target) {
+        if (!this.isEditable) return;
+        const item = this.actor.items.get(target.dataset.itemId);
+        if (!isInventoryItem(item)) return;
+
+        const doc = this.element.ownerDocument;
+        const content = doc.createElement("div");
+        const label = doc.createElement("label");
+        label.textContent = "Destination ";
+        const select = doc.createElement("select");
+        select.name = "destination";
+        const current = item.system.containerId ?? "";
+        select.add(new Option("Hors contenant", "", current === ""));
+        for (const { item: container, depth } of inventoryRows(this.actor.inventory.roots)) {
+            if (!isInventoryContainer(container) || !canPlaceInContainer(this.actor.items, item.id, container.id)) continue;
+            const prefix = depth ? "\u00a0\u00a0".repeat(depth) + "↳ " : "";
+            select.add(new Option(prefix + container.name, container.id, current === container.id));
+        }
+        label.append(select);
+        content.append(label);
+
+        const destination = await foundry.applications.api.DialogV2.prompt({
+            window: { title: `Déplacer « ${item.name} »` },
+            content,
+            modal: true,
+            rejectClose: false,
+            buttons: [{ action: "cancel", label: "Annuler", type: "button", callback: () => false }],
+            ok: {
+                label: "Déplacer",
+                callback: (_event, button) => new FormData(button.form).get("destination")
+            }
+        });
+        if (typeof destination === "string") await this._moveInventoryItem(item.id, destination || null);
+    }
+
+    static async _onMoveInventoryItemToRoot(event, target) {
+        const item = this.actor.items.get(target.dataset.itemId);
+        if (isInventoryItem(item) && item.system.containerId) await this._moveInventoryItem(item.id, null);
+    }
+
+    async _moveInventoryItem(itemId, containerId) {
+        if (!this.isEditable) return;
+        if (!canPlaceInContainer(this.actor.items, itemId, containerId)) {
+            ui.notifications.warn("Ce déplacement n’est plus possible.");
+            return;
+        }
+
+        const reopened = [];
+        for (let id = containerId; id; id = this.actor.items.get(id).system.containerId) {
+            if (this._collapsedInventory.delete(id)) reopened.push(id);
+        }
+        let updated;
+        try {
+            updated = await this.actor.moveInventoryItem(itemId, containerId);
+        } catch (error) {
+            Hooks.onError("ArcaneCharacterSheet#_moveInventoryItem", error, {
+                msg: "Impossible de déplacer l’objet.",
+                log: "error",
+                notify: "error"
+            });
+        } finally {
+            if (!updated) {
+                for (const id of reopened) this._collapsedInventory.add(id);
+            }
+        }
+    }
+
+    static async _onToggleInventoryContainer(event, target) {
+        const itemId = target.dataset.itemId;
+        if (!this._collapsedInventory.delete(itemId)) this._collapsedInventory.add(itemId);
+        await this.render();
+        this.element.querySelector(`[data-action="toggleInventoryContainer"][data-item-id="${CSS.escape(itemId)}"]`)?.focus();
+    }
+
+    static async _onToggleInventoryWeights() {
+        this._showInventoryWeights = !this._showInventoryWeights;
+        await this.render();
+        this.element.querySelector('[data-action="toggleInventoryWeights"]')?.focus();
+    }
+
     static async _onAddEquipment(event, target) {
 
         const type =
             target.dataset.equipmentType;
 
 
-        const validTypes = [
-            "weapon",
-            "shield",
-            "protection",
-            "accessory"
-        ];
-
-
-        if (!validTypes.includes(type)) {
+        if (!this.isEditable || !EQUIPMENT_TYPES.includes(type)) {
             return;
         }
 
@@ -970,7 +1251,7 @@ export class ArcaneCharacterSheet
         );
 
         if (!equipOnCreate && item) {
-            await this._setEquipmentEquipped(item, true);
+            await this.actor.setEquipmentEquipped(item.id, true);
         }
     }
 
@@ -984,78 +1265,8 @@ export class ArcaneCharacterSheet
         const item =
             this.actor.items.get(itemId);
 
-        if (!item) return;
-
-
-        await this._setEquipmentEquipped(item, !item.system.equipped);
-    }
-
-    async _setEquipmentEquipped(item, willEquip) {
-        const updates = [{
-            _id: item.id,
-            "system.equipped": willEquip
-        }];
-
-        // ==========================
-        // ÉQUIPE UN BOUCLIER
-        // ==========================
-
-        if (
-            willEquip
-            && item.type === "shield"
-        ) {
-
-            const twoHandedWeapons =
-                this.actor.items.filter(other =>
-                    other.type === "weapon"
-                    && other.system.equipped
-                    && other.system.properties.has("twoHanded")
-                );
-
-
-            updates.push(...twoHandedWeapons.map(weapon => ({
-                _id: weapon.id,
-                "system.equipped": false
-            })));
-        }
-
-
-        // ==========================
-        // ÉQUIPE UNE ARME 2 MAINS
-        // ==========================
-
-        if (
-            willEquip
-            && item.type === "weapon"
-            && item.system.properties.has("twoHanded")
-        ) {
-
-            const shields =
-                this.actor.items.filter(other =>
-                    other.type === "shield"
-                    && other.system.equipped
-                );
-
-
-            updates.push(...shields.map(shield => ({
-                _id: shield.id,
-                "system.equipped": false
-            })));
-        }
-
-
-        await this.actor.updateEmbeddedDocuments("Item", updates);
-    }
-    
-    static async _onDeleteEquipment(event, target) {
-        const itemId = target.dataset.itemId;
-
-        if (!itemId) return;
-
-        await this.actor.deleteEmbeddedDocuments(
-            "Item",
-            [itemId]
-        );
+        if (!this.isEditable || !EQUIPMENT_TYPES.includes(item?.type)) return;
+        await this.actor.setEquipmentEquipped(item.id, !item.system.equipped);
     }
 
     async _onEquipmentEdit(event) {
@@ -1122,7 +1333,7 @@ export class ArcaneCharacterSheet
         const item =
             this.actor.items.get(itemId);
 
-        if (!item || !property) return;
+        if (!this.isEditable || item?.type !== "weapon" || !property) return;
 
 
         const properties =
@@ -1136,41 +1347,7 @@ export class ArcaneCharacterSheet
             properties.add(property);
         }
 
-        const update = {
-            _id: item.id,
-            "system.properties": [...properties]
-        };
-        const updates = [update];
-
-        if (
-            property === "twoHanded"
-            && properties.has("twoHanded")
-            && item.system.equipped
-        ) {
-
-            const shields =
-                this.actor.items.filter(other =>
-                    other.type === "shield"
-                    && other.system.equipped
-                );
-
-
-            updates.push(...shields.map(shield => ({
-                _id: shield.id,
-                "system.equipped": false
-            })));
-        }
-
-
-        if (
-            property === "twoHanded"
-            && !properties.has("twoHanded")
-        ) {
-            update["system.guardEnabled"] = false;
-        }
-
-
-        await this.actor.updateEmbeddedDocuments("Item", updates);
+        await this.actor.updateInventoryItem(item.id, { "system.properties": [...properties] });
     }
 
 
