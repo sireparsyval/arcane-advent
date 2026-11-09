@@ -31,6 +31,8 @@
         {{> aaInventoryItemField label="Nom" type="text" name="name" value=document.name required=true}}
         {{#if isContainer}}
             <p class="hint">Poids propre du contenant&nbsp;: 0 kg. Le poids affiché dans l’inventaire correspond à son contenu.</p>
+        {{else if isPurse}}
+            <p class="hint">Bourse réservée aux Luqa. Chaque pièce pèse 0,01 kg ; le poids est calculé automatiquement.</p>
         {{else}}
             {{> aaInventoryItemField label="Poids unitaire (kg)" type="number" name="system.weight"
                 value=system.weight min=0 step="any" required=true}}
