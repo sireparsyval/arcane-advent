@@ -1004,6 +1004,63 @@ export class ArcaneCharacterSheet
         });
     }
 
+    _bindSheetSortListeners() {
+        const root = this.element;
+        root.addEventListener("dragstart", event => {
+            const handle = event.target.closest("[data-sheet-sort-drag]");
+            if (!handle || !event.dataTransfer) return;
+            const id = handle.dataset.sheetSortDrag;
+            const item = this.actor.items.get(id);
+            if (!item) return;
+            event.stopPropagation();
+            this._sheetSortDragId = id;
+            event.dataTransfer.setData(SHEET_SORT_DRAG_TYPE, id);
+            event.dataTransfer.effectAllowed = "move";
+        });
+        root.addEventListener("dragover", event => {
+            if (!event.dataTransfer?.types.includes(SHEET_SORT_DRAG_TYPE)) return;
+            const row = event.target.closest("[data-sheet-sort-drop]");
+            const id = this._sheetSortDragId;
+            const item = this.actor.items.get(id);
+            const target = this.actor.items.get(row?.dataset.sheetSortDrop);
+            const allowed = row && item && target && item.id !== target.id
+                && item.type === target.type;
+            this._sheetSortDropTarget?.classList.remove("aa-sort-before", "aa-sort-after");
+            this._sheetSortDropTarget = allowed ? row : null;
+            if (!allowed) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const position = event.clientY < row.getBoundingClientRect().top + row.getBoundingClientRect().height / 2
+                ? "before" : "after";
+            row.classList.add(position === "before" ? "aa-sort-before" : "aa-sort-after");
+            event.dataTransfer.dropEffect = "move";
+        });
+        root.addEventListener("drop", async event => {
+            if (!event.dataTransfer?.types.includes(SHEET_SORT_DRAG_TYPE)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            const target = event.target.closest("[data-sheet-sort-drop]");
+            const row = this._sheetSortDropTarget;
+            const id = this._sheetSortDragId;
+            const position = row?.classList.contains("aa-sort-before") ? "before" : "after";
+            this._clearSheetSort();
+            if (target && row === target && id && id === event.dataTransfer.getData(SHEET_SORT_DRAG_TYPE)) {
+                try {
+                    await this.actor.reorderSheetItem(id, target.dataset.sheetSortDrop, position);
+                } catch (error) {
+                    ui.notifications.error(error.message);
+                }
+            }
+        });
+        root.addEventListener("dragend", () => this._clearSheetSort());
+    }
+
+    _clearSheetSort() {
+        this._sheetSortDragId = null;
+        this._sheetSortDropTarget?.classList.remove("aa-sort-before", "aa-sort-after");
+        this._sheetSortDropTarget = null;
+    }
+
     _bindInventoryListeners(tab) {
         for (const quantity of tab.querySelectorAll("[data-inventory-quantity]")) {
             quantity.addEventListener("change", this._onInventoryQuantity.bind(this));
@@ -1032,14 +1089,27 @@ export class ArcaneCharacterSheet
         });
         tab.addEventListener("dragover", event => {
             if (!event.dataTransfer?.types.includes(INVENTORY_DRAG_TYPE)) return;
+            const row = event.target.closest("[data-inventory-drop]");
+            const itemId = this._inventoryDragId;
+            const targetId = row?.dataset.inventoryDrop;
+            const targetItem = this.actor.items.get(targetId);
+            if (!itemId || !row || itemId === targetId || !isInventoryItem(targetItem)) {
+                this._setInventoryDropTarget(null);
+                return;
+            }
+            const bounds = row.getBoundingClientRect();
+            const offset = (event.clientY - bounds.top) / bounds.height;
+            const position = isInventoryContainer(targetItem) && offset >= 0.25 && offset <= 0.75
+                ? "inside" : offset < 0.5 ? "before" : "after";
+            const destination = position === "inside" ? targetId : (targetItem.system.containerId || null);
+            if (!canPlaceInContainer(this.actor.items, itemId, destination)) {
+                this._setInventoryDropTarget(null);
+                return;
+            }
+            event.preventDefault();
             event.stopPropagation();
-
-            const target = event.target.closest("[data-inventory-drop]");
-            const allowed = target && this._inventoryDragId
-                && canPlaceInContainer(this.actor.items, this._inventoryDragId, target.dataset.inventoryDrop);
-            event.dataTransfer.dropEffect = allowed ? "move" : "none";
-            this._setInventoryDropTarget(allowed ? target : null);
-            if (allowed) event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+            this._setInventoryDropTarget(row, position);
         });
         tab.addEventListener("dragleave", event => {
             if (!this._inventoryDropTarget?.contains(event.relatedTarget)) this._setInventoryDropTarget(null);
@@ -1048,22 +1118,30 @@ export class ArcaneCharacterSheet
             if (!event.dataTransfer?.types.includes(INVENTORY_DRAG_TYPE)) return;
             event.preventDefault();
             event.stopPropagation();
-
-            const target = event.target.closest("[data-inventory-drop]");
+            const row = event.target.closest("[data-inventory-drop]");
             const itemId = this._inventoryDragId;
+            const target = this._inventoryDropTarget;
+            const position = this._inventoryDropPosition;
             this._clearInventoryDrag();
-            if (target && itemId && itemId === event.dataTransfer.getData(INVENTORY_DRAG_TYPE)) {
-                await this._moveInventoryItem(itemId, target.dataset.inventoryDrop);
-            }
+            if (!row || row !== target || !itemId || itemId !== event.dataTransfer.getData(INVENTORY_DRAG_TYPE)) return;
+            const targetId = row.dataset.inventoryDrop;
+            const targetItem = this.actor.items.get(targetId);
+            if (!targetItem) return;
+            const destination = position === "inside" ? targetId : (targetItem.system.containerId || null);
+            await this._moveInventoryItem(itemId, destination, position === "inside" ? {} : {
+                relativeToId: targetId, position
+            });
         });
         tab.addEventListener("dragend", () => this._clearInventoryDrag());
     }
 
-    _setInventoryDropTarget(target) {
-        if (target === this._inventoryDropTarget) return;
-        this._inventoryDropTarget?.classList.remove("aa-inventory-drop-active");
+    _setInventoryDropTarget(target, position = null) {
+        if (target === this._inventoryDropTarget && position === this._inventoryDropPosition) return;
+        this._inventoryDropTarget?.classList.remove("aa-inventory-drop-active", "aa-sort-before", "aa-sort-after");
         this._inventoryDropTarget = target;
-        target?.classList.add("aa-inventory-drop-active");
+        this._inventoryDropPosition = position;
+        if (position === "inside") target?.classList.add("aa-inventory-drop-active");
+        else if (position) target?.classList.add(position === "before" ? "aa-sort-before" : "aa-sort-after");
     }
 
     _clearInventoryDrag() {
@@ -1196,7 +1274,7 @@ export class ArcaneCharacterSheet
         if (isInventoryItem(item) && item.system.containerId) await this._moveInventoryItem(item.id, null);
     }
 
-    async _moveInventoryItem(itemId, containerId) {
+    async _moveInventoryItem(itemId, containerId, placement = {}) {
         if (!this.isEditable) return;
         if (!canPlaceInContainer(this.actor.items, itemId, containerId)) {
             ui.notifications.warn("Ce déplacement n’est plus possible.");
@@ -1209,7 +1287,7 @@ export class ArcaneCharacterSheet
         }
         let updated;
         try {
-            updated = await this.actor.moveInventoryItem(itemId, containerId);
+            updated = await this.actor.moveInventoryItem(itemId, containerId, placement);
         } catch (error) {
             Hooks.onError("ArcaneCharacterSheet#_moveInventoryItem", error, {
                 msg: "Impossible de déplacer l’objet.",
