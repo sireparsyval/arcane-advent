@@ -73,7 +73,7 @@ export class ArcaneActor extends Actor {
         return this.#queueInventoryOperation(async () => {
             const item = this.items.get(itemId);
             const relative = this.items.get(relativeToId);
-            const types = ["aptitude", "skill", "expertise", ...EQUIPMENT_TYPES];
+            const types = ["aptitude", "trait", "skill", "expertise", ...EQUIPMENT_TYPES];
             if (!item || !relative || item.id === relative.id || item.type !== relative.type
                 || !types.includes(item.type) || !["before", "after"].includes(position)) return;
             const equipment = EQUIPMENT_TYPES.includes(item.type);
