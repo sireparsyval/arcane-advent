@@ -1,5 +1,6 @@
 export const EQUIPMENT_TYPES = ["weapon", "shield", "protection", "accessory"];
-const CONTAINER_TYPES = ["container", "purse"];
+// Une bourse transporte uniquement des Luqa, pas des objets.
+const CONTAINER_TYPES = ["container"];
 export const INVENTORY_TYPES = [...EQUIPMENT_TYPES, "object", ...CONTAINER_TYPES];
 
 export const LUQA_DENOMINATIONS = [
@@ -15,6 +16,11 @@ export function isInventoryItem(item) {
 
 export function isInventoryContainer(item) {
     return CONTAINER_TYPES.includes(item?.type);
+}
+
+export function purseCoinWeight(item) {
+    if (item?.type !== "purse") return 0;
+    return LUQA_DENOMINATIONS.reduce((total, { key }) => total + (item.system.coins[key] ?? 0), 0) * 0.01;
 }
 
 export function luqaCounters(item) {
@@ -49,7 +55,8 @@ export function buildInventory(items) {
     let totalWeight = 0;
     for (const item of items) {
         if (!isInventoryItem(item)) continue;
-        const weight = isInventoryContainer(item) ? 0 : (item.system.weight ?? 0);
+        const weight = item.type === "purse" ? purseCoinWeight(item)
+            : isInventoryContainer(item) ? 0 : (item.system.weight ?? 0);
         nodes.set(item.id, { item, children: [], weight });
         totalWeight += carriedWeight(item, weight);
     }
@@ -84,6 +91,11 @@ export function buildInventory(items) {
         if (parent) parent.children.push(node);
         else if (!node.item.system.equipped) roots.push(node);
     }
+
+    // Chaque niveau conserve l’ordre des Items, indépendamment des autres niveaux.
+    const bySort = (a, b) => (a.item.sort ?? 0) - (b.item.sort ?? 0);
+    roots.sort(bySort);
+    for (const node of nodes.values()) node.children.sort(bySort);
 
     // Visit children before accumulating into their parents, regardless of nesting depth.
     const ordered = [...roots];
