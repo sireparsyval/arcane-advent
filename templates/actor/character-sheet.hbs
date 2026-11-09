@@ -25,8 +25,10 @@
 {{/inline}}
 {{#*inline "inventoryWeight"}}
     <span class="aa-inventory-weight aa-inventory-weight-value"
-        title="{{#if container}}Poids du contenu{{else}}Poids unitaire{{/if}}">
-        {{#if editableWeight}}
+        title="{{#if container}}Poids du contenu{{else}}{{#if isPurse}}Poids des pièces{{else}}Poids unitaire{{/if}}{{/if}}">
+        {{#if isPurse}}
+            {{weightLabel}}
+        {{else if editableWeight}}
             <input class="aa-inventory-weight-input" type="number" min="0" step="any" inputmode="decimal" required
                 id="aa-weight-{{id}}" value="{{unitWeight}}" data-inventory-weight="{{id}}"
                 aria-label="Poids unitaire en kg · {{name}}">
@@ -395,7 +397,8 @@
                         {{/if}}
                     </div>
                     {{#each aptitudes}}
-                        <div class="aa-condition-row aa-aptitude-row">
+                        <div class="aa-condition-row aa-aptitude-row" data-sheet-sort-drop="{{id}}">
+                            {{#if @root.canEditState}}<span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}" aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>{{/if}}
                             {{#if @root.canEditState}}
                                 <div class="aa-aptitude-identity">
                                     <label class="aa-aptitude-type">
@@ -549,7 +552,7 @@
                                         <p>{{#if description}}{{description}}{{else}}Aucune description.{{/if}}</p>
                                     </details>
                                     <span class="aa-condition-level">
-                                        {{../severityShort}} {{severity}}{{#if zone}} · {{zone}}{{/if}}
+                                        {{../severityShort}} {{severity}}{{#if zone}} · {{zone}}{{/if}}{{#if durationLabel}} · ⏳ {{durationLabel}}{{/if}}
                                     </span>
                                     {{#if @root.canEditState}}
                                         <button type="button" data-action="editCondition" data-item-id="{{id}}"
@@ -1052,6 +1055,7 @@
 
                         <div class="aa-skill-header">
                             <span></span>
+                            <span></span>
                             <span>Compétence</span>
                             <span>Carac.</span>
                             <span>Maîtrise</span>
@@ -1064,7 +1068,8 @@
 
                             {{#each skills}}
 
-                                <div class="aa-skill-row">
+                                <div class="aa-skill-row" data-sheet-sort-drop="{{id}}">
+                                    {{#if @root.canEditState}}<span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}" aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>{{else}}<span></span>{{/if}}
 
                                     <button
                                         type="button"
@@ -1197,6 +1202,7 @@
 
 
                         <div class="aa-expertise-header">
+                            <span></span>
                             <span>Expertise</span>
                             <span>Domaine</span>
                             <span>Cible</span>
@@ -1209,7 +1215,8 @@
 
                             {{#each expertises}}
 
-                                <div class="aa-expertise-row">
+                                <div class="aa-expertise-row" data-sheet-sort-drop="{{id}}">
+                                    {{#if @root.canEditState}}<span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}" aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>{{else}}<span></span>{{/if}}
 
                                     <input
                                         type="text"
@@ -1337,8 +1344,9 @@
 
                     <div class="aa-equipment-list">
                         {{#each equipment.weapons}}
-                            <div class="aa-equipment-card">
+                            <div class="aa-equipment-card" data-sheet-sort-drop="{{id}}">
                                 <div class="aa-equipment-identity">
+                                    {{#if @root.canEditState}}<span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}" aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>{{/if}}
                                     <label class="aa-equipment-field">
                                         <span>Nom</span>
                                         <input type="text" value="{{name}}"
@@ -1509,8 +1517,9 @@
 
                     <div class="aa-equipment-list">
                         {{#each equipment.shields}}
-                            <div class="aa-equipment-card">
+                            <div class="aa-equipment-card" data-sheet-sort-drop="{{id}}">
                                 <div class="aa-equipment-identity">
+                                    {{#if @root.canEditState}}<span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}" aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>{{/if}}
                                     <label class="aa-equipment-field">
                                         <span>Nom</span>
                                         <input type="text" value="{{name}}"
@@ -1549,8 +1558,9 @@
 
                     <div class="aa-equipment-list">
                         {{#each equipment.protections}}
-                            <div class="aa-equipment-card">
+                            <div class="aa-equipment-card" data-sheet-sort-drop="{{id}}">
                                 <div class="aa-equipment-identity">
+                                    {{#if @root.canEditState}}<span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}" aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>{{/if}}
                                     <label class="aa-equipment-field">
                                         <span>Nom</span>
                                         <input type="text" value="{{name}}"
@@ -1598,7 +1608,8 @@
 
                     <div class="aa-equipment-list">
                         {{#each equipment.accessories}}
-                            <div class="aa-equipment-row">
+                            <div class="aa-equipment-row" data-sheet-sort-drop="{{id}}">
+                                {{#if @root.canEditState}}<span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}" aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>{{/if}}
                                 <input type="text" value="{{name}}" aria-label="Nom de l'accessoire"
                                     data-equipment-edit data-item-id="{{id}}" data-item-field="name">
                                 {{> equippedInventoryControls unequipText="Déséquiper"}}
@@ -1635,7 +1646,7 @@
                             {{#each inventory.rows}}
                                 <li class="aa-inventory-row{{#if container}} aa-inventory-container{{/if}}"
                                     style="--aa-inventory-depth: {{depth}}"
-                                    {{#if container}}data-inventory-drop="{{id}}"{{/if}}
+                                    data-inventory-drop="{{id}}"
                                     {{#if @root.canEditState}}draggable="true" data-inventory-drag="{{id}}"{{/if}}>
                                     {{#if container}}
                                         <button type="button" class="aa-inventory-disclosure" data-action="toggleInventoryContainer"
