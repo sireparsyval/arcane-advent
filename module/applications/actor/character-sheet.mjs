@@ -1,9 +1,9 @@
 import { ARCANE_NEEDS } from "../../config.mjs";
 import {
     EQUIPMENT_TYPES, LUQA_DENOMINATIONS, canPlaceInContainer,
-    isInventoryContainer, isInventoryItem, luqaCounters
+    isInventoryContainer, isInventoryItem, luqaCounters, purseCoinWeight
 } from "../../inventory.mjs";
-import { AlterationData, InjuryData, INJURY_ZONES } from "../../data/condition-data.mjs";
+import { AlterationData, InjuryData, INJURY_ZONES, ALTERATION_DURATION_UNITS } from "../../data/condition-data.mjs";
 import {
     APTITUDE_CATEGORIES, APTITUDE_OPTIONS, APTITUDE_DURATION_UNITS, APTITUDE_RECOVERY_UNITS, parseLegacyAptitudeOption
 } from "../../data/aptitude-data.mjs";
@@ -12,6 +12,8 @@ const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
 const INVENTORY_DRAG_TYPE = "application/x-arcane-advent-inventory-item";
+const SHEET_SORT_DRAG_TYPE = "application/x-arcane-advent-sheet-sort";
+const sortableItems = items => [...items].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
 const INVENTORY_ITEM_NAMES = {
     object: "Nouvel objet",
     container: "Nouveau contenant",
@@ -20,7 +22,9 @@ const INVENTORY_ITEM_NAMES = {
 const WEIGHT_FORMAT = new Intl.NumberFormat("fr-FR", { maximumSignificantDigits: 15 });
 
 function formatWeight(weight) {
-    return `${WEIGHT_FORMAT.format(weight)} kg`;
+    // Affichage tronqué au dixième, sans tronquer les calculs internes.
+    const tenths = Math.floor((weight + Number.EPSILON) * 10) / 10;
+    return `${WEIGHT_FORMAT.format(tenths)} kg`;
 }
 
 function* inventoryRows(roots, collapsed = new Set()) {
@@ -193,6 +197,9 @@ export class ArcaneCharacterSheet
     _showInventoryWeights = true;
     _inventoryDragId = null;
     _inventoryDropTarget = null;
+    _inventoryDropPosition = null;
+    _sheetSortDragId = null;
+    _sheetSortDropTarget = null;
 
 
     get title() {
@@ -240,7 +247,7 @@ export class ArcaneCharacterSheet
         context.aptitudeCategories = APTITUDE_CATEGORIES;
         context.aptitudeDurationUnits = APTITUDE_DURATION_UNITS;
         context.aptitudeRecoveryUnits = APTITUDE_RECOVERY_UNITS;
-        context.aptitudes = this.actor.items.filter(item => item.type === "aptitude").map(item => ({
+        context.aptitudes = sortableItems(this.actor.items.filter(item => item.type === "aptitude")).map(item => ({
             id: item.id,
             name: item.name,
             system: item.system,
@@ -274,7 +281,9 @@ export class ArcaneCharacterSheet
                 name: item.name,
                 severity: item.system.severity,
                 description: item.system.description,
-                zone: item.system.zone ? INJURY_ZONES[item.system.zone] : ""
+                zone: item.system.zone ? INJURY_ZONES[item.system.zone] : "",
+                durationLabel: type === "alteration" && item.system.duration?.enabled
+                    ? `${item.system.duration.remaining} ${ALTERATION_DURATION_UNITS[item.system.duration.unit]}` : ""
             }))
         }));
 
@@ -293,8 +302,8 @@ export class ArcaneCharacterSheet
             };
         });
 
-        context.skills = this.actor.items
-            .filter(item => item.type === "skill")
+        context.skills = sortableItems(this.actor.items
+            .filter(item => item.type === "skill"))
             .map(skill => {
 
                 const ability =
@@ -316,7 +325,7 @@ export class ArcaneCharacterSheet
                 };
             });
         
-        const equipment = this.actor.items.filter(item => EQUIPMENT_TYPES.includes(item.type));
+        const equipment = sortableItems(this.actor.items.filter(item => EQUIPMENT_TYPES.includes(item.type)));
         const equipmentView = item => ({
             id: item.id,
             name: item.name,
@@ -340,7 +349,7 @@ export class ArcaneCharacterSheet
                     expanded: !this._collapsedInventory.has(item.id),
                     quantity,
                     canEquip: EQUIPMENT_TYPES.includes(item.type),
-                    showWeight: container || this._showInventoryWeights,
+                    showWeight: container || item.type === "purse" || this._showInventoryWeights,
                     weightLabel: formatWeight(weight),
                     unitWeight: weight,
                     perUnit: quantity > 1
@@ -473,10 +482,10 @@ export class ArcaneCharacterSheet
             });
         }
 
-        context.expertises = this.actor.items
+        context.expertises = sortableItems(this.actor.items
             .filter(item =>
                 item.type === "expertise"
-            )
+            ))
             .map(expertise => ({
                 id: expertise.id,
                 name: expertise.name,
@@ -709,7 +718,8 @@ export class ArcaneCharacterSheet
             {
                 ...previous,
                 severityLabel: section.severityLabel,
-                zones: type === "injury" ? INJURY_ZONES : null
+                zones: type === "injury" ? INJURY_ZONES : null,
+                durationUnits: type === "alteration" ? ALTERATION_DURATION_UNITS : null
             }
         );
 
@@ -735,6 +745,11 @@ export class ArcaneCharacterSheet
                             }
                         };
                         if (type === "injury") data.system.zone = fields.get("zone");
+                        if (type === "alteration") data.system.duration = {
+                            enabled: fields.get("durationEnabled") === "on",
+                            remaining: Number(fields.get("durationRemaining") ?? 0),
+                            unit: fields.get("durationUnit") || "turns"
+                        };
 
                         try {
                             if (item) {
@@ -905,6 +920,8 @@ export class ArcaneCharacterSheet
                 this._onEquipmentEdit.bind(this)
             );
         }
+
+        if (this.isEditable) this._bindSheetSortListeners();
 
         const equipmentTab = this.element.querySelector(".aa-equipment-tab");
         if (equipmentTab) {
