@@ -1,4 +1,5 @@
 import { ARCANE_NEEDS } from "../../config.mjs";
+import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
 import {
     EQUIPMENT_TYPES, LUQA_DENOMINATIONS, canPlaceInContainer,
     isInventoryContainer, isInventoryItem, luqaCounters, purseCoinWeight
@@ -89,7 +90,7 @@ const ROLL_MODE_LABELS = {
 };
 
 const APTITUDE_FIELDS = new Set([
-    "category", "level", "description", "durationTurns", "durationUnit",
+    "category", "level", "description", "requirements", "durationTurns", "durationUnit",
     "recoveryCounter.remaining", "recoveryCounter.max", "recoveryCounter.unit",
     "chargeCounter.remaining", "chargeCounter.max"
 ]);
@@ -165,6 +166,12 @@ export class ArcaneCharacterSheet
             editAptitudeRoll: this._onEditAptitudeRoll,
             rollAptitude: this._onRollAptitude,
             deleteAptitude: this._onDeleteStateItem,
+            goToLinkedTrait: this._onGoToLinkedTrait,
+            addTrait: this._onAddTrait,
+            toggleTraitConfig: this._onToggleTraitConfig,
+            createLinkedAptitude: this._onCreateLinkedAptitude,
+            deleteLinkedAptitude: this._onDeleteLinkedAptitude,
+            deleteTrait: this._onDeleteTrait,
             stepTrack: this._onStepTrack,
             showMercyHelp: this._onShowMercyHelp,
 
@@ -252,13 +259,40 @@ export class ArcaneCharacterSheet
             this.element?.querySelectorAll("details[data-aptitude-description][open]") ?? [],
             panel => panel.dataset.aptitudeDescription
         ));
-        context.aptitudeCategories = APTITUDE_CATEGORIES;
-        context.aptitudeDurationUnits = APTITUDE_DURATION_UNITS;
-        context.aptitudeRecoveryUnits = APTITUDE_RECOVERY_UNITS;
-        context.aptitudes = sortableItems(this.actor.items.filter(item => item.type === "aptitude")).map(item => ({
+        const openTraitConfigs = new Set(Array.from(
+            this.element?.querySelectorAll("[data-trait-config]:not([hidden])") ?? [],
+            panel => panel.dataset.traitConfig
+        ));
+        const openTraitDescriptions = new Set(Array.from(
+            this.element?.querySelectorAll("details[data-trait-description][open]") ?? [],
+            panel => panel.dataset.traitDescription
+        ));
+        const traitItems = sortableItems(this.actor.items.filter(item => item.type === "trait"));
+        const aptitudeItems = sortableItems(this.actor.items.filter(item => item.type === "aptitude"));
+        const traitsById = new Map(traitItems.map(item => [item.id, item]));
+        context.traits = traitItems.map(item => ({
             id: item.id,
             name: item.name,
             system: item.system,
+            configOpen: openTraitConfigs.has(item.id),
+            descriptionOpen: openTraitDescriptions.has(item.id),
+            linkedAptitudes: aptitudeItems
+                .filter(aptitude => aptitude.system.traitId === item.id)
+                .map(aptitude => ({
+                    id: aptitude.id,
+                    name: aptitude.name,
+                    categoryLabel: APTITUDE_CATEGORIES[aptitude.system.category]
+                }))
+        }));
+        context.aptitudeCategories = APTITUDE_CATEGORIES;
+        context.aptitudeDurationUnits = APTITUDE_DURATION_UNITS;
+        context.aptitudeRecoveryUnits = APTITUDE_RECOVERY_UNITS;
+        context.aptitudes = aptitudeItems.map(item => ({
+            id: item.id,
+            name: item.name,
+            system: item.system,
+            linkedTraitName: traitsById.get(item.system.traitId)?.name ?? "",
+            linkedTraitId: traitsById.get(item.system.traitId)?.id ?? "",
             categoryLabel: APTITUDE_CATEGORIES[item.system.category],
             durationUnitLabel: APTITUDE_DURATION_UNITS[item.system.durationUnit],
             recoveryUnitLabel: APTITUDE_RECOVERY_UNITS[item.system.recoveryCounter.unit],
@@ -598,6 +632,180 @@ export class ArcaneCharacterSheet
     }
 
 
+    static async _onAddTrait() {
+        if (!this.isEditable) return;
+        await this.actor.createEmbeddedDocuments("Item", [{
+            name: "Nouveau Trait", type: "trait", sort: nextItemSort(this.actor, "trait")
+        }]);
+    }
+
+    static _onToggleTraitConfig(event, target) {
+        const config = target.closest(".aa-trait-row")?.querySelector("[data-trait-config]");
+        if (!config) return;
+        config.hidden = !config.hidden;
+        target.setAttribute("aria-expanded", String(!config.hidden));
+    }
+
+    static async _onCreateLinkedAptitude(event, target) {
+        if (!this.isEditable) return;
+        const trait = this.actor.items.get(target.dataset.traitId);
+        if (trait?.type !== "trait") return;
+        await this.actor.createEmbeddedDocuments("Item", [{
+            name: "Nouvelle aptitude",
+            type: "aptitude",
+            sort: nextItemSort(this.actor, "aptitude"),
+            system: { traitId: trait.id }
+        }]);
+    }
+
+    static async _onDeleteLinkedAptitude(event, target) {
+        if (!this.isEditable) return;
+        const trait = this.actor.items.get(target.dataset.traitId);
+        const aptitude = this.actor.items.get(target.dataset.itemId);
+        if (trait?.type !== "trait" || aptitude?.type !== "aptitude"
+            || aptitude.system.traitId !== trait.id) return;
+
+        const content = document.createElement("div");
+        const message = document.createElement("p");
+        message.textContent = `Retirer l’aptitude « ${aptitude.name} », liée au Trait « ${trait.name} » ?`;
+        content.append(message);
+        const confirmed = await foundry.applications.api.DialogV2.confirm({
+            window: { title: "Retirer l’aptitude liée" },
+            content, modal: true, rejectClose: false,
+            yes: { label: "Retirer" }, no: { label: "Annuler" }
+        });
+        if (!confirmed) return;
+        if (this.actor.items.get(aptitude.id)?.system.traitId !== trait.id) return;
+        const deleted = await removeLinkedAptitudeFromTrait(this.actor, trait.id, aptitude.id);
+        if (!deleted.length) ui.notifications.warn("L’aptitude liée n’a pas pu être supprimée.");
+    }
+
+    static async _onDeleteTrait(event, target) {
+        if (!this.isEditable) return;
+        const trait = this.actor.items.get(target.dataset.traitId);
+        if (trait?.type !== "trait") return;
+        const linked = this.actor.items.filter(item => item.type === "aptitude"
+            && item.system.traitId === trait.id);
+        const content = document.createElement("div");
+        const heading = document.createElement("p");
+        heading.textContent = `Retirer le Trait « ${trait.name} » ?`;
+        content.append(heading);
+
+        if (!linked.length) {
+            const confirmed = await foundry.applications.api.DialogV2.confirm({
+                window: { title: "Retirer le Trait" },
+                content, modal: true, rejectClose: false,
+                yes: { label: "Retirer" }, no: { label: "Annuler" }
+            });
+            if (confirmed && this.actor.items.get(trait.id)?.type === "trait") await trait.delete();
+            return;
+        }
+
+        const explanation = document.createElement("p");
+        explanation.textContent = `${linked.length} aptitude(s) liée(s) à ce Trait :`;
+        content.append(explanation);
+        const list = document.createElement("ul");
+        for (const aptitude of linked) {
+            const li = document.createElement("li");
+            li.textContent = aptitude.name;
+            list.append(li);
+        }
+        content.append(list);
+        const hint = document.createElement("p");
+        hint.textContent = "Choisissez si ces Aptitudes doivent être supprimées avec le Trait ou conservées comme Aptitudes indépendantes.";
+        content.append(hint);
+
+        const applyDeletion = async (keepAptitudes, app) => {
+            const current = this.actor.items.get(trait.id);
+            if (current?.type !== "trait") { await app.close(); return; }
+            const live = this.actor.items.filter(item => item.type === "aptitude"
+                && item.system.traitId === trait.id);
+            if (live.length !== linked.length || live.some(item => !linked.some(old => old.id === item.id))) {
+                ui.notifications.warn("Les Aptitudes liées ont changé. Relancez la suppression du Trait.");
+                await app.close();
+                return;
+            }
+            try {
+                if (keepAptitudes) {
+                    const detached = await this.actor.updateEmbeddedDocuments("Item", live.map(item => ({
+                        _id: item.id, "system.traitId": ""
+                    })));
+                    if (detached.length !== live.length) {
+                        ui.notifications.error("Impossible de délier toutes les Aptitudes. Le Trait a été conservé.");
+                        return;
+                    }
+                    const removed = await this.actor.deleteEmbeddedDocuments("Item", [trait.id]);
+                    if (removed.length !== 1) {
+                        ui.notifications.error("Le Trait n’a pas été supprimé.");
+                        return;
+                    }
+                } else {
+                    const removed = await this.actor.deleteEmbeddedDocuments("Item", [trait.id, ...live.map(item => item.id)]);
+                    if (removed.length !== live.length + 1) {
+                        ui.notifications.error("Le Trait et ses Aptitudes liées n’ont pas pu être supprimés.");
+                        return;
+                    }
+                }
+                await app.close();
+            } catch (error) {
+                Hooks.onError("ArcaneCharacterSheet#_onDeleteTrait", error, {
+                    msg: "Impossible de supprimer le Trait.", log: "error", notify: "error"
+                });
+            }
+        };
+
+        const dialog = new foundry.applications.api.DialogV2({
+            window: { title: "Suppression du Trait et de ses Aptitudes" },
+            content, modal: true, form: { closeOnSubmit: false },
+            buttons: [
+                {
+                    action: "keep", label: "Conserver les Aptitudes",
+                    callback: (_event, _button, app) => applyDeletion(true, app)
+                },
+                {
+                    action: "removeAll", label: "Tout supprimer",
+                    callback: (_event, _button, app) => applyDeletion(false, app)
+                },
+                {
+                    action: "cancel", label: "Annuler", type: "button",
+                    callback: (_event, _button, app) => app.close()
+                }
+            ]
+        });
+        await dialog.render({ force: true });
+    }
+
+    static _onGoToLinkedTrait(event, target) {
+        const trait = this.actor.items.get(target.dataset.traitId);
+        if (trait?.type !== "trait") return;
+        const row = this.element.querySelector(`[data-trait-row="${trait.id}"]`);
+        if (!row) return;
+        const config = row.querySelector("[data-trait-config]");
+        const toggle = row.querySelector('[data-action="toggleTraitConfig"]');
+        if (config && toggle) {
+            config.hidden = false;
+            toggle.setAttribute("aria-expanded", "true");
+        }
+        row.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    async _onTraitEdit(event) {
+        event.stopPropagation();
+        if (!this.isEditable) return;
+        const field = event.currentTarget;
+        const trait = this.actor.items.get(field.dataset.traitId);
+        const key = field.dataset.traitField;
+        if (trait?.type !== "trait" || !["name", "description", "requirements"].includes(key)
+            || !field.reportValidity()) return;
+
+        const value = field.value.trim();
+        if (key === "name") {
+            if (value && value !== trait.name) await trait.update({ name: value });
+        } else if (value !== trait.system[key]) {
+            await trait.update({ [`system.${key}`]: value });
+        }
+    }
+
     static _onToggleAptitudeConfig(event, target) {
         const config = target.closest(".aa-aptitude-row")?.querySelector("[data-aptitude-config]");
         if (!config) return;
@@ -803,6 +1011,11 @@ export class ArcaneCharacterSheet
 
         const item = this.actor.items.get(target.dataset.itemId);
         if (!item || (item.type !== "aptitude" && !Object.hasOwn(CONDITION_SECTIONS, item.type))) return;
+        if (item.type === "aptitude" && item.system.traitId
+            && this.actor.items.get(item.system.traitId)?.type === "trait") {
+            ui.notifications.warn("Cette Aptitude est liée à un Trait. Supprimez-la depuis les options de ce Trait.");
+            return;
+        }
 
         const content = document.createElement("div");
         const message = document.createElement("p");
@@ -894,6 +1107,9 @@ export class ArcaneCharacterSheet
 
         for (const field of this.element.querySelectorAll("[data-aptitude-field]")) {
             field.addEventListener("change", this._onAptitudeEdit.bind(this));
+        }
+        for (const field of this.element.querySelectorAll("[data-trait-field]")) {
+            field.addEventListener("change", this._onTraitEdit.bind(this));
         }
 
         // Mémorise l'onglet actif en cas de re-render de la fiche.

@@ -1,5 +1,29 @@
 import { canPlaceInContainer, EQUIPMENT_TYPES, isInventoryContainer, isInventoryItem } from "../inventory.mjs";
 
+// Autorisation locale et temporaire pour une suppression initiée depuis les options du Trait.
+const authorizedLinkedDeletes = new WeakMap();
+
+export async function removeLinkedAptitudeFromTrait(actor, traitId, aptitudeId) {
+    const trait = actor?.items.get(traitId);
+    const aptitude = actor?.items.get(aptitudeId);
+    if (trait?.type !== "trait" || aptitude?.type !== "aptitude"
+        || aptitude.system.traitId !== traitId) return [];
+
+    let allowed = authorizedLinkedDeletes.get(actor);
+    if (!allowed) {
+        allowed = new Set();
+        authorizedLinkedDeletes.set(actor, allowed);
+    }
+    allowed.add(aptitudeId);
+    try {
+        return await actor.deleteEmbeddedDocuments("Item", [aptitudeId]);
+    } finally {
+        allowed.delete(aptitudeId);
+        if (!allowed.size) authorizedLinkedDeletes.delete(actor);
+    }
+}
+
+
 export function getEquipmentConflictType(type, properties) {
     if (type === "shield") return "weapon";
     if (type === "weapon" && hasTwoHandedProperty(properties)) return "shield";
@@ -112,6 +136,31 @@ export class ArcaneItem extends Item {
     static async _preDeleteOperation(documents, operation, user) {
         if (await super._preDeleteOperation(documents, operation, user) === false) return false;
         const actor = operation.parent ?? documents[0]?.actor;
+        if (actor?.type === "character") {
+            const deletedIds = new Set(documents.map(item => item.id));
+            const linkedAptitudes = actor.items.filter(item => item.type === "aptitude"
+                && item.system.traitId && actor.items.get(item.system.traitId)?.type === "trait");
+
+            // Une aptitude issue d'un Trait ne se supprime que depuis les options de celui-ci,
+            // ou en même temps que son Trait.
+            for (const aptitude of linkedAptitudes) {
+                if (!deletedIds.has(aptitude.id)) continue;
+                if (deletedIds.has(aptitude.system.traitId)
+                    || authorizedLinkedDeletes.get(actor)?.has(aptitude.id)) continue;
+                ui.notifications.warn("Cette aptitude est liée à un Trait : supprimez-la depuis les options de ce Trait.");
+                return false;
+            }
+
+            // Ne jamais laisser des Aptitudes orphelines quand un Trait est effacé ailleurs
+            // que dans la fiche : la fiche propose d'abord de les conserver ou de les supprimer.
+            for (const item of documents) {
+                if (item.type !== "trait") continue;
+                if (linkedAptitudes.some(apt => apt.system.traitId === item.id && !deletedIds.has(apt.id))) {
+                    ui.notifications.warn("Ce Trait possède des Aptitudes liées. Utilisez sa suppression dans la fiche pour choisir leur sort.");
+                    return false;
+                }
+            }
+        }
         if (actor?.type !== "character" || !documents.some(item => isInventoryContainer(item) || item.type === "purse")) return;
 
         const deleted = new Set(documents.map(item => item.id));

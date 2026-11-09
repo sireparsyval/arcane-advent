@@ -1484,3 +1484,93 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-alteration-duration { display: grid; gap: 8px; }
 .aa-alteration-duration label { display: grid; gap: 4px; }
 .aa-alteration-duration label:first-of-type { display: flex; align-items: center; }
+
+
+/* Traits : effets textuels et gestion des Aptitudes associées. */
+.aa-traits-panel { min-width: 0; }
+.aa-trait-row {
+    display: grid;
+    gap: 7px;
+    padding: 8px;
+    margin-top: 6px;
+    border: 1px solid var(--aa-border);
+    border-radius: 6px;
+    background: var(--aa-surface);
+    min-width: 0;
+}
+.aa-trait-identity,
+.aa-trait-actions,
+.aa-trait-links-heading,
+.aa-trait-link-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+.aa-trait-identity > strong { overflow-wrap: anywhere; }
+.aa-trait-name { flex: 1; min-width: 0; }
+.aa-trait-actions { margin-inline-start: auto; }
+.aa-trait-actions button,
+.aa-trait-link-row button,
+.aa-trait-links-heading button { width: auto; min-width: 0; }
+.aa-trait-config:not([hidden]) {
+    display: grid;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid var(--aa-border);
+    border-radius: 5px;
+}
+.aa-trait-requirements-editor,
+.aa-aptitude-requirements-editor {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    width: 100%;
+    font-size: 0.85em;
+}
+.aa-trait-config textarea,
+.aa-trait-row textarea,
+.aa-aptitude-requirements-editor textarea {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    resize: vertical;
+}
+.aa-trait-links-heading { justify-content: space-between; flex-wrap: wrap; }
+.aa-trait-links {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+.aa-trait-link-row {
+    justify-content: space-between;
+    padding: 5px 6px;
+    border-radius: 4px;
+    background: rgba(217, 188, 145, 0.055);
+}
+.aa-trait-link-row span { min-width: 0; overflow-wrap: anywhere; }
+.aa-trait-link-row small { opacity: .75; }
+.aa-trait-row details { min-width: 0; }
+.aa-trait-row details summary { cursor: pointer; padding-block: 4px; }
+.aa-trait-row details p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.aa-requirements-note {
+    padding: 5px 7px;
+    border-left: 2px solid var(--aa-accent);
+    border-radius: 3px;
+    background: rgba(217, 188, 145, 0.065);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 0.86em;
+}
+.aa-aptitude-origin-label { font-size: 0.82em; color: var(--aa-accent); overflow-wrap: anywhere; }
+.aa-aptitude-origin {
+    font-size: 0.82em;
+    white-space: nowrap;
+}
+.aa-aptitude-config:not([hidden]) > .aa-aptitude-requirements-editor {
+    flex: 1 0 100%;
+    margin-top: 4px;
+    align-self: stretch;
+}
+.aa-trait-row.aa-sort-before,
+.aa-trait-row.aa-sort-after { outline: none; }
