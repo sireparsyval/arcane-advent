@@ -1,4 +1,6 @@
 import { ARCANE_NEEDS } from "../config.mjs";
+import { buildInventory } from "../inventory.mjs";
+import { VOLUME_FACTORS, carryingCapacity, calculateEncumbrance, encumberedSpeed } from "../encumbrance.mjs";
 import { modifierSchema, modifierTotals as collectModifierTotals, ABILITY_MODIFIER_KEYS, abilityScoreModifier } from "../modifiers.mjs";
 
 const {
@@ -7,6 +9,47 @@ const {
     StringField
 } = foundry.data.fields;
 
+
+function descriptiveField() {
+    return new StringField({ required: true, nullable: false, blank: true, initial: "" });
+}
+
+function identityField() {
+    return new SchemaField({
+        title: descriptiveField(),
+        ethnicity: descriptiveField(),
+        gender: new StringField({ required: true, nullable: false,
+            choices: ["masculine", "feminine", "unknown"], initial: "unknown" }),
+        volume: new StringField({ required: true, nullable: false,
+            choices: Object.keys(VOLUME_FACTORS), initial: "medium" }),
+        ageMode: new StringField({ required: true, nullable: false,
+            choices: ["estimated", "number"], initial: "estimated" }),
+        ageNumber: new NumberField({ required: true, nullable: false,
+            integer: true, min: 0, initial: 0 }),
+        ageEstimate: new StringField({ required: true, nullable: false,
+            choices: ["unknown", "infant", "child", "adolescent", "youngAdult", "adult", "elderly", "venerable"],
+            initial: "unknown" }),
+        heightMeters: new NumberField({ required: true, nullable: false, min: 0, initial: 0 }),
+        // Poids corporel seulement, jamais additionné à l'inventaire.
+        bodyWeightKg: new NumberField({ required: true, nullable: false, min: 0, initial: 0 }),
+        alignment: descriptiveField()
+    });
+}
+
+function biographyField() {
+    return new SchemaField({
+        feature: descriptiveField(),
+        motivation: descriptiveField(),
+        habit: descriptiveField(),
+        family: descriptiveField(),
+        raisedBy: descriptiveField(),
+        quest: descriptiveField(),
+        personality: descriptiveField(),
+        ideals: descriptiveField(),
+        bonds: descriptiveField(),
+        flaws: descriptiveField()
+    });
+}
 
 function abilityField() {
     return new SchemaField({
@@ -59,6 +102,20 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
 
     static defineSchema() {
         return {
+            identity: identityField(),
+            biography: biographyField(),
+            // Ajustement manuel facultatif de la charge max., en kg.
+            carryingCapacityBonusKg: new NumberField({
+                required: true, nullable: false, initial: 0
+            }),
+            encumbrance: new SchemaField({
+                carried: new NumberField({ required: true, nullable: false, min: 0, initial: 0, persisted: false }),
+                maximum: new NumberField({ required: true, nullable: false, min: 0, initial: 0, persisted: false }),
+                percentage: new NumberField({ required: true, nullable: false, min: 0, initial: 0, persisted: false }),
+                stage: new StringField({ required: true, nullable: false,
+                    choices: ["free", "encumbered", "overloaded", "immobilized"],
+                    initial: "free", persisted: false })
+            }, { persisted: false }),
             // Ajustements manuels indépendants des altérations et blessures.
             manualModifiers: modifierSchema(),
             // Somme non persistée des modifications de toutes les sources.
@@ -454,8 +511,22 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
         this.trackers.initiative =
             this.abilities.dexterity.modifier + totals.initiative;
 
-        // La vitesse persistée reste sa valeur de base, même après un bonus/malus.
-        this.trackers.effectiveSpeed = Math.max(0, this.trackers.speed + totals.speed);
+        // Une charge inclut les objets, pièces et équipements portés, jamais le corps.
+        // La Force effective (après bonus/malus) détermine la capacité.
+        const currentLoad = buildInventory(this.parent?.items ?? []).totalWeight;
+        const capacity = carryingCapacity(
+            this.abilities.strength.effective, this.identity.volume, this.carryingCapacityBonusKg
+        );
+        const encumbrance = calculateEncumbrance(currentLoad, capacity);
+        this.encumbrance.carried = encumbrance.carried;
+        this.encumbrance.maximum = encumbrance.maximum;
+        this.encumbrance.percentage = encumbrance.percentage;
+        this.encumbrance.stage = encumbrance.stage;
+
+        // La vitesse persistée reste la base : seuls ses résultats dérivés changent.
+        // Les désavantages et interdictions de mouvement sont appliqués manuellement.
+        const normalSpeed = Math.max(0, this.trackers.speed + totals.speed);
+        this.trackers.effectiveSpeed = encumberedSpeed(normalSpeed, encumbrance.stage);
 
         for (const abilityKey of Object.keys(this.abilities)) {
             this.savingThrows[abilityKey].total =
