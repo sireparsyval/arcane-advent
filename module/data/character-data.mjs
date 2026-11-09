@@ -362,7 +362,9 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
                 )
                 .reduce(
                     (total, shield) =>
-                        total + shield.system.defenseBonus,
+                        total
+                        + shield.system.defenseBonus
+                        + this.parent.getExpertiseBonus("shieldClass", shield.system.shieldClass),
                     0
                 );
 
@@ -373,8 +375,6 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
             + this.defense.shieldBonus;
 
 
-        // Pour l'instant, aucune protection locale
-        // n'est encore branchée.
         const protectionBonuses = {
             head: 0,
             torso: 0,
@@ -393,6 +393,9 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
             }
 
 
+            const defenseBonus = item.system.defenseBonus
+                + this.parent.getExpertiseBonus("armorClass", item.system.armorClass);
+
             for (const zone of item.system.zones) {
 
                 if (!(zone in protectionBonuses)) {
@@ -400,8 +403,7 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
                 }
 
 
-                protectionBonuses[zone] +=
-                    item.system.defenseBonus;
+                protectionBonuses[zone] += defenseBonus;
             }
         }
 

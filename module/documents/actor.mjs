@@ -480,121 +480,30 @@ export class ArcaneActor extends Actor {
             );
     }
 
-async rollGuard(itemId) {
+    getGuardModifier(item) {
+        if (!item?.system.equipped || !item.system.guardEnabled) return null;
 
-    const item =
-        this.items.get(itemId);
-
-    if (!item || !item.system.equipped) {
-        return;
-    }
-
-
-    const strength =
-        this.system.abilities.strength.modifier;
-
-    const dexterity =
-        this.system.abilities.dexterity.modifier;
-
-
-    let formula;
-    let data;
-    let expertiseBonus = 0;
-
-
-    // ==========================
-    // ARME À DEUX MAINS
-    // ==========================
-
-    if (item.type === "weapon") {
-
-        if (
-            !item.system.properties.has("twoHanded")
-            || !item.system.guardEnabled
-        ) {
-            return;
+        const { strength, dexterity, constitution } = this.system.abilities;
+        if (item.type === "weapon" && item.system.properties.has("twoHanded")) {
+            return strength.modifier + Math.min(dexterity.modifier, 0)
+                + this.getExpertiseBonus("weaponClass", item.system.weaponClass);
         }
 
-
-        expertiseBonus =
-            this.getExpertiseBonus(
-                "weaponClass",
-                item.system.weaponClass
-            );
-
-
-        // Une bonne DEX n'aide pas.
-        // Une mauvaise DEX pénalise.
-        const dexPenalty =
-            Math.min(dexterity, 0);
-
-
-        formula =
-            "10 + @strength + @expertise + @dexPenalty";
-
-        data = {
-            strength,
-            expertise: expertiseBonus,
-            dexPenalty
-        };
-    }
-
-
-    // ==========================
-    // BOUCLIER
-    // ==========================
-
-    else if (item.type === "shield") {
-
-        if (!item.system.guardEnabled) {
-            return;
+        if (item.type === "shield") {
+            return strength.modifier + Math.min(constitution.modifier, 0)
+                + item.system.defenseBonus
+                + this.getExpertiseBonus("shieldClass", item.system.shieldClass);
         }
 
-
-        expertiseBonus =
-            this.getExpertiseBonus(
-                "shieldClass",
-                item.system.shieldClass
-            );
-
-
-        formula =
-            "10 + @strength + @defense + @expertise";
-
-        data = {
-            strength,
-            defense: item.system.defenseBonus,
-            expertise: expertiseBonus
-        };
+        return null;
     }
 
 
-    else {
-        return;
+    async rollGuard(itemId, mode = "normal") {
+        const item = this.items.get(itemId);
+        const modifier = this.getGuardModifier(item);
+        if (modifier === null) return;
+
+        return this._rollD20(modifier, mode, foundry.utils.escapeHTML("Garde — " + item.name));
     }
-
-
-    const roll =
-        new foundry.dice.Roll(
-            formula,
-            data
-        );
-
-
-    await roll.evaluate();
-
-
-    await roll.toMessage({
-        speaker:
-            foundry.documents.ChatMessage.getSpeaker({
-                actor: this
-            }),
-
-        flavor:
-            `Garde — ${item.name}`
-    });
-
-
-    return roll;
-}
 }

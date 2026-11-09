@@ -32,6 +32,7 @@ body.detached > .aa-detached-sheet .window-content {
         .aa-tracker > label,
         .aa-tracker-roll > span,
         .aa-roll-mode button,
+        .aa-defense-mode button,
         .aa-death-save-group > span,
         .aa-death-save-roll
     ) {
@@ -42,7 +43,7 @@ body.detached > .aa-detached-sheet .window-content {
         white-space: nowrap;
     }
 
-    body.detached > .aa-detached-sheet :is(.aa-identity, .aa-defense-header label, .aa-defense-header select) {
+    body.detached > .aa-detached-sheet .aa-identity {
         min-width: 0;
     }
 
@@ -211,7 +212,8 @@ body.detached > .aa-detached-sheet .window-content {
     border-top: 1px solid var(--aa-border);
 }
 
-.aa-roll-mode button {
+.aa-roll-mode button,
+.aa-defense-mode button {
     min-width: 0;
     padding-inline: 4px;
     white-space: normal;
@@ -893,6 +895,7 @@ body.detached > .aa-detached-sheet .window-content {
 }
 
 .aa-roll-mode button[aria-pressed="true"],
+.aa-defense-mode button[aria-pressed="true"],
 .aa-equipment-options button[aria-pressed="true"],
 .aa-aptitude-config button[aria-pressed="true"],
 .aa-aptitude-actions button[aria-expanded="true"] {
@@ -1026,6 +1029,7 @@ body.detached > .aa-detached-sheet .window-content {
 
 .aa-defense-header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 10px;
 
@@ -1040,10 +1044,12 @@ body.detached > .aa-detached-sheet .window-content {
 }
 
 
-.aa-defense-header label {
-    display: flex;
-    align-items: center;
-    gap: 5px;
+.aa-defense-mode {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, auto));
+    gap: 4px;
+    min-width: 0;
+    max-width: 100%;
 }
 
 

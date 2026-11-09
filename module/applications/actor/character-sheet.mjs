@@ -34,6 +34,12 @@ const DEATH_SAVE_LABELS = {
     failures: "Échecs"
 };
 
+const DEFENSE_MODE_LABELS = {
+    dex: "DEX",
+    con: "CON",
+    best: "↑ DEX/CON"
+};
+
 const ROLL_MODE_LABELS = {
     advantage: "Avantage",
     normal: "Neutre",
@@ -101,6 +107,7 @@ export class ArcaneCharacterSheet
 
         actions: {
             setRollMode: this._onSetRollMode,
+            setDefenseMode: this._onSetDefenseMode,
             rollConsciousnessDie: this._onRollConsciousnessDie,
             rollDeathSave: this._onRollDeathSave,
             rollInitiativeCheck: this._onRollInitiativeCheck,
@@ -148,6 +155,11 @@ export class ArcaneCharacterSheet
     };
 
 
+    get title() {
+        return this.actor.name || this.actor.id;
+    }
+
+
     static PARTS = {
         body: {
             template:
@@ -166,6 +178,11 @@ export class ArcaneCharacterSheet
         context.activeSheetTab = this._activeTab ?? "core";
 
         context.canEditState = this.isEditable;
+        context.defenseModes = Object.entries(DEFENSE_MODE_LABELS).map(([key, label]) => ({
+            key,
+            label,
+            selected: key === this.actor.system.defense.mode
+        }));
         const rollMode = this._getRollMode();
         context.rollModes = Object.entries(ROLL_MODE_LABELS).map(([key, label]) => ({
             key,
@@ -396,103 +413,14 @@ export class ArcaneCharacterSheet
         };
 
         context.guardSources = [];
-
-
-        // ==========================
-        // ARMES À DEUX MAINS
-        // ==========================
-
-        for (const weapon of this.actor.items) {
-
-            if (
-                weapon.type !== "weapon"
-                || !weapon.system.equipped
-                || !weapon.system.properties.has("twoHanded")
-                || !weapon.system.guardEnabled
-            ) {
-                continue;
-            }
-
-
-            const expertiseBonus =
-                this.actor.getExpertiseBonus(
-                    "weaponClass",
-                    weapon.system.weaponClass
-                );
-
-
-            const strength =
-                this.actor.system
-                    .abilities
-                    .strength
-                    .modifier;
-
-            const dexterity =
-                this.actor.system
-                    .abilities
-                    .dexterity
-                    .modifier;
-
-
-            const guardValue =
-                10
-                + strength
-                + expertiseBonus
-                + Math.min(dexterity, 0);
-
+        for (const item of equipment) {
+            const modifier = this.actor.getGuardModifier(item);
+            if (modifier === null) continue;
 
             context.guardSources.push({
-                id: weapon.id,
-                name: weapon.name,
-                type: "weapon",
-                label: "Arme",
-                value: guardValue
-            });
-        }
-
-
-        // ==========================
-        // BOUCLIERS
-        // ==========================
-
-        for (const shield of this.actor.items) {
-
-            if (
-                shield.type !== "shield"
-                || !shield.system.equipped
-                || !shield.system.guardEnabled
-            ) {
-                continue;
-            }
-
-
-            const expertiseBonus =
-                this.actor.getExpertiseBonus(
-                    "shieldClass",
-                    shield.system.shieldClass
-                );
-
-
-            const strength =
-                this.actor.system
-                    .abilities
-                    .strength
-                    .modifier;
-
-
-            const guardValue =
-                10
-                + strength
-                + shield.system.defenseBonus
-                + expertiseBonus;
-
-
-            context.guardSources.push({
-                id: shield.id,
-                name: shield.name,
-                type: "shield",
-                label: "Bouclier",
-                value: guardValue
+                id: item.id,
+                name: item.name,
+                value: modifier >= 0 ? "+" + modifier : String(modifier)
             });
         }
 
@@ -520,6 +448,13 @@ export class ArcaneCharacterSheet
 
     _getRollMode() {
         return this.actor.system.rollMode ?? "normal";
+    }
+
+
+    static async _onSetDefenseMode(event, target) {
+        const mode = target.dataset.defenseMode;
+        if (!this.isEditable || !Object.hasOwn(DEFENSE_MODE_LABELS, mode)) return;
+        await this.actor.update({ "system.defense.mode": mode });
     }
 
 
@@ -584,7 +519,7 @@ export class ArcaneCharacterSheet
         if (!itemId) return;
 
 
-        await this.actor.rollGuard(itemId);
+        await this.actor.rollGuard(itemId, this._getRollMode());
     }
 
 
@@ -869,7 +804,9 @@ export class ArcaneCharacterSheet
 
     async _onRender(context, options) {
         await super._onRender(context, options);
-        this.element.classList.toggle("aa-detached-sheet", this.window.windowId === this.id);
+        const isDetached = this.window.windowId === this.id;
+        this.element.classList.toggle("aa-detached-sheet", isDetached);
+        if (isDetached) this.element.ownerDocument.title = this.title;
 
         // Onglets
         const tabs = new foundry.applications.ux.Tabs({

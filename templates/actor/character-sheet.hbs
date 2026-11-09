@@ -712,42 +712,13 @@
                             <h3><span class="aa-heading-icon" aria-hidden="true">🛡️</span>Défense</h3>
 
 
-                            <label>
-                                Base
-
-                                <select name="system.defense.mode" title="↑ DEX/CON : utilise le meilleur des deux modificateurs">
-
-                                    <option
-                                        value="dex"
-                                        {{#if (eq system.defense.mode "dex")}}
-                                            selected
-                                        {{/if}}
-                                    >
-                                        DEX
-                                    </option>
-
-
-                                    <option
-                                        value="con"
-                                        {{#if (eq system.defense.mode "con")}}
-                                            selected
-                                        {{/if}}
-                                    >
-                                        CON
-                                    </option>
-
-
-                                    <option
-                                        value="best"
-                                        {{#if (eq system.defense.mode "best")}}
-                                            selected
-                                        {{/if}}
-                                    >
-                                        ↑ DEX/CON
-                                    </option>
-
-                                </select>
-                            </label>
+                            <div class="aa-defense-mode" role="group" aria-label="Mode de Défense">
+                                {{#each defenseModes}}
+                                    <button type="button" data-action="setDefenseMode" data-defense-mode="{{key}}"
+                                        aria-pressed="{{selected}}" {{#unless @root.canEditState}}disabled{{/unless}}
+                                        {{#if (eq key "best")}}title="Utilise le meilleur des deux modificateurs"{{/if}}>{{label}}</button>
+                                {{/each}}
+                            </div>
 
 
                             {{#if system.defense.shieldBonus}}
