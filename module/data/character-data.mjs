@@ -1,3 +1,5 @@
+import { ARCANE_NEEDS } from "../config.mjs";
+
 const {
     NumberField,
     SchemaField,
@@ -446,5 +448,27 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
         else {
             this.fever.percentage = 0;
         }
+    }
+}
+
+export class PlayerCharacterData extends CharacterData {
+
+    static defineSchema() {
+        const needs = Object.fromEntries(Object.entries(ARCANE_NEEDS).map(([key, { stages }]) => [
+            key,
+            new NumberField({
+                required: true,
+                nullable: false,
+                integer: true,
+                min: 0,
+                max: stages.length - 1,
+                initial: stages.length - 1
+            })
+        ]));
+
+        return {
+            ...super.defineSchema(),
+            needs: new SchemaField(needs)
+        };
     }
 }

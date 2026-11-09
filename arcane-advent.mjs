@@ -1,4 +1,4 @@
-import { CharacterData } from "./module/data/character-data.mjs";
+import { CharacterData, PlayerCharacterData } from "./module/data/character-data.mjs";
 import { WeaponData } from "./module/data/weapon-data.mjs";
 import { ShieldData } from "./module/data/shield-data.mjs";
 import { ProtectionData } from "./module/data/protection-data.mjs";
@@ -6,6 +6,7 @@ import { AccessoryData } from "./module/data/accessory-data.mjs";
 
 import { SkillData } from "./module/data/skill-data.mjs";
 import { ExpertiseData } from "./module/data/expertise-data.mjs";
+import { AlterationData, InjuryData } from "./module/data/condition-data.mjs";
 
 import { ArcaneActor } from "./module/documents/actor.mjs";
 import { ArcaneItem } from "./module/documents/item.mjs";
@@ -19,7 +20,7 @@ Hooks.once("init", () => {
     CONFIG.Actor.documentClass = ArcaneActor;
     CONFIG.Item.documentClass = ArcaneItem;
 
-    CONFIG.Actor.dataModels.character = CharacterData;
+    CONFIG.Actor.dataModels.character = PlayerCharacterData;
     CONFIG.Actor.dataModels.npc = CharacterData;
 
     CONFIG.Item.dataModels.weapon = WeaponData;
@@ -29,6 +30,8 @@ Hooks.once("init", () => {
 
     CONFIG.Item.dataModels.skill = SkillData;
     CONFIG.Item.dataModels.expertise = ExpertiseData;
+    CONFIG.Item.dataModels.alteration = AlterationData;
+    CONFIG.Item.dataModels.injury = InjuryData;
 
     CONFIG.Actor.trackableAttributes = {
         character: {

@@ -46,7 +46,9 @@
             "protection": {},
             "accessory": {},
             "skill": {},
-            "expertise": {}
+            "expertise": {},
+            "alteration": {},
+            "injury": {}
         }
     }
 }

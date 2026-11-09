@@ -25,7 +25,7 @@
     <nav class="aa-tabs tabs" data-group="sheet">
 
         <a
-            class="item"
+            class="item{{#if (eq activeSheetTab "core")}} active{{/if}}"
             data-tab="core"
             data-group="sheet"
         >
@@ -33,7 +33,7 @@
         </a>
 
         <a
-            class="item"
+            class="item{{#if (eq activeSheetTab "equipment")}} active{{/if}}"
             data-tab="equipment"
             data-group="sheet"
         >
@@ -41,7 +41,7 @@
         </a>
 
         <a
-            class="item"
+            class="item{{#if (eq activeSheetTab "arcanology")}} active{{/if}}"
             data-tab="arcanology"
             data-group="sheet"
         >
@@ -49,7 +49,7 @@
         </a>
 
         <a
-            class="item"
+            class="item{{#if (eq activeSheetTab "information")}} active{{/if}}"
             data-tab="information"
             data-group="sheet"
         >
@@ -57,7 +57,7 @@
         </a>
 
         <a
-            class="item"
+            class="item{{#if (eq activeSheetTab "options")}} active{{/if}}"
             data-tab="options"
             data-group="sheet"
         >
@@ -69,7 +69,7 @@
     <div class="aa-tab-content">
 
         <section
-            class="tab"
+            class="tab{{#if (eq activeSheetTab "core")}} active{{/if}}"
             data-group="sheet"
             data-tab="core"
         >
@@ -266,73 +266,21 @@
                             <div class="aa-status-content">
 
                                 <div class="aa-death-saves">
-
-                                    <div class="aa-death-save-group">
-
-                                        <span>
-                                            Réussites
-                                        </span>
-
-                                        <div class="aa-death-save-boxes">
-
-                                            <input
-                                                type="checkbox"
-                                                {{#if deathSaves.successes.[0]}}checked{{/if}}
-                                                data-death-save="successes"
-                                                data-death-save-index="1"
-                                            >
-
-                                            <input
-                                                type="checkbox"
-                                                {{#if deathSaves.successes.[1]}}checked{{/if}}
-                                                data-death-save="successes"
-                                                data-death-save-index="2"
-                                            >
-
-                                            <input
-                                                type="checkbox"
-                                                {{#if deathSaves.successes.[2]}}checked{{/if}}
-                                                data-death-save="successes"
-                                                data-death-save-index="3"
-                                            >
-
+                                    {{#each deathSaves}}
+                                        <div class="aa-death-save-group">
+                                            <span>{{label}}</span>
+                                            <div class="aa-death-save-boxes" role="group" aria-label="{{label}}">
+                                                {{#each steps}}
+                                                    <button type="button" data-action="stepTrack" data-track="deathSaves"
+                                                        data-key="{{../key}}" data-index="{{index}}" aria-pressed="{{filled}}"
+                                                        aria-label="{{../label}}, coche {{index}} sur 3"
+                                                        {{#unless @root.canEditState}}disabled{{/unless}}>
+                                                        {{#if filled}}<span aria-hidden="true">✓</span>{{/if}}
+                                                    </button>
+                                                {{/each}}
+                                            </div>
                                         </div>
-
-                                    </div>
-
-                                    <div class="aa-death-save-group">
-
-                                        <span>
-                                            Échecs
-                                        </span>
-
-                                        <div class="aa-death-save-boxes">
-
-                                            <input
-                                                type="checkbox"
-                                                {{#if deathSaves.failures.[0]}}checked{{/if}}
-                                                data-death-save="failures"
-                                                data-death-save-index="1"
-                                            >
-
-                                            <input
-                                                type="checkbox"
-                                                {{#if deathSaves.failures.[1]}}checked{{/if}}
-                                                data-death-save="failures"
-                                                data-death-save-index="2"
-                                            >
-
-                                            <input
-                                                type="checkbox"
-                                                {{#if deathSaves.failures.[2]}}checked{{/if}}
-                                                data-death-save="failures"
-                                                data-death-save-index="3"
-                                            >
-
-                                        </div>
-
-                                    </div>
-
+                                    {{/each}}
                                 </div>
 
                             </div>
@@ -364,7 +312,11 @@
                                 </div>
 
                             </div>
-
+                            <button type="button" class="aa-mercy-help" data-action="showMercyHelp"
+                                aria-label="Aide sur les points de Miséricorde"
+                                data-tooltip-text="À construire" data-tooltip-direction="UP">
+                                <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                            </button>
                         </div>
 
                     </div>
@@ -380,7 +332,7 @@
 
                 <section class="aa-panel">
                     <h2 class="aa-status-title">
-                        Conditions
+                        État du personnage
                     </h2>
 
                     <div class="aa-roll-mode">
@@ -413,10 +365,65 @@
                         </select>
                     </div>
 
-                    <p>
-                        Conditions, blessures, besoins,
-                        climat et moral.
-                    </p>
+                    {{#each conditionSections}}
+                        <div class="aa-condition-group">
+                            <div class="aa-condition-heading">
+                                <h3>{{title}}</h3>
+                                {{#if @root.canEditState}}
+                                    <button type="button" data-action="editCondition" data-condition-type="{{type}}"
+                                        aria-label="{{addLabel}}" title="{{addLabel}}">
+                                        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                                    </button>
+                                {{/if}}
+                            </div>
+
+                            {{#each entries}}
+                                <div class="aa-condition-row">
+                                    <details>
+                                        <summary>{{name}}</summary>
+                                        <p>{{#if description}}{{description}}{{else}}Aucune description.{{/if}}</p>
+                                    </details>
+                                    <span class="aa-condition-level">
+                                        {{../severityShort}} {{severity}}{{#if zone}} · {{zone}}{{/if}}
+                                    </span>
+                                    {{#if @root.canEditState}}
+                                        <button type="button" data-action="editCondition" data-item-id="{{id}}"
+                                            aria-label="Modifier {{name}}" title="Modifier">
+                                            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                                        </button>
+                                        <button type="button" data-action="deleteCondition" data-item-id="{{id}}"
+                                            aria-label="Retirer {{name}}" title="Retirer">
+                                            <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                        </button>
+                                    {{/if}}
+                                </div>
+                            {{else}}
+                                <p class="aa-condition-empty">{{empty}}</p>
+                            {{/each}}
+                        </div>
+                    {{/each}}
+
+                    <div class="aa-condition-group">
+                        <h3>Besoins</h3>
+                        <div class="aa-needs">
+                            {{#each needs}}
+                                <div class="aa-need-column" role="group" aria-label="{{label}}">
+                                    <strong>{{label}}</strong>
+                                    <div class="aa-need-meter" aria-hidden="true">
+                                        {{#each steps}}
+                                            <span {{#if filled}}class="is-filled"{{/if}}></span>
+                                        {{/each}}
+                                    </div>
+                                    {{#each levels}}
+                                        <button type="button" class="aa-need-level" data-action="stepTrack" data-track="needs"
+                                            data-key="{{../key}}" data-index="{{index}}" aria-pressed="{{selected}}"
+                                            aria-label="{{../label}} — {{name}} ({{index}} sur {{../max}})"
+                                            {{#unless @root.canEditState}}disabled{{/unless}}>{{name}}</button>
+                                    {{/each}}
+                                </div>
+                            {{/each}}
+                        </div>
+                    </div>
                 </section>
 
                 </div>
@@ -1168,7 +1175,7 @@
 
 
         <section
-            class="tab"
+            class="tab{{#if (eq activeSheetTab "equipment")}} active{{/if}}"
             data-group="sheet"
             data-tab="equipment"
         >
@@ -1528,7 +1535,7 @@
 
 
         <section
-            class="tab"
+            class="tab{{#if (eq activeSheetTab "arcanology")}} active{{/if}}"
             data-group="sheet"
             data-tab="arcanology"
         >
@@ -1540,7 +1547,7 @@
 
 
         <section
-            class="tab"
+            class="tab{{#if (eq activeSheetTab "information")}} active{{/if}}"
             data-group="sheet"
             data-tab="information"
         >
@@ -1552,7 +1559,7 @@
 
 
         <section
-            class="tab"
+            class="tab{{#if (eq activeSheetTab "options")}} active{{/if}}"
             data-group="sheet"
             data-tab="options"
         >

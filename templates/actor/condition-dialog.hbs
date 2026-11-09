@@ -1,0 +1,27 @@
+<div class="aa-condition-form standard-form">
+    <label>
+        Nom
+        <input type="text" name="name" value="{{name}}" required pattern=".*\S.*" autofocus>
+    </label>
+
+    <label>
+        {{severityLabel}}
+        <input type="number" name="severity" value="{{system.severity}}" min="0" step="1" required>
+    </label>
+
+    {{#if zones}}
+        <label>
+            Zone blessée
+            <select name="zone">
+                {{#each zones}}
+                    <option value="{{@key}}" {{#if (eq @key ../system.zone)}}selected{{/if}}>{{this}}</option>
+                {{/each}}
+            </select>
+        </label>
+    {{/if}}
+
+    <label>
+        Description
+        <textarea name="description" rows="4">{{system.description}}</textarea>
+    </label>
+</div>

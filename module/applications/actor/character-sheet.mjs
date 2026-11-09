@@ -1,6 +1,42 @@
+import { ARCANE_NEEDS } from "../../config.mjs";
+import { AlterationData, InjuryData, INJURY_ZONES } from "../../data/condition-data.mjs";
+
 const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 
+
+const CONDITION_SECTIONS = {
+    alteration: {
+        model: AlterationData,
+        title: "Altérations d’état",
+        addLabel: "Ajouter une altération",
+        editLabel: "Modifier l’altération",
+        empty: "Aucune altération.",
+        severityLabel: "Intensité",
+        severityShort: "Int."
+    },
+    injury: {
+        model: InjuryData,
+        title: "Blessures & Maladies",
+        addLabel: "Ajouter une blessure ou une maladie",
+        editLabel: "Modifier la blessure ou la maladie",
+        empty: "Aucune blessure ni maladie.",
+        severityLabel: "Gravité",
+        severityShort: "Grav."
+    }
+};
+
+const DEATH_SAVE_LABELS = {
+    successes: "Réussites",
+    failures: "Échecs"
+};
+
+function trackSteps(value, max) {
+    return Array.from({ length: max }, (_, offset) => ({
+        index: offset + 1,
+        filled: value > offset
+    }));
+}
 
 export class ArcaneCharacterSheet
     extends HandlebarsApplicationMixin(ActorSheetV2) {
@@ -26,6 +62,11 @@ export class ArcaneCharacterSheet
             rollAbility: this._onRollAbility,
             rollSavingThrow: this._onRollSavingThrow,
             rollGuard: this._onRollGuard,
+
+            editCondition: this._onEditCondition,
+            deleteCondition: this._onDeleteCondition,
+            stepTrack: this._onStepTrack,
+            showMercyHelp: this._onShowMercyHelp,
 
             addSkill: this._onAddSkill,
             deleteSkill: this._onDeleteSkill,
@@ -70,6 +111,39 @@ export class ArcaneCharacterSheet
 
         context.actor = this.actor;
         context.system = this.actor.system;
+        // L’onglet doit être visible avant que Foundry restaure le défilement.
+        context.activeSheetTab = this._activeTab ?? "core";
+
+        context.canEditState = this.isEditable;
+        context.conditionSections = Object.entries(CONDITION_SECTIONS).map(([type, section]) => ({
+            type,
+            title: section.title,
+            addLabel: section.addLabel,
+            empty: section.empty,
+            severityShort: section.severityShort,
+            entries: this.actor.items.filter(item => item.type === type).map(item => ({
+                id: item.id,
+                name: item.name,
+                severity: item.system.severity,
+                description: item.system.description,
+                zone: item.system.zone ? INJURY_ZONES[item.system.zone] : ""
+            }))
+        }));
+
+        context.needs = Object.entries(ARCANE_NEEDS).map(([key, { label, stages }]) => {
+            const value = this.actor.system.needs[key];
+            return {
+                key,
+                label,
+                max: stages.length - 1,
+                steps: trackSteps(value, stages.length - 1),
+                levels: stages.map((name, index) => ({
+                    name,
+                    index,
+                    selected: index === value
+                })).reverse()
+            };
+        });
 
         context.skills = this.actor.items
             .filter(item => item.type === "skill")
@@ -345,20 +419,11 @@ export class ArcaneCharacterSheet
                 bonus: expertise.system.bonus
             }));
 
-        context.deathSaves = {
-
-            successes: [
-                this.actor.system.deathSaves.successes >= 1,
-                this.actor.system.deathSaves.successes >= 2,
-                this.actor.system.deathSaves.successes >= 3
-            ],
-
-            failures: [
-                this.actor.system.deathSaves.failures >= 1,
-                this.actor.system.deathSaves.failures >= 2,
-                this.actor.system.deathSaves.failures >= 3
-            ]
-        };
+        context.deathSaves = Object.entries(DEATH_SAVE_LABELS).map(([key, label]) => ({
+            key,
+            label,
+            steps: trackSteps(this.actor.system.deathSaves[key], 3)
+        }));
         
         return context;
     }
@@ -411,6 +476,115 @@ export class ArcaneCharacterSheet
     }
 
 
+    static async _onEditCondition(event, target) {
+        if (!this.isEditable) return;
+
+        const itemId = target.dataset.itemId;
+        const item = itemId ? this.actor.items.get(itemId) : null;
+        const type = itemId ? item?.type : target.dataset.conditionType;
+        if (!Object.hasOwn(CONDITION_SECTIONS, type)) return;
+        const section = CONDITION_SECTIONS[type];
+
+        const previous = {
+            name: item?.name ?? "",
+            system: item?.system.toObject() ?? section.model.schema.getInitialValue({})
+        };
+
+        const content = document.createElement("div");
+        content.innerHTML = await foundry.applications.handlebars.renderTemplate(
+            "systems/arcane-advent/templates/actor/condition-dialog.hbs",
+            {
+                ...previous,
+                severityLabel: section.severityLabel,
+                zones: type === "injury" ? INJURY_ZONES : null
+            }
+        );
+
+        const dialog = new foundry.applications.api.DialogV2({
+            window: { title: item ? section.editLabel : section.addLabel },
+            position: { width: 420 },
+            content,
+            modal: true,
+            form: { closeOnSubmit: false },
+            buttons: [
+                {
+                    action: "save",
+                    label: item ? "Enregistrer" : "Ajouter",
+                    callback: async (_event, button, app) => {
+                        if (!button.form.reportValidity()) return;
+
+                        const fields = new FormData(button.form);
+                        const data = {
+                            name: fields.get("name").trim(),
+                            system: {
+                                severity: Number(fields.get("severity")),
+                                description: fields.get("description").trim()
+                            }
+                        };
+                        if (type === "injury") data.system.zone = fields.get("zone");
+
+                        try {
+                            if (item) {
+                                if (!this.actor.items.has(itemId)) {
+                                    ui.notifications.warn("Cette condition a déjà été retirée.");
+                                    await app.close();
+                                    return;
+                                }
+
+                                const changes = foundry.utils.diffObject(previous, data);
+                                if (Object.keys(changes).length) await item.update(changes);
+                            } else {
+                                await this.actor.createEmbeddedDocuments("Item", [
+                                    { ...data, type }
+                                ]);
+                            }
+                            await app.close();
+                        } catch (error) {
+                            Hooks.onError("ArcaneCharacterSheet#_onEditCondition", error, {
+                                msg: "Impossible d’enregistrer la condition.",
+                                log: "error",
+                                notify: "error"
+                            });
+                        }
+                    }
+                },
+                {
+                    action: "cancel",
+                    label: "Annuler",
+                    type: "button",
+                    callback: (_event, _button, app) => app.close()
+                }
+            ]
+        });
+
+        await dialog.render({ force: true });
+    }
+
+
+    static async _onDeleteCondition(event, target) {
+        if (!this.isEditable) return;
+
+        const item = this.actor.items.get(target.dataset.itemId);
+        if (!item || !Object.hasOwn(CONDITION_SECTIONS, item.type)) return;
+
+        const content = document.createElement("div");
+        const message = document.createElement("p");
+        message.textContent = `Retirer « ${item.name} » de la fiche du personnage ?`;
+        content.append(message);
+
+        const confirmed = await foundry.applications.api.DialogV2.confirm({
+            window: { title: "Retirer la condition" },
+            content,
+            modal: true,
+            rejectClose: false,
+            yes: { label: "Retirer" },
+            no: { label: "Annuler" }
+        });
+
+        if (confirmed && this.actor.items.has(item.id)) await item.delete();
+    }
+
+
     static async _onAddSkill(event, target) {
         await this.actor.createEmbeddedDocuments(
             "Item",
@@ -456,12 +630,10 @@ export class ArcaneCharacterSheet
         await super._onRender(context, options);
 
         // Onglets
-        this._activeTab ??= "core";
-
         const tabs = new foundry.applications.ux.Tabs({
             navSelector: ".aa-tabs",
             contentSelector: ".aa-tab-content",
-            initial: this._activeTab,
+            initial: context.activeSheetTab,
             group: "sheet"
         });
 
@@ -511,18 +683,6 @@ export class ArcaneCharacterSheet
             field.addEventListener(
                 "change",
                 this._onExpertiseEdit.bind(this)
-            );
-        }
-
-        const deathSaveFields =
-            this.element.querySelectorAll(
-                "[data-death-save]"
-            );
-
-        for (const field of deathSaveFields) {
-            field.addEventListener(
-                "change",
-                this._onDeathSaveChange.bind(this)
             );
         }
     }
@@ -1103,35 +1263,30 @@ export class ArcaneCharacterSheet
         });
     }
 
-    async _onDeathSaveChange(event) {
-
-        const field =
-            event.currentTarget;
-
-        const type =
-            field.dataset.deathSave;
-
-        const index =
-            Number(field.dataset.deathSaveIndex);
-
-
-        if (
-            !["successes", "failures"].includes(type)
-            || !index
-        ) {
-            return;
-        }
-
-
-        const value =
-            field.checked
-                ? index
-                : index - 1;
-
-
-        await this.actor.update({
-            [`system.deathSaves.${type}`]:
-                value
+    static async _onShowMercyHelp(event, target) {
+        await foundry.applications.api.DialogV2.prompt({
+            window: { title: "Points de Miséricorde" },
+            content: target.dataset.tooltipText,
+            ok: { label: "Fermer" },
+            rejectClose: false
         });
+    }
+
+    static async _onStepTrack(event, target) {
+        if (!this.isEditable) return;
+
+        const { track, key } = target.dataset;
+        const index = Number(target.dataset.index);
+        let max = 0;
+        if (track === "needs" && Object.hasOwn(ARCANE_NEEDS, key)) {
+            max = ARCANE_NEEDS[key].stages.length - 1;
+        } else if (track === "deathSaves" && Object.hasOwn(DEATH_SAVE_LABELS, key)) {
+            max = 3;
+        }
+        if (!max || !Number.isInteger(index) || index < (track === "needs" ? 0 : 1) || index > max) return;
+
+        const current = this.actor.system[track][key];
+        const value = track === "deathSaves" && index <= current ? index - 1 : index;
+        await this.actor.update({ [`system.${track}.${key}`]: value });
     }
 }
