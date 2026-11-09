@@ -1758,6 +1758,7 @@
                                             data-inventory-quantity="{{id}}" aria-label="Quantité de {{name}}"
                                             {{#unless @root.canEditState}}readonly{{/unless}}>
                                     {{/if}}
+                                    {{#if isPurse}}<span class="aa-inventory-purse-icon" aria-hidden="true">💰</span>{{/if}}
                                     <span class="aa-inventory-name">{{name}}</span>
                                     {{#if coins.length}}
                                         <span class="aa-inventory-coins">
