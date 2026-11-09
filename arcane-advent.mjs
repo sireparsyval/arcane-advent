@@ -7,6 +7,7 @@ import { AccessoryData } from "./module/data/accessory-data.mjs";
 import { SkillData } from "./module/data/skill-data.mjs";
 import { ExpertiseData } from "./module/data/expertise-data.mjs";
 import { AlterationData, InjuryData } from "./module/data/condition-data.mjs";
+import { AptitudeData } from "./module/data/aptitude-data.mjs";
 
 import { ArcaneActor } from "./module/documents/actor.mjs";
 import { ArcaneItem } from "./module/documents/item.mjs";
@@ -32,6 +33,7 @@ Hooks.once("init", () => {
     CONFIG.Item.dataModels.expertise = ExpertiseData;
     CONFIG.Item.dataModels.alteration = AlterationData;
     CONFIG.Item.dataModels.injury = InjuryData;
+    CONFIG.Item.dataModels.aptitude = AptitudeData;
 
     CONFIG.Actor.trackableAttributes = {
         character: {

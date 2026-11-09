@@ -1,11 +1,10 @@
 const {
     NumberField,
     SetField,
-    StringField,
-    TypedObjectField
+    StringField
 } = foundry.data.fields;
 
-import { EquipmentData } from "./equipment-data.mjs";
+import { EquipmentData, damageReductionsField } from "./equipment-data.mjs";
 
 
 export class ProtectionData extends EquipmentData {
@@ -41,20 +40,7 @@ export class ProtectionData extends EquipmentData {
                 }
             ),
 
-            damageReductions: new TypedObjectField(
-                new NumberField({
-                    required: true,
-                    nullable: false,
-                    integer: true,
-                    min: 0,
-                    initial: 0
-                }),
-                {
-                    required: true,
-                    nullable: false,
-                    initial: {}
-                }
-            )
+            damageReductions: damageReductionsField()
         };
     }
 }

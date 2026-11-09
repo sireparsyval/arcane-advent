@@ -1,11 +1,26 @@
 const {
     BooleanField,
+    NumberField,
     SetField,
-    StringField
+    StringField,
+    TypedObjectField
 } = foundry.data.fields;
 
 import { BaseItemData } from "./base-item-data.mjs";
 
+
+export function damageReductionsField() {
+    return new TypedObjectField(
+        new NumberField({
+            required: true,
+            nullable: false,
+            integer: true,
+            min: 0,
+            initial: 0
+        }),
+        { required: true, nullable: false, initial: {} }
+    );
+}
 
 export class EquipmentData extends BaseItemData {
 

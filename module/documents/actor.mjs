@@ -1,3 +1,10 @@
+const EXPERTISE_EQUIPMENT_TYPES = {
+    weaponClass: ["weapon"],
+    shieldClass: ["shield"],
+    armorClass: ["protection"],
+    toolObject: ["weapon", "shield", "protection", "accessory"]
+};
+
 export class ArcaneActor extends Actor {
 
     async modifyConsciousness(amount) {
@@ -138,6 +145,47 @@ export class ArcaneActor extends Actor {
     }
 
 
+    async rollConsciousnessDie() {
+        const formula = this.system.consciousnessDice.formula.trim();
+        if (!formula || !foundry.dice.Roll.validate(formula)) {
+            ui.notifications.warn("La formule des dés de conscience est invalide.");
+            return;
+        }
+
+        const roll = new foundry.dice.Roll(formula, this.getRollData());
+        await roll.evaluate();
+        await roll.toMessage({
+            speaker: foundry.documents.ChatMessage.getSpeaker({ actor: this }),
+            flavor: "Dé de conscience"
+        });
+        return roll;
+    }
+
+
+    async rollDeathSave() {
+        const roll = new foundry.dice.Roll("1d20");
+        await roll.evaluate();
+
+        const success = roll.total >= 11;
+        const key = success ? "successes" : "failures";
+        const count = roll.total === 20 ? 3 : roll.total === 1 ? 2 : 1;
+        const value = Math.min(3, this.system.deathSaves[key] + count);
+        await this.update({ [`system.deathSaves.${key}`]: value });
+
+        const label = success ? "réussite" : "échec";
+        await roll.toMessage({
+            speaker: foundry.documents.ChatMessage.getSpeaker({ actor: this }),
+            flavor: `Contre-la-Mort — ${count} ${label}${count > 1 ? "s" : ""}`
+        });
+        return roll;
+    }
+
+
+    async rollInitiativeCheck(mode = "normal") {
+        return this._rollD20(this.system.trackers.initiative, mode, "Jet d’initiative");
+    }
+
+
     async rollAbility(abilityKey, mode = "normal") {
         const ability = this.system.abilities[abilityKey];
 
@@ -207,6 +255,49 @@ export class ArcaneActor extends Actor {
             `Jet de ${skill.name}`
         );
     }
+    async rollAptitude(itemId, rollId, mode = "normal") {
+        const aptitude = this.items.get(itemId);
+        if (aptitude?.type !== "aptitude" || !Object.hasOwn(aptitude.system.rolls, rollId)) return;
+
+        const config = aptitude.system.rolls[rollId];
+        const skill = this.items.get(config.skillId);
+        const ability = this.system.abilities[config.ability]?.modifier ?? 0;
+        const mastery = skill?.type === "skill" ? skill.system.mastery : 0;
+        const expertise = this.items.get(config.expertiseId);
+        const bonus = expertise?.type === "expertise" && this._canApplyAptitudeExpertise(expertise)
+            ? expertise.system.bonus
+            : 0;
+        const modifier = ability + mastery + bonus;
+        const flavor = foundry.utils.escapeHTML(`${aptitude.name} — ${config.name}`);
+        const formula = config.formula.trim();
+
+        if (formula.toLowerCase() === "1d20") return this._rollD20(modifier, mode, flavor);
+
+        const suffix = modifier < 0 ? ` - ${Math.abs(modifier)}` : modifier > 0 ? ` + ${modifier}` : "";
+        const roll = new foundry.dice.Roll(formula + suffix, this.getRollData());
+        await roll.evaluate();
+        await roll.toMessage({
+            speaker: foundry.documents.ChatMessage.getSpeaker({ actor: this }),
+            flavor
+        });
+        return roll;
+    }
+
+    _canApplyAptitudeExpertise(expertise) {
+        const { domain, target } = expertise.system;
+        if (!Object.hasOwn(EXPERTISE_EQUIPMENT_TYPES, domain)) return domain === "other";
+
+        const normalized = target.trim().toLowerCase();
+        if (!normalized) return false;
+
+        return this.items.some(item => {
+            if (!item.system.equipped || !EXPERTISE_EQUIPMENT_TYPES[domain].includes(item.type)) return false;
+            const equipmentTarget = domain === "toolObject" ? item.name : item.system[domain];
+            return equipmentTarget?.trim().toLowerCase() === normalized;
+        });
+    }
+
+
     async rollWeaponAttack(
         weaponId,
         mode = "normal"

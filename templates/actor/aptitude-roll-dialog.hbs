@@ -1,0 +1,44 @@
+<div class="aa-condition-form standard-form">
+    <label>
+        Nom du bouton
+        <input type="text" name="name" value="{{current.name}}" required pattern=".*\S.*" autofocus>
+    </label>
+
+    <label>
+        Formule
+        <input type="text" name="formula" value="{{current.formula}}" placeholder="1d20" required>
+    </label>
+
+    <label>
+        Caractéristique
+        <select name="ability">
+            <option value="">Aucune</option>
+            {{#each abilities}}
+                <option value="{{@key}}" {{#if (eq @key ../current.ability)}}selected{{/if}}>{{this}}</option>
+            {{/each}}
+        </select>
+    </label>
+
+    <label>
+        Compétence (bonus de maîtrise)
+        <select name="skillId">
+            <option value="">Aucune</option>
+            {{#each skills}}
+                <option value="{{id}}" {{#if (eq id ../current.skillId)}}selected{{/if}}>{{name}}</option>
+            {{/each}}
+        </select>
+    </label>
+
+    <label>
+        Expertise
+        <select name="expertiseId">
+            <option value="">Aucune</option>
+            {{#each expertises}}
+                <option value="{{id}}" {{#if (eq id ../current.expertiseId)}}selected{{/if}}>
+                    {{name}}{{#if system.target}} · {{system.target}}{{/if}} ({{system.bonus}})
+                </option>
+            {{/each}}
+        </select>
+    </label>
+    <p class="hint">Une expertise liée à l’équipement s’applique si un objet correspondant est équipé au moment du jet.</p>
+</div>

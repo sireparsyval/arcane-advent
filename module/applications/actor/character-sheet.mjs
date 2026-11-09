@@ -1,5 +1,8 @@
 import { ARCANE_NEEDS } from "../../config.mjs";
 import { AlterationData, InjuryData, INJURY_ZONES } from "../../data/condition-data.mjs";
+import {
+    APTITUDE_CATEGORIES, APTITUDE_OPTIONS, APTITUDE_DURATION_UNITS, APTITUDE_RECOVERY_UNITS, parseLegacyAptitudeOption
+} from "../../data/aptitude-data.mjs";
 
 const { ActorSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -8,7 +11,7 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const CONDITION_SECTIONS = {
     alteration: {
         model: AlterationData,
-        title: "Altérations d’état",
+        title: "Altérations d’État",
         addLabel: "Ajouter une altération",
         editLabel: "Modifier l’altération",
         empty: "Aucune altération.",
@@ -17,7 +20,7 @@ const CONDITION_SECTIONS = {
     },
     injury: {
         model: InjuryData,
-        title: "Blessures & Maladies",
+        title: "Conditions Physiques",
         addLabel: "Ajouter une blessure ou une maladie",
         editLabel: "Modifier la blessure ou la maladie",
         empty: "Aucune blessure ni maladie.",
@@ -31,10 +34,48 @@ const DEATH_SAVE_LABELS = {
     failures: "Échecs"
 };
 
+const ROLL_MODE_LABELS = {
+    advantage: "Avantage",
+    normal: "Neutre",
+    disadvantage: "Désavantage"
+};
+
+const APTITUDE_FIELDS = new Set([
+    "category", "level", "description", "durationTurns", "durationUnit",
+    "recoveryCounter.remaining", "recoveryCounter.max", "recoveryCounter.unit",
+    "chargeCounter.remaining", "chargeCounter.max"
+]);
+
+const APTITUDE_ROLL_ABILITIES = {
+    strength: "Force",
+    dexterity: "Dextérité",
+    constitution: "Constitution",
+    intelligence: "Intelligence",
+    wisdom: "Sagesse",
+    charisma: "Charisme"
+};
+
+function isAptitudeOptionVisible(system, key) {
+    const count = key === "duration" ? system.durationTurns : system[`${key}Counter`].max;
+    return system.showOptions[key] ?? (count > 0 || Boolean(system[key]?.trim()));
+}
+
 function trackSteps(value, max) {
     return Array.from({ length: max }, (_, offset) => ({
         index: offset + 1,
         filled: value > offset
+    }));
+}
+
+function damageTypeLabel(type) {
+    return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+function damageReductionEntries(item) {
+    return Object.entries(item.system.damageReductions ?? {}).map(([type, value]) => ({
+        type,
+        label: damageTypeLabel(type),
+        value
     }));
 }
 
@@ -59,12 +100,22 @@ export class ArcaneCharacterSheet
         },
 
         actions: {
+            setRollMode: this._onSetRollMode,
+            rollConsciousnessDie: this._onRollConsciousnessDie,
+            rollDeathSave: this._onRollDeathSave,
+            rollInitiativeCheck: this._onRollInitiativeCheck,
             rollAbility: this._onRollAbility,
             rollSavingThrow: this._onRollSavingThrow,
             rollGuard: this._onRollGuard,
 
             editCondition: this._onEditCondition,
-            deleteCondition: this._onDeleteCondition,
+            deleteCondition: this._onDeleteStateItem,
+            addAptitude: this._onAddAptitude,
+            toggleAptitudeConfig: this._onToggleAptitudeConfig,
+            toggleAptitudeOption: this._onToggleAptitudeOption,
+            editAptitudeRoll: this._onEditAptitudeRoll,
+            rollAptitude: this._onRollAptitude,
+            deleteAptitude: this._onDeleteStateItem,
             stepTrack: this._onStepTrack,
             showMercyHelp: this._onShowMercyHelp,
 
@@ -77,8 +128,8 @@ export class ArcaneCharacterSheet
             deleteEquipment: this._onDeleteEquipment,
 
             toggleProtectionZone: this._onToggleProtectionZone,
-            addProtectionReduction: this._onAddProtectionReduction,
-            removeProtectionReduction: this._onRemoveProtectionReduction,
+            addDamageReduction: this._onAddDamageReduction,
+            removeDamageReduction: this._onRemoveDamageReduction,
 
             rollWeaponAttack: this._onRollWeaponAttack,
             rollWeaponDamage: this._onRollWeaponDamage,
@@ -115,6 +166,46 @@ export class ArcaneCharacterSheet
         context.activeSheetTab = this._activeTab ?? "core";
 
         context.canEditState = this.isEditable;
+        const rollMode = this._getRollMode();
+        context.rollModes = Object.entries(ROLL_MODE_LABELS).map(([key, label]) => ({
+            key,
+            label,
+            selected: key === rollMode
+        }));
+        const openConfigs = new Set(Array.from(
+            this.element?.querySelectorAll("[data-aptitude-config]:not([hidden])") ?? [],
+            panel => panel.dataset.aptitudeConfig
+        ));
+        const openDescriptions = new Set(Array.from(
+            this.element?.querySelectorAll("details[data-aptitude-description][open]") ?? [],
+            panel => panel.dataset.aptitudeDescription
+        ));
+        context.aptitudeCategories = APTITUDE_CATEGORIES;
+        context.aptitudeDurationUnits = APTITUDE_DURATION_UNITS;
+        context.aptitudeRecoveryUnits = APTITUDE_RECOVERY_UNITS;
+        context.aptitudes = this.actor.items.filter(item => item.type === "aptitude").map(item => ({
+            id: item.id,
+            name: item.name,
+            system: item.system,
+            categoryLabel: APTITUDE_CATEGORIES[item.system.category],
+            durationUnitLabel: APTITUDE_DURATION_UNITS[item.system.durationUnit],
+            recoveryUnitLabel: APTITUDE_RECOVERY_UNITS[item.system.recoveryCounter.unit],
+            configOpen: openConfigs.has(item.id),
+            descriptionOpen: openDescriptions.has(item.id),
+            rolls: Object.entries(item.system.rolls).map(([id, roll]) => ({
+                id,
+                name: roll.name.replace(/^(?:🎲\uFE0F?\s*)+/u, "")
+            })),
+            options: Object.entries(APTITUDE_OPTIONS).map(([key, label]) => ({
+                key,
+                label,
+                value: key === "duration" ? item.system.durationTurns : item.system[`${key}Counter`],
+                note: item.system[key] && parseLegacyAptitudeOption(key, item.system[key]) === null
+                    ? item.system[key].trim()
+                    : "",
+                active: isAptitudeOptionVisible(item.system, key)
+            }))
+        }));
         context.conditionSections = Object.entries(CONDITION_SECTIONS).map(([type, section]) => ({
             type,
             title: section.title,
@@ -216,7 +307,10 @@ export class ArcaneCharacterSheet
                             ability.modifier
                             + expertiseBonus,
 
-                        damageTypes: [...item.system.damageTypes],
+                        damageTypes: [...item.system.damageTypes].map(type => ({
+                            type,
+                            label: damageTypeLabel(type)
+                        })),
 
                         properties: {
                             twoHanded:
@@ -253,6 +347,8 @@ export class ArcaneCharacterSheet
                     name: item.name,
                     system: item.system,
 
+                    damageReductions: damageReductionEntries(item),
+
                     expertiseBonus:
                         this.actor.getExpertiseBonus(
                             "shieldClass",
@@ -285,14 +381,7 @@ export class ArcaneCharacterSheet
                             item.system.zones.has("legs")
                     },
 
-                    damageReductions:
-                        Object.entries(
-                            item.system.damageReductions ?? {}
-                        )
-                        .map(([type, value]) => ({
-                            type,
-                            value
-                        }))
+                    damageReductions: damageReductionEntries(item)
                 })),
 
             accessories: equipment.filter(
@@ -430,13 +519,36 @@ export class ArcaneCharacterSheet
 
 
     _getRollMode() {
-        const select = this.element.querySelector(
-            '[name="system.rollMode"]'
-        );
+        return this.actor.system.rollMode ?? "normal";
+    }
 
-        return select?.value
-            ?? this.actor.system.rollMode
-            ?? "normal";
+
+    static async _onSetRollMode(event, target) {
+        const mode = target.dataset.rollMode;
+        if (!this.isEditable || !Object.hasOwn(ROLL_MODE_LABELS, mode)) return;
+        await this.actor.update({ "system.rollMode": mode });
+    }
+
+
+    static async _onRollConsciousnessDie() {
+        await this.actor.rollConsciousnessDie();
+    }
+
+
+    static async _onRollDeathSave(event, target) {
+        if (!this.isEditable || target.disabled) return;
+
+        target.disabled = true;
+        try {
+            await this.actor.rollDeathSave();
+        } finally {
+            target.disabled = !this.isEditable;
+        }
+    }
+
+
+    static async _onRollInitiativeCheck() {
+        await this.actor.rollInitiativeCheck(this._getRollMode());
     }
 
 
@@ -473,6 +585,123 @@ export class ArcaneCharacterSheet
 
 
         await this.actor.rollGuard(itemId);
+    }
+
+
+    static async _onAddAptitude() {
+        if (!this.isEditable) return;
+        await this.actor.createEmbeddedDocuments("Item", [
+            { name: "Nouvelle aptitude", type: "aptitude" }
+        ]);
+    }
+
+
+    static _onToggleAptitudeConfig(event, target) {
+        const config = target.closest(".aa-aptitude-row")?.querySelector("[data-aptitude-config]");
+        if (!config) return;
+
+        config.hidden = !config.hidden;
+        target.setAttribute("aria-expanded", String(!config.hidden));
+    }
+
+
+    static async _onToggleAptitudeOption(event, target) {
+        if (!this.isEditable) return;
+        const { itemId, option } = target.dataset;
+        const item = this.actor.items.get(itemId);
+        if (item?.type !== "aptitude" || !Object.hasOwn(APTITUDE_OPTIONS, option)) return;
+
+        await item.update({
+            [`system.showOptions.${option}`]: !isAptitudeOptionVisible(item.system, option)
+        });
+    }
+
+
+    static async _onRollAptitude(event, target) {
+        const { itemId, rollId } = target.dataset;
+        await this.actor.rollAptitude(itemId, rollId, this._getRollMode());
+    }
+
+
+    static async _onEditAptitudeRoll(event, target) {
+        if (!this.isEditable) return;
+        const { itemId, rollId } = target.dataset;
+        const item = this.actor.items.get(itemId);
+        if (item?.type !== "aptitude") return;
+        if (rollId && !Object.hasOwn(item.system.rolls, rollId)) return;
+
+        const current = rollId ? item.system.rolls[rollId] : { name: "Jet", formula: "1d20" };
+        const content = document.createElement("div");
+        content.innerHTML = await foundry.applications.handlebars.renderTemplate(
+            "systems/arcane-advent/templates/actor/aptitude-roll-dialog.hbs",
+            {
+                current,
+                abilities: APTITUDE_ROLL_ABILITIES,
+                skills: this.actor.items.filter(entry => entry.type === "skill"),
+                expertises: this.actor.items.filter(entry => entry.type === "expertise")
+            }
+        );
+
+        const buttons = [{
+            action: "save",
+            label: rollId ? "Enregistrer" : "Ajouter",
+            callback: async (_event, button, app) => {
+                if (!button.form.reportValidity()) return;
+                const fields = new FormData(button.form);
+                const formula = fields.get("formula").trim();
+                if (!formula || !foundry.dice.Roll.validate(formula)) {
+                    ui.notifications.warn("La formule du jet est invalide.");
+                    return;
+                }
+
+                if (!this.actor.items.has(itemId) || (rollId && !Object.hasOwn(item.system.rolls, rollId))) {
+                    await app.close();
+                    return;
+                }
+                const id = rollId ?? foundry.utils.randomID();
+                await item.update({
+                    [`system.rolls.${id}`]: {
+                        name: fields.get("name").trim(),
+                        formula,
+                        ability: fields.get("ability"),
+                        skillId: fields.get("skillId"),
+                        expertiseId: fields.get("expertiseId")
+                    }
+                });
+                await app.close();
+            }
+        }];
+
+        if (rollId) buttons.push({
+            action: "remove",
+            label: "Supprimer",
+            type: "button",
+            callback: async (_event, _button, app) => {
+                if (this.actor.items.has(itemId) && Object.hasOwn(item.system.rolls, rollId)) {
+                    await item.update({
+                        system: { rolls: { [rollId]: new foundry.data.operators.ForcedDeletion() } }
+                    });
+                }
+                await app.close();
+            }
+        });
+
+        buttons.push({
+            action: "cancel",
+            label: "Annuler",
+            type: "button",
+            callback: (_event, _button, app) => app.close()
+        });
+
+        const dialog = new foundry.applications.api.DialogV2({
+            window: { title: rollId ? "Modifier le jet d’aptitude" : "Ajouter un jet d’aptitude" },
+            position: { width: 430 },
+            content,
+            modal: true,
+            form: { closeOnSubmit: false },
+            buttons
+        });
+        await dialog.render({ force: true });
     }
 
 
@@ -561,11 +790,11 @@ export class ArcaneCharacterSheet
     }
 
 
-    static async _onDeleteCondition(event, target) {
+    static async _onDeleteStateItem(event, target) {
         if (!this.isEditable) return;
 
         const item = this.actor.items.get(target.dataset.itemId);
-        if (!item || !Object.hasOwn(CONDITION_SECTIONS, item.type)) return;
+        if (!item || (item.type !== "aptitude" && !Object.hasOwn(CONDITION_SECTIONS, item.type))) return;
 
         const content = document.createElement("div");
         const message = document.createElement("p");
@@ -573,7 +802,7 @@ export class ArcaneCharacterSheet
         content.append(message);
 
         const confirmed = await foundry.applications.api.DialogV2.confirm({
-            window: { title: "Retirer la condition" },
+            window: { title: item.type === "aptitude" ? "Retirer l’aptitude" : "Retirer la condition" },
             content,
             modal: true,
             rejectClose: false,
@@ -626,8 +855,21 @@ export class ArcaneCharacterSheet
     }
 
 
+    _onDetach(from, to) {
+        super._onDetach(from, to);
+        this.element.classList.add("aa-detached-sheet");
+    }
+
+
+    _onAttach(from, to) {
+        super._onAttach(from, to);
+        this.element.classList.remove("aa-detached-sheet");
+    }
+
+
     async _onRender(context, options) {
         await super._onRender(context, options);
+        this.element.classList.toggle("aa-detached-sheet", this.window.windowId === this.id);
 
         // Onglets
         const tabs = new foundry.applications.ux.Tabs({
@@ -638,6 +880,10 @@ export class ArcaneCharacterSheet
         });
 
         tabs.bind(this.element);
+
+        for (const field of this.element.querySelectorAll("[data-aptitude-field]")) {
+            field.addEventListener("change", this._onAptitudeEdit.bind(this));
+        }
 
         // Mémorise l'onglet actif en cas de re-render de la fiche.
         for (const tab of this.element.querySelectorAll(
@@ -685,6 +931,36 @@ export class ArcaneCharacterSheet
                 this._onExpertiseEdit.bind(this)
             );
         }
+    }
+
+
+    async _onAptitudeEdit(event) {
+        event.stopPropagation();
+        if (!this.isEditable) return;
+
+        const field = event.currentTarget;
+        const { itemId, aptitudeField } = field.dataset;
+        const item = this.actor.items.get(itemId);
+        if (item?.type !== "aptitude" || !field.reportValidity()) return;
+
+        if (aptitudeField === "name") {
+            const name = field.value.trim();
+            if (name && name !== item.name) await item.update({ name });
+            return;
+        }
+
+        if (!APTITUDE_FIELDS.has(aptitudeField)) return;
+        const value = field.type === "number" ? field.valueAsNumber : field.value;
+        if (value === foundry.utils.getProperty(item.system, aptitudeField)) return;
+
+        const changes = { [`system.${aptitudeField}`]: value };
+        if (aptitudeField.endsWith(".max")) {
+            const [counter] = aptitudeField.split(".");
+            if (item.system[counter].remaining > value) {
+                changes[`system.${counter}.remaining`] = value;
+            }
+        }
+        await item.update(changes);
     }
 
 
@@ -1071,12 +1347,17 @@ export class ArcaneCharacterSheet
         if (!input) return;
 
         const damageType =
-            input.value.trim().toLowerCase();
+            damageTypeLabel(input.value.trim());
 
         if (!damageType) return;
 
         const damageTypes =
             new Set(weapon.system.damageTypes);
+
+        if ([...damageTypes].some(type => type.toLowerCase() === damageType.toLowerCase())) {
+            input.value = "";
+            return;
+        }
 
         damageTypes.add(damageType);
 
@@ -1151,115 +1432,44 @@ export class ArcaneCharacterSheet
         });
     }
 
-    static async _onAddProtectionReduction(
-        event,
-        target
-    ) {
-        const itemId =
-            target.dataset.itemId;
+    static async _onAddDamageReduction(event, target) {
+        const { itemId } = target.dataset;
+        const item = this.actor.items.get(itemId);
+        if (!["shield", "protection"].includes(item?.type)) return;
 
+        const typeInput = this.element.querySelector(
+            `[data-reduction-type-input][data-item-id="${itemId}"]`
+        );
+        const valueInput = this.element.querySelector(
+            `[data-reduction-value-input][data-item-id="${itemId}"]`
+        );
+        if (!typeInput || !valueInput) return;
 
-        const protection =
-            this.actor.items.get(itemId);
+        const type = damageTypeLabel(typeInput.value.replace(/\./g, "").trim());
+        if (!type || /^[-=]=/.test(type) || ["__proto__", "Constructor", "Prototype"].includes(type)) return;
+        if (!valueInput.reportValidity()) return;
 
-
-        if (
-            !protection
-            || protection.type !== "protection"
-        ) {
-            return;
-        }
-
-
-        const typeInput =
-            this.element.querySelector(
-                `[data-reduction-type-input][data-item-id="${itemId}"]`
-            );
-
-
-        const valueInput =
-            this.element.querySelector(
-                `[data-reduction-value-input][data-item-id="${itemId}"]`
-            );
-
-
-        if (!typeInput || !valueInput) {
-            return;
-        }
-
-
-        const type =
-            typeInput.value
-                .trim()
-                .toLowerCase()
-                .replace(/\./g, "");
-
-
-        const value =
-            Math.max(
-                0,
-                Number(valueInput.value) || 0
-            );
-
-
-        if (!type) {
-            return;
-        }
-
-
-        const reductions = {
-            ...protection.system.damageReductions
-        };
-
-
-        reductions[type] = value;
-
-
-        await protection.update({
-            "system.damageReductions":
-                reductions
+        const existingType = Object.keys(item.system.damageReductions).find(
+            key => key.toLowerCase() === type.toLowerCase()
+        );
+        await item.update({
+            [`system.damageReductions.${existingType ?? type}`]: Number(valueInput.value)
         });
-
 
         typeInput.value = "";
         valueInput.value = "";
     }
 
-    static async _onRemoveProtectionReduction(
-        event,
-        target
-    ) {
-        const itemId =
-            target.dataset.itemId;
+    static async _onRemoveDamageReduction(event, target) {
+        const { itemId, damageType } = target.dataset;
+        const item = this.actor.items.get(itemId);
+        if (!["shield", "protection"].includes(item?.type)) return;
+        if (!Object.hasOwn(item.system.damageReductions, damageType)) return;
 
-        const damageType =
-            target.dataset.damageType;
-
-
-        const protection =
-            this.actor.items.get(itemId);
-
-
-        if (
-            !protection
-            || protection.type !== "protection"
-            || !damageType
-        ) {
-            return;
-        }
-
-
-        const reductions = {
-            ...protection.system.damageReductions
-        };
-
-
-        delete reductions[damageType];
-
-
-        await protection.update({
-            "system.damageReductions":
-                reductions
+        await item.update({
+            system: {
+                damageReductions: { [damageType]: new foundry.data.operators.ForcedDeletion() }
+            }
         });
     }
 

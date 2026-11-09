@@ -2,7 +2,8 @@
     "TYPES": {
         "Item": {
             "alteration": "Altération d’état",
-            "injury": "Blessure ou maladie"
+            "injury": "Blessure ou maladie",
+            "aptitude": "Aptitude"
         }
     }
 }

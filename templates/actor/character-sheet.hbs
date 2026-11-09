@@ -1,3 +1,28 @@
+{{#*inline "damageReductionControls"}}
+    <div class="aa-equipment-detail">
+        <strong class="aa-equipment-label">Réductions</strong>
+        <div class="aa-equipment-options">
+            {{#each damageReductions}}
+                <span class="aa-equipment-pill">
+                    <span>{{label}}</span>
+                    <input type="number" value="{{value}}" min="0" aria-label="Réduction contre {{label}}"
+                        data-equipment-edit data-item-id="{{../id}}" data-item-field="system.damageReductions.{{type}}">
+                    <button type="button" data-action="removeDamageReduction"
+                        data-item-id="{{../id}}" data-damage-type="{{type}}"
+                        aria-label="Retirer la réduction contre {{label}}" title="Retirer la réduction">×</button>
+                </span>
+            {{/each}}
+            <div class="aa-equipment-add">
+                <input type="text" placeholder="Tranchants…" aria-label="Type de dégâts à réduire"
+                    data-reduction-type-input data-item-id="{{id}}">
+                <input type="number" min="0" placeholder="0" aria-label="Valeur de la réduction"
+                    data-reduction-value-input data-item-id="{{id}}">
+                <button type="button" data-action="addDamageReduction" data-item-id="{{id}}"
+                    aria-label="Ajouter une réduction" title="Ajouter une réduction">+</button>
+            </div>
+        </div>
+    </div>
+{{/inline}}
 <div class="aa-character">
 
     <header class="aa-header">
@@ -146,7 +171,7 @@
 
                             <div class="aa-status-content">
 
-                                <div class="aa-status-values">
+                                <div class="aa-status-values aa-consciousness-dice-values">
 
                                     <input
                                         type="number"
@@ -163,6 +188,9 @@
                                         name="system.consciousnessDice.max"
                                         value="{{system.consciousnessDice.max}}"
                                     >
+
+                                    <button type="button" data-action="rollConsciousnessDie"
+                                        aria-label="Lancer le dé de conscience" title="Lancer le dé de conscience">🎲</button>
 
                                 </div>
 
@@ -283,6 +311,9 @@
                                     {{/each}}
                                 </div>
 
+                                <button type="button" class="aa-death-save-roll" data-action="rollDeathSave"
+                                    {{#unless canEditState}}disabled{{/unless}}>🎲 Contre-la-Mort</button>
+
                             </div>
 
                         </div>
@@ -324,9 +355,143 @@
                 </section>
 
                 <section class="aa-panel">
-                    <h2 class="aa-status-title">
-                        Aptitudes
-                    </h2>
+                    <div class="aa-condition-heading aa-aptitude-heading">
+                        <h2 class="aa-status-title">Aptitudes</h2>
+                        {{#if canEditState}}
+                            <button type="button" data-action="addAptitude"
+                                aria-label="Ajouter une aptitude" title="Ajouter une aptitude">
+                                <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                            </button>
+                        {{/if}}
+                    </div>
+                    {{#each aptitudes}}
+                        <div class="aa-condition-row aa-aptitude-row">
+                            {{#if @root.canEditState}}
+                                <div class="aa-aptitude-identity">
+                                    <label class="aa-aptitude-type">
+                                        <span>Type</span>
+                                        <select data-aptitude-field="category" data-item-id="{{id}}">
+                                            {{#each @root.aptitudeCategories}}
+                                                <option value="{{@key}}" {{#if (eq @key ../system.category)}}selected{{/if}}>{{this}}</option>
+                                            {{/each}}
+                                        </select>
+                                    </label>
+                                    <label class="aa-aptitude-level">
+                                        <span>Niv.</span>
+                                        <input type="number" min="0" step="1" required value="{{system.level}}"
+                                            data-aptitude-field="level" data-item-id="{{id}}">
+                                    </label>
+                                    <label class="aa-aptitude-name">
+                                        <span>Nom</span>
+                                        <input type="text" required pattern=".*\S.*" value="{{name}}"
+                                            data-aptitude-field="name" data-item-id="{{id}}">
+                                    </label>
+                                    <div class="aa-aptitude-actions">
+                                        <button type="button" data-action="toggleAptitudeConfig" aria-expanded="{{configOpen}}"
+                                            aria-label="Champs facultatifs de {{name}}" title="Champs facultatifs">
+                                            <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                                        </button>
+                                        <button type="button" data-action="deleteAptitude" data-item-id="{{id}}"
+                                            aria-label="Retirer {{name}}" title="Retirer l’aptitude">
+                                            <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="aa-aptitude-config" data-aptitude-config="{{id}}" {{#unless configOpen}}hidden{{/unless}}>
+                                    {{#each options}}
+                                        <button type="button" data-action="toggleAptitudeOption" data-item-id="{{../id}}"
+                                            data-option="{{key}}" aria-pressed="{{active}}">{{label}}</button>
+                                    {{/each}}
+                                    <button type="button" class="aa-aptitude-add-roll" data-action="editAptitudeRoll" data-item-id="{{id}}"
+                                        aria-label="Ajouter un jet" title="Ajouter un jet">+🎲</button>
+                                </div>
+                            {{else}}
+                                <div class="aa-aptitude-identity">
+                                    <strong>{{name}}</strong>
+                                    <span class="aa-condition-level">{{categoryLabel}} · Niv. {{system.level}} ({{system.level}} PdF)</span>
+                                </div>
+                            {{/if}}
+                            <div class="aa-aptitude-optional">
+                                {{#each options}}
+                                    {{#if active}}
+                                        <div class="aa-aptitude-option aa-aptitude-option-{{key}}">
+                                            <strong>{{label}}</strong>
+                                            {{#if @root.canEditState}}
+                                                {{#if (eq key "duration")}}
+                                                    <div class="aa-aptitude-option-line">
+                                                        <input type="number" min="0" step="1" required value="{{value}}"
+                                                            data-aptitude-field="durationTurns" data-item-id="{{../id}}" aria-label="Durée">
+                                                        <select class="aa-aptitude-duration-unit" data-aptitude-field="durationUnit"
+                                                            data-item-id="{{../id}}" aria-label="Unité de durée">
+                                                            {{#each @root.aptitudeDurationUnits}}
+                                                                <option value="{{@key}}" {{#if (eq @key ../../system.durationUnit)}}selected{{/if}}>{{this}}</option>
+                                                            {{/each}}
+                                                        </select>
+                                                    </div>
+                                                {{else}}
+                                                    <div class="aa-aptitude-option-line">
+                                                        <div class="aa-aptitude-counter">
+                                                            <input type="number" min="0" max="{{value.max}}" step="1" required value="{{value.remaining}}"
+                                                                data-aptitude-field="{{key}}Counter.remaining" data-item-id="{{../id}}"
+                                                                aria-label="{{label}} — restant" title="Restant">
+                                                            <span aria-hidden="true">/</span>
+                                                            <input type="number" min="0" step="1" required value="{{value.max}}"
+                                                                data-aptitude-field="{{key}}Counter.max" data-item-id="{{../id}}"
+                                                                aria-label="{{label}} — max" title="Max">
+                                                        </div>
+                                                        {{#if (eq key "recovery")}}
+                                                            <select data-aptitude-field="recoveryCounter.unit" data-item-id="{{../id}}" aria-label="Unité de récupération">
+                                                                {{#each @root.aptitudeRecoveryUnits}}
+                                                                    <option value="{{@key}}" {{#if (eq @key ../value.unit)}}selected{{/if}}>{{this}}</option>
+                                                                {{/each}}
+                                                            </select>
+                                                        {{/if}}
+                                                    </div>
+                                                {{/if}}
+                                            {{else}}
+                                                <span>
+                                                    {{#if (eq key "duration")}}
+                                                        {{value}} {{../durationUnitLabel}}
+                                                    {{else}}
+                                                        {{value.remaining}} / {{value.max}}{{#if (eq key "recovery")}} {{../recoveryUnitLabel}}{{/if}}
+                                                    {{/if}}
+                                                </span>
+                                            {{/if}}
+                                            {{#if note}}<small>Ancienne valeur · {{note}}</small>{{/if}}
+                                        </div>
+                                    {{/if}}
+                                {{/each}}
+                            </div>
+                            {{#if rolls}}
+                                <div class="aa-aptitude-rolls">
+                                    {{#each rolls}}
+                                        <div class="aa-aptitude-roll">
+                                            <button type="button" data-action="rollAptitude" data-item-id="{{../id}}" data-roll-id="{{id}}">
+                                                <span aria-hidden="true">🎲</span> {{name}}
+                                            </button>
+                                            {{#if @root.canEditState}}
+                                                <button type="button" class="aa-aptitude-edit-roll" data-action="editAptitudeRoll"
+                                                    data-item-id="{{../id}}" data-roll-id="{{id}}" aria-label="Modifier {{name}}" title="Modifier {{name}}">
+                                                    <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                                                </button>
+                                            {{/if}}
+                                        </div>
+                                    {{/each}}
+                                </div>
+                            {{/if}}
+                            <details data-aptitude-description="{{id}}" {{#if descriptionOpen}}open{{/if}}>
+                                <summary>Effets et utilisation</summary>
+                                {{#if @root.canEditState}}
+                                    <textarea rows="4" data-aptitude-field="description" data-item-id="{{id}}"
+                                        aria-label="Effets et utilisation de {{name}}">{{system.description}}</textarea>
+                                {{else}}
+                                    <p>{{#if system.description}}{{system.description}}{{else}}Aucune description.{{/if}}</p>
+                                {{/if}}
+                            </details>
+                        </div>
+                    {{else}}
+                        <p class="aa-condition-empty">Aucune aptitude.</p>
+                    {{/each}}
                 </section>
 
 
@@ -334,36 +499,6 @@
                     <h2 class="aa-status-title">
                         État du personnage
                     </h2>
-
-                    <div class="aa-roll-mode">
-                        <label for="roll-mode">Jets</label>
-
-                        <select
-                            id="roll-mode"
-                            name="system.rollMode"
-                        >
-                            <option
-                                value="advantage"
-                                {{#if (eq system.rollMode "advantage")}}selected{{/if}}
-                            >
-                                Avantage
-                            </option>
-
-                            <option
-                                value="normal"
-                                {{#if (eq system.rollMode "normal")}}selected{{/if}}
-                            >
-                                Neutre
-                            </option>
-
-                            <option
-                                value="disadvantage"
-                                {{#if (eq system.rollMode "disadvantage")}}selected{{/if}}
-                            >
-                                Désavantage
-                            </option>
-                        </select>
-                    </div>
 
                     {{#each conditionSections}}
                         <div class="aa-condition-group">
@@ -404,7 +539,6 @@
                     {{/each}}
 
                     <div class="aa-condition-group">
-                        <h3>Besoins</h3>
                         <div class="aa-needs">
                             {{#each needs}}
                                 <div class="aa-need-column" role="group" aria-label="{{label}}">
@@ -710,13 +844,11 @@
                         </div>
 
 
-                        <div class="aa-tracker">
-                            <label>Initiative</label>
-
-                            <strong>
-                                {{system.trackers.initiative}}
-                            </strong>
-                        </div>
+                        <button type="button" class="aa-tracker aa-tracker-roll" data-action="rollInitiativeCheck"
+                            title="Lancer l’initiative">
+                            <span><span aria-hidden="true">🎲</span> Initiative</span>
+                            <strong>{{system.trackers.initiative}}</strong>
+                        </button>
 
 
                         <div class="aa-tracker">
@@ -733,6 +865,13 @@
                             </div>
                         </div>
 
+                    </div>
+
+                    <div class="aa-roll-mode" role="group" aria-label="Mode de jet">
+                        {{#each rollModes}}
+                            <button type="button" data-action="setRollMode" data-roll-mode="{{key}}"
+                                aria-pressed="{{selected}}" {{#unless @root.canEditState}}disabled{{/unless}}>{{label}}</button>
+                        {{/each}}
                     </div>
 
                 </section>
@@ -1246,14 +1385,14 @@
                                     <div class="aa-equipment-options">
                                         {{#each damageTypes}}
                                             <span class="aa-equipment-pill">
-                                                <span>{{this}}</span>
+                                                <span>{{label}}</span>
                                                 <button type="button" data-action="removeWeaponDamageType"
-                                                    data-item-id="{{../id}}" data-damage-type="{{this}}"
-                                                    aria-label="Retirer le type {{this}}" title="Retirer">×</button>
+                                                    data-item-id="{{../id}}" data-damage-type="{{type}}"
+                                                    aria-label="Retirer le type {{type}}" title="Retirer">×</button>
                                             </span>
                                         {{/each}}
                                         <div class="aa-equipment-add">
-                                            <input type="text" placeholder="Tranchant…" aria-label="Nouveau type de dégâts"
+                                            <input type="text" placeholder="Tranchants…" aria-label="Nouveau type de dégâts"
                                                 data-damage-type-input data-item-id="{{id}}">
                                             <button type="button" data-action="addWeaponDamageType" data-item-id="{{id}}"
                                                 aria-label="Ajouter un type de dégâts" title="Ajouter un type de dégâts">+</button>
@@ -1406,6 +1545,7 @@
                                         </div>
                                     </div>
                                 </div>
+                                {{> damageReductionControls}}
                             </div>
                         {{else}}
                             <p class="aa-empty-equipment">Aucun bouclier équipé.</p>
@@ -1459,29 +1599,7 @@
                                     </div>
                                 </div>
 
-                                <div class="aa-equipment-detail">
-                                    <strong class="aa-equipment-label">Réductions</strong>
-                                    <div class="aa-equipment-options">
-                                        {{#each damageReductions}}
-                                            <span class="aa-equipment-pill">
-                                                <span>{{type}}</span>
-                                                <input type="number" value="{{value}}" min="0" aria-label="Réduction contre {{type}}"
-                                                    data-equipment-edit data-item-id="{{../id}}" data-item-field="system.damageReductions.{{type}}">
-                                                <button type="button" data-action="removeProtectionReduction"
-                                                    data-item-id="{{../id}}" data-damage-type="{{type}}"
-                                                    aria-label="Retirer la réduction contre {{type}}" title="Retirer la réduction">×</button>
-                                            </span>
-                                        {{/each}}
-                                        <div class="aa-equipment-add">
-                                            <input type="text" placeholder="Tranchant…" aria-label="Type de dégâts à réduire"
-                                                data-reduction-type-input data-item-id="{{id}}">
-                                            <input type="number" min="0" placeholder="0" aria-label="Valeur de la réduction"
-                                                data-reduction-value-input data-item-id="{{id}}">
-                                            <button type="button" data-action="addProtectionReduction" data-item-id="{{id}}"
-                                                aria-label="Ajouter une réduction" title="Ajouter une réduction">+</button>
-                                        </div>
-                                    </div>
-                                </div>
+                                {{> damageReductionControls}}
                             </div>
                         {{else}}
                             <p class="aa-empty-equipment">Aucune protection équipée.</p>

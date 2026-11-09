@@ -4,7 +4,7 @@ const {
     StringField
 } = foundry.data.fields;
 
-import { EquipmentData } from "./equipment-data.mjs";
+import { EquipmentData, damageReductionsField } from "./equipment-data.mjs";
 
 
 export class ShieldData extends EquipmentData {
@@ -26,6 +26,8 @@ export class ShieldData extends EquipmentData {
                 integer: true,
                 initial: 0
             }),
+
+            damageReductions: damageReductionsField(),
 
             guardEnabled: new BooleanField({
                 required: true,

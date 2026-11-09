@@ -48,7 +48,8 @@
             "skill": {},
             "expertise": {},
             "alteration": {},
-            "injury": {}
+            "injury": {},
+            "aptitude": {}
         }
     }
 }
