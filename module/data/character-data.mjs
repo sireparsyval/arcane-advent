@@ -403,25 +403,10 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
             }
         }
 
-
-        this.defense.zones.head =
-            this.defense.base
-            + protectionBonuses.head;
-
-
-        this.defense.zones.torso =
-            this.defense.base
-            + protectionBonuses.torso;
-
-
-        this.defense.zones.arms =
-            this.defense.base
-            + protectionBonuses.arms;
-
-
-        this.defense.zones.legs =
-            this.defense.base
-            + protectionBonuses.legs;
+        this.defense.zones.head = this.defense.base + protectionBonuses.head;
+        this.defense.zones.torso = this.defense.base + protectionBonuses.torso;
+        this.defense.zones.arms = this.defense.base + protectionBonuses.arms;
+        this.defense.zones.legs = this.defense.base + protectionBonuses.legs;
 
         const hasPerceptionSkill =
             this.parent.items.some(item =>

@@ -336,33 +336,32 @@
 }
 
 .aa-equipment-tab {
-    padding: 14px;
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
+.aa-equipment-heading,
+.aa-equipment-create {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
 }
 
 .aa-equipment-heading {
-    display: flex;
     justify-content: space-between;
-    align-items: center;
-    gap: 12px;
+    gap: 8px 12px;
 }
 
 .aa-equipment-heading h2 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.15rem;
     color: var(--aa-accent);
 }
 
-.aa-equipment-create {
-    display: flex;
-    gap: 6px;
-}
-
-.aa-equipment-create button {
-    width: auto;
-}
-
 .aa-equipment-section {
-    margin-top: 14px;
+    min-width: 0;
     padding: 12px;
     border: 1px solid var(--aa-border);
     border-radius: 7px;
@@ -370,275 +369,222 @@
 }
 
 .aa-equipment-section h3 {
-    margin: 0 0 10px;
-    padding-bottom: 8px;
+    margin: 0 0 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--aa-border);
     font-size: 1rem;
     color: var(--aa-accent);
-    border-bottom: 1px solid var(--aa-border);
 }
 
-.aa-equipment-list {
+.aa-equipment-list,
+.aa-equipment-card {
     display: grid;
-    gap: 5px;
+    gap: 6px;
+    min-width: 0;
 }
 
+.aa-equipment-card,
 .aa-equipment-row {
+    padding: 7px 8px;
+    border: 1px solid var(--aa-border);
+    border-radius: 5px;
+    background: var(--aa-surface);
+}
+
+.aa-equipment-tab button {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.aa-equipment-tab input:not([type="checkbox"]) {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.aa-equipment-identity,
+.aa-equipment-row,
+.aa-equipment-actions,
+.aa-shield-controls,
+.aa-protection-controls,
+.aa-weapon-combat,
+.aa-weapon-attack,
+.aa-weapon-damage,
+.aa-weapon-range,
+.aa-equipment-detail,
+.aa-equipment-options,
+.aa-equipment-add,
+.aa-weapon-configs,
+.aa-weapon-property-config {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px 6px;
+    min-width: 0;
+}
+
+.aa-equipment-field {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     gap: 6px;
+    flex: 1 1 10rem;
+    min-width: 0;
 }
 
-.aa-equipment-row input {
-    flex: 1;
+.aa-equipment-field:first-child {
+    flex-grow: 1.25;
 }
 
-.aa-equipment-row button {
-    width: auto;
+.aa-equipment-field input {
+    width: 100%;
 }
 
-.aa-item-type {
-    min-width: 75px;
+.aa-equipment-row > input {
+    flex: 1 1 12rem;
+}
+
+.aa-equipment-identity > .aa-equipment-actions,
+.aa-shield-controls,
+.aa-protection-controls,
+.aa-equipment-row > .aa-equipment-actions {
+    margin-inline-start: auto;
+}
+
+.aa-equipment-actions button {
+    min-width: 30px;
+    padding-inline: 5px;
+}
+
+.aa-equipment-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.aa-equipment-inline input[type="number"] {
+    width: 3.5rem;
     text-align: center;
-    opacity: 0.65;
 }
 
-.aa-empty-equipment {
-    margin: 4px 0;
-    opacity: 0.6;
-    font-style: italic;
+.aa-equipment-stat {
+    font-weight: bold;
+    white-space: nowrap;
 }
 
-/* ========================================================= */
-/* ARMES                                                     */
-/* ========================================================= */
+.aa-weapon-attack > .aa-equipment-stat,
+.aa-shield-controls > .aa-equipment-stat {
+    padding: 2px 6px;
+    border: 1px solid var(--aa-border);
+    border-radius: 5px;
+    background: var(--aa-surface);
+}
 
-.aa-weapon-card {
-    display: grid;
-    gap: 7px;
+.aa-weapon-combat {
+    gap: 6px 12px;
+}
 
-    padding: 8px;
+.aa-weapon-damage input,
+.aa-weapon-property-config input[type="text"] {
+    width: 7rem;
+}
 
-    border:
-        1px solid var(--aa-border, rgba(220, 200, 175, 0.22));
+.aa-equipment-detail {
+    align-items: baseline;
+    padding-top: 5px;
+    border-top: 1px solid var(--aa-border);
+}
 
+.aa-equipment-label {
+    flex: 0 1 6rem;
+    color: var(--aa-accent);
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
+.aa-equipment-options {
+    flex: 1 1 14rem;
+}
+
+.aa-equipment-options button[aria-pressed="true"] {
+    border-color: var(--aa-accent);
+    background: rgba(217, 188, 145, 0.1);
+    font-weight: bold;
+}
+
+.aa-equipment-pill {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    max-width: 100%;
+    padding: 2px 5px;
+    border: 1px solid var(--aa-border);
     border-radius: 5px;
 }
 
-
-/* --------------------------------------------------------- */
-/* IDENTITÉ : NOM + CLASSE                                   */
-/* --------------------------------------------------------- */
-
-.aa-weapon-identity {
-    display: grid;
-
-    grid-template-columns:
-        minmax(250px, 1.4fr)
-        minmax(250px, 1fr);
-
-    gap: 8px;
-    align-items: center;
-}
-
-
-.aa-weapon-name {
-    width: 100%;
+.aa-equipment-pill > span,
+.aa-item-type {
     min-width: 0;
+    overflow-wrap: anywhere;
 }
 
-
-.aa-weapon-class {
-    display: grid;
-
-    grid-template-columns:
-        auto minmax(200px, 1fr);
-
-    gap: 6px;
-    align-items: center;
+.aa-equipment-pill button {
+    flex: none;
+    padding-inline: 4px;
 }
 
-
-.aa-weapon-class input {
-    width: 100%;
-    min-width: 0;
-}
-
-
-/* --------------------------------------------------------- */
-/* COMBAT                                                    */
-/* --------------------------------------------------------- */
-
-.aa-weapon-combat {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-
-    gap: 6px;
-}
-
-
-.aa-weapon-ability {
-    min-width: 38px;
-
-    text-align: center;
-    font-weight: bold;
-}
-
-
-.aa-weapon-expertise {
-    white-space: nowrap;
-    font-weight: bold;
-}
-
-
-.aa-weapon-damage {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-
-.aa-weapon-damage input {
-    width: 130px;
-    min-width: 0;
-}
-
-
-.aa-weapon-range {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-
-.aa-weapon-range input {
-    width: 55px;
-
+.aa-equipment-pill input[type="number"],
+.aa-equipment-add input[type="number"] {
+    flex: 0 0 3.25rem;
+    width: 3.25rem;
     text-align: center;
 }
 
-
-.aa-weapon-combat button {
-    width: auto;
-    min-width: 34px;
-    padding-left: 6px;
-    padding-right: 6px;
+.aa-equipment-add input[type="text"] {
+    flex: 1 1 8rem;
+    width: 8rem;
 }
 
-
-/* --------------------------------------------------------- */
-/* TYPES DE DÉGÂTS                                           */
-/* --------------------------------------------------------- */
-
-.aa-weapon-damage-types {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-
-    gap: 5px;
+.aa-equipment-add button {
+    flex: none;
 }
 
-
-.aa-weapon-damage-types strong {
-    white-space: nowrap;
+.aa-weapon-configs:not(:has(> *)) {
+    display: none;
 }
 
-
-.aa-damage-type {
-    display: inline-flex;
-    align-items: center;
-
-    gap: 3px;
-
-    padding: 2px 6px;
-
-    border:
-        1px solid var(--aa-border, rgba(220, 200, 175, 0.22));
-
-    border-radius: 10px;
+.aa-weapon-configs {
+    align-items: stretch;
+    padding-top: 5px;
+    border-top: 1px solid var(--aa-border);
 }
-
-
-.aa-damage-type button {
-    width: auto;
-    min-width: 0;
-
-    padding: 0 3px;
-
-    border: 0;
-    background: none;
-}
-
-
-.aa-weapon-damage-types
-input[data-damage-type-input] {
-    width: 150px;
-}
-
-
-/* --------------------------------------------------------- */
-/* PROPRIÉTÉS                                                */
-/* --------------------------------------------------------- */
-
-.aa-weapon-properties {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-
-    gap: 5px;
-}
-
-
-.aa-weapon-properties button {
-    width: auto;
-
-    opacity: 0.55;
-}
-
-
-.aa-weapon-properties button.active {
-    opacity: 1;
-    font-weight: bold;
-}
-
-
-/* --------------------------------------------------------- */
-/* CONFIG DES PROPRIÉTÉS ACTIVES                             */
-/* --------------------------------------------------------- */
 
 .aa-weapon-property-config {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-
-    gap: 8px;
-
-    padding-top: 6px;
-
-    border-top:
-        1px solid var(--aa-border, rgba(220, 200, 175, 0.22));
+    padding: 4px 6px;
+    border: 1px solid var(--aa-border);
+    border-radius: 5px;
 }
 
-
-.aa-weapon-property-config label {
-    display: flex;
-    align-items: center;
-
-    gap: 4px;
+.aa-weapon-property-config > strong {
+    color: var(--aa-accent);
+    font-size: 0.85rem;
 }
 
-
-.aa-weapon-property-config input[type="number"] {
-    width: 60px;
-
-    text-align: center;
+.aa-item-type {
+    font-size: 0.85rem;
+    opacity: 0.75;
 }
 
-
-.aa-weapon-property-config input[type="text"] {
-    width: 110px;
+.aa-empty-equipment {
+    margin: 2px 0;
+    opacity: 0.7;
+    font-style: italic;
 }
-
 
 .aa-expertise-header,
 .aa-expertise-row {
@@ -680,68 +626,6 @@ input[data-damage-type-input] {
     padding: 0;
 }
 
-
-.aa-weapon-expertise {
-    white-space: nowrap;
-    font-weight: bold;
-}
-
-.aa-shield-row {
-    display: grid;
-
-    grid-template-columns:
-        minmax(220px, 1.4fr)
-        minmax(220px, 1.4fr)
-        70px
-        70px
-        auto
-        32px
-        32px;
-
-    gap: 6px;
-    align-items: center;
-}
-
-
-.aa-shield-row label {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-
-.aa-shield-row input[type="text"] {
-    min-width: 0;
-    width: 100%;
-}
-
-
-.aa-shield-row input[type="number"] {
-    width: 50px;
-    text-align: center;
-}
-
-
-.aa-shield-guard {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-
-    white-space: nowrap;
-}
-
-
-.aa-shield-row button {
-    width: 32px;
-    min-width: 32px;
-    padding: 0;
-}
-
-
-.aa-shield-expertise {
-    white-space: nowrap;
-    font-weight: bold;
-}
 
 .aa-defense-panel {
     margin-top: 10px;
@@ -830,163 +714,6 @@ input[data-damage-type-input] {
     width: auto;
 }
 
-
-/* ========================================================= */
-/* PROTECTIONS                                               */
-/* ========================================================= */
-
-.aa-protection-card {
-    display: grid;
-    gap: 7px;
-
-    padding: 8px;
-
-    border:
-        1px solid var(--aa-border, rgba(220, 200, 175, 0.22));
-
-    border-radius: 5px;
-}
-
-
-/* --------------------------------------------------------- */
-/* IDENTITÉ                                                  */
-/* --------------------------------------------------------- */
-
-.aa-protection-main {
-    display: grid;
-
-    grid-template-columns:
-        minmax(220px, 1.4fr)
-        minmax(220px, 1fr)
-        90px
-        32px
-        32px;
-
-    gap: 6px;
-    align-items: center;
-}
-
-
-.aa-protection-name {
-    width: 100%;
-    min-width: 0;
-}
-
-
-.aa-protection-class,
-.aa-protection-defense {
-    display: flex;
-    align-items: center;
-
-    gap: 5px;
-}
-
-
-.aa-protection-class input {
-    width: 100%;
-    min-width: 0;
-}
-
-
-.aa-protection-defense input {
-    width: 50px;
-
-    text-align: center;
-}
-
-
-.aa-protection-main button {
-    width: 32px;
-    min-width: 32px;
-
-    padding: 0;
-}
-
-
-/* --------------------------------------------------------- */
-/* ZONES                                                     */
-/* --------------------------------------------------------- */
-
-.aa-protection-zones {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-
-    gap: 5px;
-}
-
-
-.aa-protection-zones button {
-    width: auto;
-
-    opacity: 0.55;
-}
-
-
-.aa-protection-zones button.active {
-    opacity: 1;
-    font-weight: bold;
-}
-
-
-/* --------------------------------------------------------- */
-/* RÉDUCTIONS                                                */
-/* --------------------------------------------------------- */
-
-.aa-protection-reductions {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-
-    gap: 5px;
-}
-
-
-.aa-reduction-entry {
-    display: inline-flex;
-    align-items: center;
-
-    gap: 4px;
-
-    padding: 2px 5px;
-
-    border:
-        1px solid var(--aa-border, rgba(220, 200, 175, 0.22));
-
-    border-radius: 5px;
-}
-
-
-.aa-reduction-entry input[type="number"] {
-    width: 45px;
-
-    text-align: center;
-}
-
-
-.aa-reduction-entry button {
-    width: auto;
-    min-width: 0;
-
-    padding: 0 3px;
-}
-
-
-.aa-reduction-type {
-    white-space: nowrap;
-}
-
-
-.aa-reduction-new-type {
-    width: 130px;
-}
-
-
-.aa-reduction-new-value {
-    width: 50px;
-
-    text-align: center;
-}
 
 /* ========================================================= */
 /* STATUT                                                    */

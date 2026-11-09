@@ -584,19 +584,21 @@ export class ArcaneCharacterSheet
         };
 
 
-        await this.actor.createEmbeddedDocuments(
+        // Equipping a shield may also unequip a two-handed weapon.
+        const equipOnCreate = type !== "shield";
+        const [item] = await this.actor.createEmbeddedDocuments(
             "Item",
-            [
-                {
-                    name: names[type],
-                    type,
-
-                    system: {
-                        equipped: false
-                    }
-                }
-            ]
+            [{
+                name: names[type],
+                type,
+                system: { equipped: equipOnCreate }
+            }],
+            { render: equipOnCreate }
         );
+
+        if (!equipOnCreate && item) {
+            await this._setEquipmentEquipped(item, true);
+        }
     }
 
     static async _onToggleEquipment(
@@ -612,9 +614,10 @@ export class ArcaneCharacterSheet
         if (!item) return;
 
 
-        const willEquip =
-            !item.system.equipped;
+        await this._setEquipmentEquipped(item, !item.system.equipped);
+    }
 
+    async _setEquipmentEquipped(item, willEquip) {
         const updates = [{
             _id: item.id,
             "system.equipped": willEquip
