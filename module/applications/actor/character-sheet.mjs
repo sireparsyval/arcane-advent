@@ -14,6 +14,14 @@ const { HandlebarsApplicationMixin } = foundry.applications.api;
 const INVENTORY_DRAG_TYPE = "application/x-arcane-advent-inventory-item";
 const SHEET_SORT_DRAG_TYPE = "application/x-arcane-advent-sheet-sort";
 const sortableItems = items => [...items].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
+
+// Newly created items always start at the end of their visible group.
+function nextItemSort(actor, group) {
+    const siblings = actor.items.filter(item => group === "inventory"
+        ? isInventoryItem(item) && !item.system.equipped && !item.system.containerId
+        : item.type === group);
+    return Math.max(0, ...siblings.map(item => item.sort ?? 0)) + 100000;
+}
 const INVENTORY_ITEM_NAMES = {
     object: "Nouvel objet",
     container: "Nouveau contenant",
@@ -585,7 +593,7 @@ export class ArcaneCharacterSheet
     static async _onAddAptitude() {
         if (!this.isEditable) return;
         await this.actor.createEmbeddedDocuments("Item", [
-            { name: "Nouvelle aptitude", type: "aptitude" }
+            { name: "Nouvelle aptitude", type: "aptitude", sort: nextItemSort(this.actor, "aptitude") }
         ]);
     }
 
@@ -821,6 +829,7 @@ export class ArcaneCharacterSheet
                 {
                     name: "Nouvelle compétence",
                     type: "skill",
+                    sort: nextItemSort(this.actor, "skill"),
 
                     system: {
                         ability: "strength",
@@ -1225,7 +1234,7 @@ export class ArcaneCharacterSheet
         if (!this.isEditable || !Object.hasOwn(INVENTORY_ITEM_NAMES, type)) return;
 
         await this.actor.createEmbeddedDocuments("Item", [
-            { type, name: INVENTORY_ITEM_NAMES[type] }
+            { type, name: INVENTORY_ITEM_NAMES[type], sort: nextItemSort(this.actor, "inventory") }
         ]);
     }
 
@@ -1341,6 +1350,7 @@ export class ArcaneCharacterSheet
             [{
                 name: names[type],
                 type,
+                sort: nextItemSort(this.actor, type),
                 system: { equipped: equipOnCreate }
             }],
             { render: equipOnCreate }
@@ -1483,6 +1493,7 @@ export class ArcaneCharacterSheet
                 {
                     name: "Nouvelle expertise",
                     type: "expertise",
+                    sort: nextItemSort(this.actor, "expertise"),
 
                     system: {
                         domain: "weaponClass",
