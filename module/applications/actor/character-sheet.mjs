@@ -1,4 +1,5 @@
 import { ARCANE_NEEDS } from "../../config.mjs";
+import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedModifier } from "../../modifiers.mjs";
 import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
 import {
     EQUIPMENT_TYPES, LUQA_DENOMINATIONS, canPlaceInContainer,
@@ -57,18 +58,14 @@ const CONDITION_SECTIONS = {
         title: "Altérations d’État",
         addLabel: "Ajouter une altération",
         editLabel: "Modifier l’altération",
-        empty: "Aucune altération.",
-        severityLabel: "Intensité",
-        severityShort: "Int."
+        empty: "Aucune altération."
     },
     injury: {
         model: InjuryData,
         title: "Conditions Physiques",
         addLabel: "Ajouter une blessure ou une maladie",
         editLabel: "Modifier la blessure ou la maladie",
-        empty: "Aucune blessure ni maladie.",
-        severityLabel: "Gravité",
-        severityShort: "Grav."
+        empty: "Aucune blessure ni maladie."
     }
 };
 
@@ -312,17 +309,35 @@ export class ArcaneCharacterSheet
                 active: isAptitudeOptionVisible(item.system, key)
             }))
         }));
+        const totalModifiers = this.actor.system.modifierTotals;
+        const manualModifiers = this.actor.system.manualModifiers;
+        const modifierGroup = (title, keys) => ({
+            title,
+            entries: keys.map(key => ({
+                key,
+                label: MODIFIER_TARGETS[key],
+                manual: manualModifiers[key],
+                fromConditionsLabel: signedModifier(totalModifiers[key] - manualModifiers[key]),
+                totalLabel: signedModifier(totalModifiers[key])
+            }))
+        });
+        context.manualModifierGroups = [
+            modifierGroup("Caractéristiques principales", ABILITY_MODIFIER_KEYS),
+            modifierGroup("Trackers", TRACKER_MODIFIER_KEYS)
+        ];
         context.conditionSections = Object.entries(CONDITION_SECTIONS).map(([type, section]) => ({
             type,
             title: section.title,
             addLabel: section.addLabel,
             empty: section.empty,
-            severityShort: section.severityShort,
             entries: this.actor.items.filter(item => item.type === type).map(item => ({
                 id: item.id,
                 name: item.name,
-                severity: item.system.severity,
                 description: item.system.description,
+                modifierLabel: Object.entries(MODIFIER_TARGETS)
+                    .filter(([key]) => item.system.modifiers[key] !== 0)
+                    .map(([key, label]) => `${label} ${signedModifier(item.system.modifiers[key])}`)
+                    .join(" · "),
                 zone: item.system.zone ? INJURY_ZONES[item.system.zone] : "",
                 durationLabel: type === "alteration" && item.system.duration?.enabled
                     ? `${item.system.duration.remaining} ${ALTERATION_DURATION_UNITS[item.system.duration.unit]}` : ""
@@ -929,12 +944,23 @@ export class ArcaneCharacterSheet
             system: item?.system.toObject() ?? section.model.schema.getInitialValue({})
         };
 
+        const modifierGroup = (title, keys) => ({
+            title,
+            fields: keys.map(key => ({
+                key, label: MODIFIER_TARGETS[key],
+                value: previous.system.modifiers?.[key] ?? 0,
+                step: key === "speed" ? "any" : "1"
+            }))
+        });
         const content = document.createElement("div");
         content.innerHTML = await foundry.applications.handlebars.renderTemplate(
             "systems/arcane-advent/templates/actor/condition-dialog.hbs",
             {
                 ...previous,
-                severityLabel: section.severityLabel,
+                modifierGroups: [
+                    modifierGroup("Caractéristiques principales", ABILITY_MODIFIER_KEYS),
+                    modifierGroup("Trackers", TRACKER_MODIFIER_KEYS)
+                ],
                 zones: type === "injury" ? INJURY_ZONES : null,
                 durationUnits: type === "alteration" ? ALTERATION_DURATION_UNITS : null
             }
@@ -954,11 +980,20 @@ export class ArcaneCharacterSheet
                         if (!button.form.reportValidity()) return;
 
                         const fields = new FormData(button.form);
+                        const modifiers = {};
+                        for (const key of Object.keys(MODIFIER_TARGETS)) {
+                            const amount = Number(fields.get(`modifier.${key}`));
+                            if (!Number.isFinite(amount) || (key !== "speed" && !Number.isSafeInteger(amount))) {
+                                ui.notifications.warn(`Bonus/malus invalide pour ${MODIFIER_TARGETS[key]}.`);
+                                return;
+                            }
+                            modifiers[key] = amount;
+                        }
                         const data = {
                             name: fields.get("name").trim(),
                             system: {
-                                severity: Number(fields.get("severity")),
-                                description: fields.get("description").trim()
+                                description: fields.get("description").trim(),
+                                modifiers
                             }
                         };
                         if (type === "injury") data.system.zone = fields.get("zone");

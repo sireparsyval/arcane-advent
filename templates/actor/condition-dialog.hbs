@@ -4,11 +4,6 @@
         <input type="text" name="name" value="{{name}}" required pattern=".*\S.*" autofocus>
     </label>
 
-    <label>
-        {{severityLabel}}
-        <input type="number" name="severity" value="{{system.severity}}" min="0" step="1" required>
-    </label>
-
     {{#if zones}}
         <label>
             Zone blessée
@@ -41,6 +36,25 @@
             </label>
         </fieldset>
     {{/if}}
+
+    <details class="aa-condition-modifier-details" open>
+        <summary>Bonus / malus appliqués</summary>
+        <p class="hint">Ces valeurs s'ajoutent automatiquement aux autres sources. Laissez 0 si la condition ne modifie pas cette valeur.</p>
+        {{#each modifierGroups}}
+            <fieldset class="aa-condition-modifier-group">
+                <legend>{{title}}</legend>
+                <div class="aa-modifier-edit-grid">
+                    {{#each fields}}
+                        <label class="aa-modifier-edit-line">
+                            <span>{{label}}</span>
+                            <input type="number" name="modifier.{{key}}" value="{{value}}"
+                                step="{{step}}" required aria-label="Bonus/malus : {{label}}">
+                        </label>
+                    {{/each}}
+                </div>
+            </fieldset>
+        {{/each}}
+    </details>
 
     <label>
         Description
