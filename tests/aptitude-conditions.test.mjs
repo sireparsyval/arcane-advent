@@ -49,3 +49,9 @@ test("interpréteur mathématique et booléen, sans JavaScript exécutable", () 
     assert.equal(evaluateAptitudeExpression("this.constructor.constructor('return 1')()", vars), false);
     assert.equal(evaluateAptitudeExpression("FOR / 0 > 1", vars), false);
 });
+
+test("une condition sans cible ne peut pas correspondre à des champs vides", () => {
+    assert.equal(aptitudeConditionStatus(actor, condition("inventory", "", 1, ">=")), false);
+    assert.equal(aptitudeConditionStatus(actor, condition("equipped", "", 1, "=")), false);
+    assert.equal(aptitudeConditionStatus(actor, condition("luqa", "", 1, ">=")), false);
+});
