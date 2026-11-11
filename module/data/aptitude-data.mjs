@@ -143,7 +143,8 @@ export class AptitudeData extends BaseItemData {
                 operator: new StringField({ choices: ["<", "<=", "=", ">=", ">", "!="], initial: "<" }),
                 value: new NumberField({ initial: 50 }),
                 key: new StringField({ blank: true, initial: "" }),
-                expression: new StringField({ blank: true, initial: "" })
+                expression: new StringField({ blank: true, initial: "" }),
+                consumes: new BooleanField({ initial: false })
             }), { required: true, nullable: false, initial: {} }),
             rolls: new TypedObjectField(new SchemaField({
                 name: new StringField({ blank: false, initial: "Jet" }),
