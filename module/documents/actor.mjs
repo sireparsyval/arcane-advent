@@ -384,7 +384,11 @@ export class ArcaneActor extends Actor {
 
         const config = aptitude.system.rolls[rollId];
         const skill = this.items.get(config.skillId);
-        const ability = this.system.abilities[config.ability]?.modifier ?? 0;
+        const selectedAbilities = config.abilities?.size
+            ? [...config.abilities]
+            : config.ability ? [config.ability] : [];
+        const ability = [...new Set(selectedAbilities)]
+            .reduce((total, key) => total + (this.system.abilities[key]?.modifier ?? 0), 0);
         const mastery = skill?.type === "skill" ? skill.system.mastery : 0;
         const expertise = this.items.get(config.expertiseId);
         const bonus = expertise?.type === "expertise" && this._canApplyAptitudeExpertise(expertise)
