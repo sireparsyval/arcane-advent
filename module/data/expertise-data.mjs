@@ -1,9 +1,12 @@
 const {
     NumberField,
-    StringField
+    StringField,
+    SetField,
+    TypedObjectField
 } = foundry.data.fields;
 
 import { BaseItemData } from "./base-item-data.mjs";
+import { PROPERTY_FILTER_STATES } from "../expertise.mjs";
 
 
 export class ExpertiseData extends BaseItemData {
@@ -25,6 +28,16 @@ export class ExpertiseData extends BaseItemData {
                 blank: true,
                 initial: ""
             }),
+
+            // Plusieurs classes possibles. "target" est conservé pour les anciennes fiches.
+            classes: new SetField(new StringField({ required: true, blank: false }), {
+                required: true, nullable: false, initial: []
+            }),
+
+            propertyFilters: new TypedObjectField(new StringField({
+                required: true, nullable: false,
+                choices: Object.keys(PROPERTY_FILTER_STATES), initial: "neutral"
+            }), { required: true, nullable: false, initial: {} }),
 
             bonus: new NumberField({
                 required: true,
