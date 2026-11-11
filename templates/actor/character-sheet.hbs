@@ -511,7 +511,7 @@
                                                 data-action="editAptitudeCondition" data-item-id="{{../id}}" data-condition-id="{{id}}"
                                                 title="{{label}} · {{#if satisfied}}Remplie{{else}}Non remplie{{/if}} · Cliquer pour configurer"
                                                 {{#unless @root.canEditState}}disabled{{/unless}}>
-                                                {{#if satisfied}}✓{{else}}✕{{/if}} {{label}}
+                                                {{#if satisfied}}✓{{else}}✕{{/if}} {{label}}{{#if consumes}} · consommable{{/if}}
                                             </button>
                                         {{else}}
                                             <button type="button" class="aa-condition-chip {{#if satisfied}}is-satisfied{{else}}is-manual{{/if}}"
