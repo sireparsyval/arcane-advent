@@ -360,10 +360,6 @@ body.detached > .aa-detached-sheet .window-content {
 }
 
 .aa-aptitude-edit-roll {
-    display: none;
-}
-
-.aa-aptitude-config:not([hidden]) ~ .aa-aptitude-rolls .aa-aptitude-edit-roll {
     display: inline-flex;
     align-items: center;
 }
@@ -1903,6 +1899,7 @@ body.detached > .aa-detached-sheet .window-content {
     flex: 0 0 auto;
     width: auto;
     min-width: 0;
+    padding: 2px 6px;
 }
 .aa-editor-form {
     display: grid;
