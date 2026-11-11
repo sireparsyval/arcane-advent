@@ -1290,113 +1290,23 @@
                         </div>
 
 
-                        <div class="aa-expertise-header">
-                            <span></span>
-                            <span>Expertise</span>
-                            <span>Domaine</span>
-                            <span>Cible</span>
-                            <span>Bonus</span>
-                            <span></span>
-                        </div>
-
-
                         <div class="aa-expertise-list">
-
                             {{#each expertises}}
-
-                                <div class="aa-expertise-row" data-sheet-sort-drop="{{id}}">
-                                    {{#if @root.canEditState}}<span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}" aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>{{else}}<span></span>{{/if}}
-
-                                    <input
-                                        type="text"
-                                        value="{{name}}"
-                                        data-expertise-edit
-                                        data-expertise-id="{{id}}"
-                                        data-expertise-field="name"
-                                    >
-
-
-                                    <select
-                                        data-expertise-edit
-                                        data-expertise-id="{{id}}"
-                                        data-expertise-field="system.domain"
-                                    >
-
-                                        <option
-                                            value="weaponClass"
-                                            {{#if (eq domain "weaponClass")}}selected{{/if}}
-                                        >
-                                            Classe d'arme
-                                        </option>
-
-                                        <option
-                                            value="shieldClass"
-                                            {{#if (eq domain "shieldClass")}}selected{{/if}}
-                                        >
-                                            Classe de bouclier
-                                        </option>
-
-                                        <option
-                                            value="armorClass"
-                                            {{#if (eq domain "armorClass")}}selected{{/if}}
-                                        >
-                                            Classe d'armure
-                                        </option>
-
-                                        <option
-                                            value="toolObject"
-                                            {{#if (eq domain "toolObject")}}selected{{/if}}
-                                        >
-                                            Outil / Objet
-                                        </option>
-
-                                        <option
-                                            value="other"
-                                            {{#if (eq domain "other")}}selected{{/if}}
-                                        >
-                                            Autre
-                                        </option>
-
-                                    </select>
-
-
-                                    <input
-                                        type="text"
-                                        value="{{target}}"
-                                        placeholder="ex : Épée"
-                                        data-expertise-edit
-                                        data-expertise-id="{{id}}"
-                                        data-expertise-field="system.target"
-                                    >
-
-
-                                    <input
-                                        type="number"
-                                        value="{{bonus}}"
-                                        data-expertise-edit
-                                        data-expertise-id="{{id}}"
-                                        data-expertise-field="system.bonus"
-                                    >
-
-
-                                    <button
-                                        type="button"
-                                        data-action="deleteExpertise"
-                                        data-expertise-id="{{id}}"
-                                    >
-                                        ×
-                                    </button>
-
+                                <div class="aa-expertise-row aa-expertise-compact" data-sheet-sort-drop="{{id}}">
+                                    {{#if @root.canEditState}}<span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}"
+                                        aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>{{/if}}
+                                    <span class="aa-expertise-name" title="{{name}}">{{name}}</span>
+                                    <strong class="aa-expertise-level" title="Niveau / bonus d'Expertise">{{bonusLabel}}</strong>
+                                    {{#if @root.canEditState}}
+                                        <button type="button" data-action="editExpertise" data-expertise-id="{{id}}"
+                                            title="Configurer {{name}}" aria-label="Options de {{name}}">⚙ Options</button>
+                                        <button type="button" data-action="deleteExpertise" data-expertise-id="{{id}}"
+                                            title="Supprimer {{name}}" aria-label="Supprimer {{name}}">×</button>
+                                    {{/if}}
                                 </div>
-
                             {{else}}
-
-                                <p class="aa-empty-skills">
-                                    Aucune expertise.
-                                </p>
-
+                                <p class="aa-empty-skills">Aucune expertise.</p>
                             {{/each}}
-
                         </div>
 
                     </section>
