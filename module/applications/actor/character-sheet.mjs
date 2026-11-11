@@ -4,6 +4,7 @@ import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedM
 import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
 import { EXPERTISE_DOMAINS, WEAPON_PROPERTIES, PROPERTY_FILTER_STATES, normalizedClasses } from "../../expertise.mjs";
 import { CONDITION_METRICS, aptitudeConditionStatus } from "../../aptitude-conditions.mjs";
+import { hotbarRollData } from "../../shortcuts.mjs";
 import {
     EQUIPMENT_TYPES, LUQA_DENOMINATIONS, canPlaceInContainer,
     isInventoryContainer, isInventoryItem, luqaCounters, purseCoinWeight
@@ -1422,6 +1423,21 @@ export class ArcaneCharacterSheet
         });
 
         tabs.bind(this.element);
+
+        // Les boutons de jets peuvent être glissés sur la barre native de Foundry.
+        // Les raccourcis appelleront les jets d'origine, avec leurs modificateurs actuels.
+        for (const button of this.element.querySelectorAll("button[data-action]")) {
+            if (!hotbarRollData(this.actor, button)) continue;
+            button.draggable = true;
+            button.title = (button.title ? button.title + " · " : "") + "Glisser vers la barre de raccourcis";
+            button.addEventListener("dragstart", event => {
+                const data = hotbarRollData(this.actor, button);
+                if (!data || !event.dataTransfer) return;
+                event.dataTransfer.setData("text/plain", JSON.stringify(data));
+                event.dataTransfer.effectAllowed = "copy";
+                event.stopPropagation();
+            });
+        }
 
         for (const field of this.element.querySelectorAll("[data-aptitude-field]")) {
             field.addEventListener("change", this._onAptitudeEdit.bind(this));
