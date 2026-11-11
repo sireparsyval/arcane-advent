@@ -331,7 +331,8 @@ export class ArcaneCharacterSheet
                 id,
                 label: condition.label,
                 automatic: condition.kind === "automatic",
-                satisfied: aptitudeConditionStatus(this.actor, condition)
+                satisfied: aptitudeConditionStatus(this.actor, condition),
+                consumes: condition.consumes
             })),
             effectDuration: {
                 active: item.system.effectDuration.enabled || isAptitudeOptionVisible(item.system, "duration"),
@@ -941,7 +942,7 @@ export class ArcaneCharacterSheet
                 origins: list({ caster: "Lanceur", target: "Point ciblé" }),
                 propagations: list({ projectile: "Projectile", beam: "Rayon", instant: "Instantané", wave: "Onde" }),
                 conditions: Object.entries(system.conditions).map(([id, condition]) => ({
-                    id, label: condition.label, automatic: condition.kind === "automatic"
+                    id, label: condition.label, automatic: condition.kind === "automatic", consumes: condition.consumes
                 }))
             }
         );
@@ -1062,7 +1063,7 @@ export class ArcaneCharacterSheet
         const kind = current?.kind ?? (requestedKind === "automatic" ? "automatic" : "manual");
         const starting = current ?? {
             label: "Nouvelle condition", kind, enabled: false,
-            metric: "pdcRatio", operator: "<", value: 50, key: "", expression: ""
+            metric: "pdcRatio", operator: "<", value: 50, key: "", expression: "", consumes: false
         };
         const content = document.createElement("div");
         content.innerHTML = await foundry.applications.handlebars.renderTemplate(
@@ -1089,6 +1090,7 @@ export class ArcaneCharacterSheet
                     data.value = Number(fields.get("value"));
                     data.key = String(fields.get("key") ?? "").trim();
                     data.expression = String(fields.get("expression") ?? "").trim();
+                    data.consumes = fields.has("consumes");
                     if (!Object.hasOwn(CONDITION_METRICS, data.metric)
                         || !["<", "<=", "=", ">=", ">", "!="].includes(data.operator)
                         || !Number.isFinite(data.value)) {
