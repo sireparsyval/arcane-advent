@@ -914,6 +914,212 @@ export class ArcaneCharacterSheet
     }
 
 
+    static async _onEditAptitudeOptions(event, target) {
+        if (!this.isEditable) return;
+        const aptitude = this.actor.items.get(target.dataset.itemId);
+        if (aptitude?.type !== "aptitude") return;
+
+        const { DialogV2 } = foundry.applications.api;
+        const system = aptitude.system;
+        const content = document.createElement("div");
+        const durationActive = system.effectDuration.enabled || isAptitudeOptionVisible(system, "duration");
+        const list = data => Object.entries(data).map(([key, label]) => ({ key, label }));
+        content.innerHTML = await foundry.applications.handlebars.renderTemplate(
+            "systems/arcane-advent/templates/actor/aptitude-options-dialog.hbs", {
+                system,
+                isTechnique: system.category === "technique",
+                chargeActive: isAptitudeOptionVisible(system, "charge"),
+                recoveryActive: isAptitudeOptionVisible(system, "recovery"),
+                castingActive: isAptitudeOptionVisible(system, "casting"),
+                durationActive,
+                effectRemaining: system.effectDuration.enabled ? system.effectDuration.remaining : system.durationTurns,
+                effectUnit: system.effectDuration.enabled ? system.effectDuration.unit : system.durationUnit,
+                units: list(APTITUDE_RECOVERY_UNITS),
+                targetModes: list({ self: "Soi-même", single: "Cible unique", multiple: "Cibles séparées", area: "Zone" }),
+                shapes: list({ circle: "Cercle", cone: "Cône", line: "Ligne", rectangle: "Rectangle", free: "Libre" }),
+                origins: list({ caster: "Lanceur", target: "Point ciblé" }),
+                propagations: list({ projectile: "Projectile", beam: "Rayon", instant: "Instantané", wave: "Onde" }),
+                conditions: Object.entries(system.conditions).map(([id, condition]) => ({
+                    id, label: condition.label, automatic: condition.kind === "automatic"
+                }))
+            }
+        );
+
+        const readCounter = (fields, name) => {
+            const remaining = Number(fields.get(name + ".remaining"));
+            const max = Number(fields.get(name + ".max"));
+            if (!Number.isSafeInteger(remaining) || !Number.isSafeInteger(max)
+                || remaining < 0 || max < 0 || remaining > max) throw Error("Compteur invalide : " + name);
+            const unit = fields.get(name + ".unit");
+            if (unit && !Object.hasOwn(APTITUDE_RECOVERY_UNITS, unit)) throw Error("Unité invalide.");
+            return { remaining, max, unit };
+        };
+        const dialog = new DialogV2({
+            window: { title: "Options — " + aptitude.name },
+            position: { width: 675 }, content, modal: true, form: { closeOnSubmit: false },
+            buttons: [
+                {
+                    action: "save", label: "Enregistrer / Appliquer",
+                    callback: async (_event, button, app) => {
+                        if (!button.form.reportValidity()) return;
+                        const values = new FormData(button.form);
+                        const updates = { "system.requirements": String(values.get("requirements") ?? "").trim() };
+                        try {
+                            if (system.category !== "technique") {
+                                for (const name of ["charge", "recovery", "casting"]) {
+                                    const counter = readCounter(values, name);
+                                    const base = name + "Counter";
+                                    updates["system.showOptions." + name] = values.has("enable." + name);
+                                    updates["system." + base + ".remaining"] = counter.remaining;
+                                    updates["system." + base + ".max"] = counter.max;
+                                    if (counter.unit) updates["system." + base + ".unit"] = counter.unit;
+                                }
+                            }
+                            const effectRemaining = Number(values.get("effect.remaining"));
+                            const effectUnit = values.get("effect.unit");
+                            if (!Number.isSafeInteger(effectRemaining) || effectRemaining < 0
+                                || !Object.hasOwn(APTITUDE_RECOVERY_UNITS, effectUnit)) throw Error("Durée d'effet invalide.");
+                            updates["system.effectDuration.enabled"] = values.has("effect.enabled");
+                            updates["system.effectDuration.remaining"] = effectRemaining;
+                            updates["system.effectDuration.unit"] = effectUnit;
+                            updates["system.showOptions.duration"] = values.has("effect.enabled");
+                            updates["system.durationTurns"] = effectRemaining;
+                            // La migration conserve les anciennes unités tout en offrant Minutes et Repos dans le nouveau champ.
+                            if (Object.hasOwn(APTITUDE_DURATION_UNITS, effectUnit)) updates["system.durationUnit"] = effectUnit;
+                            const validChoices = {
+                                mode: ["self", "single", "multiple", "area"],
+                                shape: ["circle", "cone", "line", "rectangle", "free"],
+                                origin: ["caster", "target"],
+                                propagation: ["projectile", "beam", "instant", "wave"]
+                            };
+                            for (const [key, choices] of Object.entries(validChoices)) {
+                                const value = values.get("target." + key);
+                                if (!choices.includes(value)) throw Error("Paramètre de ciblage invalide : " + key);
+                                updates["system.targeting." + key] = value;
+                            }
+                            for (const key of ["maxTargets", "range", "radius", "length", "width", "angle"]) {
+                                const value = Number(values.get("target." + key));
+                                if (!Number.isFinite(value) || value < 0 || (key === "angle" && value > 360)
+                                    || (key === "maxTargets" && !Number.isSafeInteger(value))) {
+                                    throw Error("Valeur de ciblage invalide : " + key);
+                                }
+                                updates["system.targeting." + key] = value;
+                            }
+                            updates["system.targeting.travels"] = values.has("target.travels");
+                        } catch (error) {
+                            ui.notifications.warn(error.message);
+                            return;
+                        }
+                        if (this.actor.items.has(aptitude.id)) await aptitude.update(updates);
+                        await app.close();
+                    }
+                },
+                { action: "cancel", label: "Annuler", type: "button",
+                    callback: (_event, _button, app) => app.close() }
+            ]
+        });
+        for (const control of content.querySelectorAll("[data-aa-add-condition]")) {
+            control.addEventListener("click", async () => {
+                await dialog.close();
+                await this._openAptitudeConditionEditor(aptitude, null, control.dataset.aaAddCondition);
+            });
+        }
+        for (const control of content.querySelectorAll("[data-aa-edit-condition]")) {
+            control.addEventListener("click", async () => {
+                await dialog.close();
+                await this._openAptitudeConditionEditor(aptitude, control.dataset.aaEditCondition);
+            });
+        }
+        content.querySelector("[data-aa-add-roll]")?.addEventListener("click", async () => {
+            await dialog.close();
+            await ArcaneCharacterSheet._onEditAptitudeRoll.call(this, null, { dataset: { itemId: aptitude.id } });
+        });
+        await dialog.render({ force: true });
+    }
+
+    static async _onToggleManualAptitudeCondition(event, target) {
+        if (!this.isEditable) return;
+        const aptitude = this.actor.items.get(target.dataset.itemId);
+        const condition = aptitude?.system.conditions?.[target.dataset.conditionId];
+        if (aptitude?.type !== "aptitude" || condition?.kind !== "manual") return;
+        await aptitude.update({
+            [`system.conditions.${target.dataset.conditionId}.enabled`]: !condition.enabled
+        });
+    }
+
+    static async _onEditAptitudeCondition(event, target) {
+        if (!this.isEditable) return;
+        const aptitude = this.actor.items.get(target.dataset.itemId);
+        if (aptitude?.type !== "aptitude") return;
+        await this._openAptitudeConditionEditor(aptitude, target.dataset.conditionId);
+    }
+
+    async _openAptitudeConditionEditor(aptitude, conditionId = null, requestedKind = "manual") {
+        if (!this.isEditable) return;
+        const current = conditionId ? aptitude.system.conditions[conditionId] : null;
+        if (conditionId && !current) return;
+        const kind = current?.kind ?? (requestedKind === "automatic" ? "automatic" : "manual");
+        const starting = current ?? {
+            label: "Nouvelle condition", kind, enabled: false,
+            metric: "pdcRatio", operator: "<", value: 50, key: "", expression: ""
+        };
+        const content = document.createElement("div");
+        content.innerHTML = await foundry.applications.handlebars.renderTemplate(
+            "systems/arcane-advent/templates/actor/aptitude-condition-dialog.hbs", {
+                current: starting,
+                automatic: kind === "automatic",
+                metrics: Object.entries(CONDITION_METRICS).map(([key, label]) =>
+                    ({ key, label, selected: key === starting.metric })),
+                operators: ["<", "<=", "=", ">=", ">", "!="].map(key =>
+                    ({ key, label: key, selected: key === starting.operator }))
+            }
+        );
+        const buttons = [{
+            action: "save", label: "Enregistrer / Appliquer",
+            callback: async (_event, button, app) => {
+                if (!button.form.reportValidity()) return;
+                const fields = new FormData(button.form);
+                const label = String(fields.get("label") ?? "").trim();
+                if (!label) return;
+                const data = { ...starting, label, kind };
+                if (kind === "automatic") {
+                    data.metric = fields.get("metric");
+                    data.operator = fields.get("operator");
+                    data.value = Number(fields.get("value"));
+                    data.key = String(fields.get("key") ?? "").trim();
+                    data.expression = String(fields.get("expression") ?? "").trim();
+                    if (!Object.hasOwn(CONDITION_METRICS, data.metric)
+                        || !["<", "<=", "=", ">=", ">", "!="].includes(data.operator)
+                        || !Number.isFinite(data.value)) {
+                        ui.notifications.warn("Condition automatique invalide.");
+                        return;
+                    }
+                }
+                const id = conditionId ?? foundry.utils.randomID();
+                if (this.actor.items.has(aptitude.id)) {
+                    await aptitude.update({ [`system.conditions.${id}`]: data });
+                }
+                await app.close();
+            }
+        }];
+        if (conditionId) buttons.push({
+            action: "delete", label: "Supprimer", type: "button",
+            callback: async (_event, _button, app) => {
+                if (this.actor.items.has(aptitude.id)) await aptitude.update({
+                    system: { conditions: { [conditionId]: new foundry.data.operators.ForcedDeletion() } }
+                });
+                await app.close();
+            }
+        });
+        buttons.push({ action: "cancel", label: "Annuler", type: "button",
+            callback: (_event, _button, app) => app.close() });
+        const dialog = new foundry.applications.api.DialogV2({
+            window: { title: kind === "automatic" ? "Condition automatique" : "Condition manuelle" },
+            position: { width: 510 }, content, modal: true, form: { closeOnSubmit: false }, buttons
+        });
+        await dialog.render({ force: true });
+    }
+
     static async _onRollAptitude(event, target) {
         const { itemId, rollId } = target.dataset;
         await this.actor.rollAptitude(itemId, rollId, this._getRollMode());
