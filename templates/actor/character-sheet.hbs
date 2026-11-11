@@ -477,7 +477,7 @@
                                     <div class="aa-aptitude-actions">
                                         <button type="button" data-action="editAptitudeOptions" data-item-id="{{id}}"
                                             aria-label="Options de {{name}}" title="Options et créateur de compétence">
-                                            <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                                            <i class="fa-solid fa-gear" aria-hidden="true"></i> Options
                                         </button>
                                         {{#if linkedTraitId}}
                                             <button type="button" data-action="goToLinkedTrait" data-trait-id="{{linkedTraitId}}"
@@ -535,8 +535,8 @@
                                         <div class="aa-aptitude-option">
                                             <strong>{{label}}</strong>
                                             <span>{{value.remaining}} / {{value.max}}
-                                                {{#if (eq key "recovery")}} {{value.unit}}{{/if}}
-                                                {{#if (eq key "casting")}} {{value.unit}}{{/if}}
+                                                {{#if (eq key "recovery")}} {{unitLabel}}{{/if}}
+                                                {{#if (eq key "casting")}} {{unitLabel}}{{/if}}
                                             </span>
                                         </div>
                                     {{/if}}
