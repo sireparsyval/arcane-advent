@@ -906,11 +906,13 @@
 
                                     <button
                                         type="button"
+                                        class="aa-guard-roll"
                                         data-action="rollGuard"
                                         data-item-id="{{id}}"
-                                        title="Garde avec {{name}}"
+                                        title="Défense de Garde : {{defense}} (comparaison avec l'attaque). Cliquer pour un JS de Garde à {{saveModifierLabel}}."
                                     >
-                                        🛡️ {{name}} — {{value}}
+                                        🛡️ <span class="aa-guard-name">{{name}}</span>
+                                        <span class="aa-guard-values">— [ <strong title="Défense de Garde">{{defense}}</strong> | <strong title="Modificateur du JS de Garde">{{saveModifierLabel}}</strong> ]</span>
                                     </button>
 
                                 {{/each}}
