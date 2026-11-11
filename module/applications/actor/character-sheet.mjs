@@ -570,13 +570,16 @@ export class ArcaneCharacterSheet
 
         context.guardSources = [];
         for (const item of equipment) {
-            const modifier = this.actor.getGuardModifier(item);
-            if (modifier === null) continue;
+            const stats = this.actor.getGuardStatistics(item);
+            if (!stats) continue;
 
             context.guardSources.push({
                 id: item.id,
                 name: item.name,
-                value: modifier >= 0 ? "+" + modifier : String(modifier)
+                defense: stats.defense,
+                saveModifierLabel: stats.savingThrowModifier >= 0
+                    ? "+" + stats.savingThrowModifier
+                    : String(stats.savingThrowModifier)
             });
         }
 
