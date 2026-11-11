@@ -899,6 +899,14 @@ export class ArcaneCharacterSheet
         const content = document.createElement("div");
         const durationActive = system.effectDuration.enabled || isAptitudeOptionVisible(system, "duration");
         const list = data => Object.entries(data).map(([key, label]) => ({ key, label }));
+        // Cinq unités proposées pour les nouvelles Aptitudes, sans supprimer les valeurs historiques.
+        const unitLabels = { ...APTITUDE_DURATION_UNITS };
+        for (const unit of [system.recoveryCounter.unit, system.castingCounter.unit,
+            system.effectDuration.unit, system.durationUnit]) {
+            if (Object.hasOwn(APTITUDE_RECOVERY_UNITS, unit) && !Object.hasOwn(unitLabels, unit)) {
+                unitLabels[unit] = APTITUDE_RECOVERY_UNITS[unit];
+            }
+        }
         content.innerHTML = await foundry.applications.handlebars.renderTemplate(
             "systems/arcane-advent/templates/actor/aptitude-options-dialog.hbs", {
                 system,
@@ -909,7 +917,7 @@ export class ArcaneCharacterSheet
                 durationActive,
                 effectRemaining: system.effectDuration.enabled ? system.effectDuration.remaining : system.durationTurns,
                 effectUnit: system.effectDuration.enabled ? system.effectDuration.unit : system.durationUnit,
-                units: list(APTITUDE_RECOVERY_UNITS),
+                units: list(unitLabels),
                 targetModes: list({ self: "Soi-même", single: "Cible unique", multiple: "Cibles séparées", area: "Zone" }),
                 shapes: list({ circle: "Cercle", cone: "Cône", line: "Ligne", rectangle: "Rectangle", free: "Libre" }),
                 origins: list({ caster: "Lanceur", target: "Point ciblé" }),
