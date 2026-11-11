@@ -2,6 +2,7 @@ import { ARCANE_NEEDS } from "../../config.mjs";
 import { VOLUME_LABELS, ENCUMBRANCE_STAGES } from "../../encumbrance.mjs";
 import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedModifier } from "../../modifiers.mjs";
 import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
+import { EXPERTISE_DOMAINS, WEAPON_PROPERTIES, PROPERTY_FILTER_STATES, normalizedClasses } from "../../expertise.mjs";
 import {
     EQUIPMENT_TYPES, LUQA_DENOMINATIONS, canPlaceInContainer,
     isInventoryContainer, isInventoryItem, luqaCounters, purseCoinWeight
@@ -222,6 +223,7 @@ export class ArcaneCharacterSheet
             rollWeaponVersatileDamage: this._onRollWeaponVersatileDamage,
 
             addExpertise: this._onAddExpertise,
+            editExpertise: this._onEditExpertise,
             deleteExpertise: this._onDeleteExpertise,
 
             addWeaponDamageType: this._onAddWeaponDamageType,
@@ -594,7 +596,8 @@ export class ArcaneCharacterSheet
                 name: expertise.name,
                 domain: expertise.system.domain,
                 target: expertise.system.target,
-                bonus: expertise.system.bonus
+                bonus: expertise.system.bonus,
+                bonusLabel: signedModifier(expertise.system.bonus)
             }));
 
         context.deathSaves = Object.entries(DEATH_SAVE_LABELS).map(([key, label]) => ({
@@ -1243,17 +1246,7 @@ export class ArcaneCharacterSheet
             )) control.disabled = false;
         }
 
-        const expertiseFields =
-            this.element.querySelectorAll(
-                "[data-expertise-edit]"
-            );
 
-        for (const field of expertiseFields) {
-            field.addEventListener(
-                "change",
-                this._onExpertiseEdit.bind(this)
-            );
-        }
     }
 
 
@@ -1857,33 +1850,97 @@ export class ArcaneCharacterSheet
         );
     }
 
-    async _onExpertiseEdit(event) {
-        event.stopPropagation();
+    static async _onEditExpertise(event, target) {
+        if (!this.isEditable) return;
+        const expertise = this.actor.items.get(target.dataset.expertiseId);
+        if (expertise?.type !== "expertise") return;
 
-        const field = event.currentTarget;
-
-        const expertiseId =
-            field.dataset.expertiseId;
-
-        const expertiseField =
-            field.dataset.expertiseField;
-
-        const expertise =
-            this.actor.items.get(expertiseId);
-
-        if (!expertise) return;
-
-
-        let value = field.value;
-
-        if (field.type === "number") {
-            value = Number(value) || 0;
-        }
-
-
-        await expertise.update({
-            [expertiseField]: value
+        const { DialogV2 } = foundry.applications.api;
+        const content = document.createElement("div");
+        content.innerHTML = await foundry.applications.handlebars.renderTemplate(
+            "systems/arcane-advent/templates/actor/expertise-dialog.hbs", {
+                name: expertise.name,
+                bonus: expertise.system.bonus,
+                classesText: normalizedClasses(expertise).join("\n"),
+                domains: Object.entries(EXPERTISE_DOMAINS).map(([key, label]) =>
+                    ({ key, label, selected: key === expertise.system.domain })),
+                isWeapon: expertise.system.domain === "weaponClass",
+                properties: Object.entries(WEAPON_PROPERTIES).map(([key, label]) => ({
+                    key, label,
+                    states: Object.entries(PROPERTY_FILTER_STATES).map(([value, title]) =>
+                        ({ key: value, label: title, selected: value === (expertise.system.propertyFilters[key] ?? "neutral") }))
+                }))
+            }
+        );
+        const domainSelect = content.querySelector("[data-expertise-domain]");
+        domainSelect.addEventListener("change", () => {
+            content.querySelector("[data-expertise-weapon-filters]").hidden =
+                domainSelect.value !== "weaponClass";
         });
+
+        const dialog = new DialogV2({
+            window: { title: "Options — " + expertise.name },
+            position: { width: 500 }, content, modal: true,
+            form: { closeOnSubmit: false },
+            buttons: [
+                {
+                    action: "save", label: "Enregistrer / Appliquer",
+                    callback: async (_event, button, app) => {
+                        if (!button.form.reportValidity()) return;
+                        const values = new FormData(button.form);
+                        const name = String(values.get("name") ?? "").trim();
+                        const bonus = Number(values.get("bonus"));
+                        if (!name || !Number.isSafeInteger(bonus)) {
+                            ui.notifications.warn("Nom ou niveau d’Expertise invalide.");
+                            return;
+                        }
+                        const domain = values.get("domain");
+                        if (!Object.hasOwn(EXPERTISE_DOMAINS, domain)) return;
+                        const classes = [...new Set(String(values.get("classes") ?? "").split(/\r?\n/u)
+                            .map(v => v.trim()).filter(Boolean))];
+                        const propertyFilters = {};
+                        for (const key of Object.keys(WEAPON_PROPERTIES)) {
+                            const state = values.get("property." + key);
+                            if (!Object.hasOwn(PROPERTY_FILTER_STATES, state)) return;
+                            propertyFilters[key] = state;
+                        }
+                        if (domain !== "other" && !classes.length
+                            && !(domain === "weaponClass"
+                                && Object.values(propertyFilters).includes("required"))) {
+                            ui.notifications.warn("Précisez au moins une classe ou une propriété d'arme requise.");
+                            return;
+                        }
+                        if (!this.actor.items.has(expertise.id)) { await app.close(); return; }
+                        await expertise.update({
+                            name,
+                            "system.domain": domain,
+                            "system.target": classes[0] ?? "",
+                            "system.classes": classes,
+                            "system.propertyFilters": propertyFilters,
+                            "system.bonus": bonus
+                        });
+                        await app.close();
+                    }
+                },
+                {
+                    action: "delete", label: "Supprimer", type: "button",
+                    callback: async (_event, _button, app) => {
+                        const confirmed = await DialogV2.confirm({
+                            window: { title: "Supprimer l’Expertise" },
+                            content: "Supprimer cette Expertise ?", yes: { label: "Supprimer" },
+                            no: { label: "Annuler" }, rejectClose: false
+                        });
+                        if (confirmed && this.actor.items.has(expertise.id)) {
+                            await expertise.delete();
+                            await app.close();
+                        }
+                    }
+                },
+                { action: "cancel", label: "Annuler", type: "button",
+                    callback: (_event, _button, app) => app.close() }
+            ]
+        });
+        await dialog.render({ force: true });
     }
 
     static async _onAddWeaponDamageType(
