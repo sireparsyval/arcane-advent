@@ -50,7 +50,6 @@ export function expertiseMatches(expertise, item, { requireEquipped = true } = {
     if (!Object.hasOwn(EXPERTISE_DOMAINS, domain) || !item) return false;
 
     const className = itemClassForDomain(item, domain).trim().toLocaleLowerCase("fr");
-    if (!className) return false;
     const classes = normalizedClasses(expertise).map(name => name.toLocaleLowerCase("fr"));
     if (classes.length && !classes.includes(className)) return false;
     if (!classes.length && !(domain === "weaponClass" && Object.values(propertyFilters ?? {}).includes("required"))) return false;
