@@ -612,7 +612,7 @@ export class ArcaneActor extends Actor {
     getGuardStatistics(item) {
         if (!item) return null;
 
-        const { strength, dexterity } = this.system.abilities;
+        const { strength, dexterity, constitution } = this.system.abilities;
         const expertiseBonus = item.type === "weapon"
             ? this.getExpertiseBonus("weaponClass", item.system.weaponClass)
             : item.type === "shield"
@@ -622,6 +622,7 @@ export class ArcaneActor extends Actor {
         return guardValues(item, {
             strengthModifier: strength.modifier,
             dexterityModifier: dexterity.modifier,
+            constitutionModifier: constitution.modifier,
             expertiseBonus
         });
     }
