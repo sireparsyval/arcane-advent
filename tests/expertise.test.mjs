@@ -41,6 +41,9 @@ test("une Expertise d'arme peut n'exiger qu'une propriété", () => {
     const exp = expertise({ target: "", classes: new Set(), propertyFilters: { twoHanded: "required" } });
     assert.equal(expertiseMatches(exp, weapon("", ["twoHanded"])), true);
     assert.equal(expertiseMatches(exp, weapon("", ["light"])), false);
+    assert.equal(expertiseMatches(exp, {
+        type: "object", system: { properties: new Set(["twoHanded"]) }
+    }), false);
 });
 
 test("classes d'objet pour objets non équipables et noms d'objet historiques", () => {

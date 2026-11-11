@@ -325,7 +325,7 @@ body.detached > .aa-detached-sheet .window-content {
     display: grid;
     gap: 6px;
     min-width: 0;
-    padding: 6px;
+    padding: 8px;
     overflow-wrap: anywhere;
 }
 
@@ -337,6 +337,10 @@ body.detached > .aa-detached-sheet .window-content {
     flex-wrap: wrap;
     align-items: end;
     gap: 5px;
+}
+
+.aa-aptitude-identity > .aa-sort-handle {
+    align-self: center;
 }
 
 .aa-aptitude-rolls button,
@@ -373,7 +377,7 @@ body.detached > .aa-detached-sheet .window-content {
 }
 
 .aa-aptitude-name {
-    flex: 1 1 7rem;
+    flex: 1 1 11rem;
 }
 
 .aa-aptitude-actions {
@@ -416,6 +420,26 @@ body.detached > .aa-detached-sheet .window-content {
 
 .aa-aptitude-option > strong {
     font-size: 0.85em;
+}
+
+.aa-aptitude-facts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+}
+
+.aa-aptitude-facts:not(:has(> *)) {
+    display: none;
+}
+
+.aa-aptitude-facts .aa-aptitude-option {
+    display: inline-flex;
+    align-items: baseline;
+    flex: 0 1 auto;
+    gap: 5px;
+    padding: 2px 6px;
+    font-size: .85em;
 }
 
 .aa-aptitude-option-duration {
@@ -1883,7 +1907,10 @@ body.detached > .aa-detached-sheet .window-content {
     align-items: center;
     gap: 6px;
     min-width: 0;
-    padding: 3px 2px;
+    padding: 4px 6px;
+    border: 1px solid var(--aa-border);
+    border-radius: 5px;
+    background: var(--aa-surface);
 }
 .arcane-advent .aa-expertise-compact .aa-expertise-name {
     flex: 1;
@@ -1892,6 +1919,7 @@ body.detached > .aa-detached-sheet .window-content {
 }
 .arcane-advent .aa-expertise-compact .aa-expertise-level {
     min-width: 3ch;
+    padding: 2px 4px;
     text-align: center;
     font-variant-numeric: tabular-nums;
 }
@@ -1917,31 +1945,55 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-editor-form fieldset {
     min-width: 0;
 }
+.aa-editor-form [hidden] {
+    display: none;
+}
+.aa-editor-form .hint {
+    margin: 0;
+}
+.aa-expertise-editor-identity {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 5rem;
+    gap: 8px;
+}
 .aa-expertise-property-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
     gap: 6px;
-}
-.aa-expertise-property-grid label {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-}
-.aa-expertise-property-grid select {
-    max-width: 115px;
+    margin-block-start: 8px;
 }
 
-/* Créateur d'Aptitudes : panneaux configurables hors de la fiche, indicateurs compacts. */
-.aa-aptitude-options-editor fieldset {
+/* Options d'aptitude */
+.aa-aptitude-options-editor {
+    max-block-size: min(63vh, 36rem);
+    overflow: auto;
+    scrollbar-gutter: stable;
+}
+.aa-options-section {
+    border: 1px solid var(--color-border-light-tertiary, #777);
+    border-radius: 5px;
+}
+.aa-options-section > summary {
+    padding: 8px 10px;
+    cursor: pointer;
+    font-weight: 600;
+}
+.aa-options-section-body {
+    display: grid;
+    gap: 10px;
+    padding: 6px 10px 10px;
+}
+.aa-aptitude-option-actions {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 8px;
 }
-.aa-aptitude-options-inline, .aa-aptitude-options-grid {
+.aa-aptitude-option-actions > button {
+    width: auto;
+}
+.aa-aptitude-options-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
     gap: 8px;
     align-items: end;
 }
@@ -2004,20 +2056,25 @@ body.detached > .aa-detached-sheet .window-content {
 }
 
 .aa-expertise-property-choice {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 6rem;
     align-items: center;
     gap: 8px;
+    padding: 3px 5px;
+    border: 1px solid var(--color-border-light-tertiary, #777);
+    border-radius: 5px;
 }
 .aa-expertise-property-toggle {
-    width: 104px;
-    min-width: 88px;
+    width: 100%;
+    min-width: 0;
     padding: 3px 6px;
-    font-size: .82em;
+    font-size: .85em;
 }
-.aa-expertise-property-toggle.state-required {
-    border-color: rgba(61, 164, 105, .7);
+.aa-expertise-property-toggle[data-state="required"] {
+    border-color: #3da469;
+    background: rgba(61, 164, 105, .18);
 }
-.aa-expertise-property-toggle.state-excluded {
-    border-color: rgba(206, 79, 85, .75);
+.aa-expertise-property-toggle[data-state="excluded"] {
+    border-color: #ce4f55;
+    background: rgba(206, 79, 85, .18);
 }

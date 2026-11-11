@@ -128,6 +128,14 @@ const APTITUDE_ROLL_ABILITIES = {
     charisma: "Charisme"
 };
 
+const APTITUDE_TARGET_MODES = Object.freeze({
+    self: "Soi-même", single: "Cible unique", multiple: "Cibles séparées", area: "Zone"
+});
+
+const APTITUDE_AREA_SHAPES = Object.freeze({
+    circle: "Cercle", cone: "Cône", line: "Ligne", rectangle: "Rectangle", free: "Libre"
+});
+
 function isAptitudeOptionVisible(system, key) {
     const count = key === "duration" ? system.durationTurns : system[`${key}Counter`].max;
     return system.showOptions[key] ?? (count > 0 || Boolean(system[key]?.trim()));
@@ -336,7 +344,7 @@ export class ArcaneCharacterSheet
             targetingSummary: item.system.targeting?.mode === "multiple"
                 ? `Cibles : ${item.system.targeting.maxTargets}`
                 : item.system.targeting?.mode === "area"
-                    ? `Zone · ${item.system.targeting.shape}`
+                    ? `Zone · ${APTITUDE_AREA_SHAPES[item.system.targeting.shape]}`
                     : "",
             durationUnitLabel: APTITUDE_DURATION_UNITS[item.system.durationUnit],
             recoveryUnitLabel: APTITUDE_RECOVERY_UNITS[item.system.recoveryCounter.unit],
@@ -898,6 +906,8 @@ export class ArcaneCharacterSheet
         const system = aptitude.system;
         const content = document.createElement("div");
         const durationActive = system.effectDuration.enabled || isAptitudeOptionVisible(system, "duration");
+        const hasEffectDuration = system.effectDuration.enabled
+            || system.effectDuration.remaining > 0 || system.effectDuration.unit !== "turns";
         const list = data => Object.entries(data).map(([key, label]) => ({ key, label }));
         // Cinq unités proposées pour les nouvelles Aptitudes, sans supprimer les valeurs historiques.
         const unitLabels = { ...APTITUDE_DURATION_UNITS };
@@ -907,7 +917,7 @@ export class ArcaneCharacterSheet
                 unitLabels[unit] = APTITUDE_RECOVERY_UNITS[unit];
             }
         }
-        content.innerHTML = await foundry.applications.handlebars.renderTemplate(
+        const renderOptions = () => foundry.applications.handlebars.renderTemplate(
             "systems/arcane-advent/templates/actor/aptitude-options-dialog.hbs", {
                 system,
                 isTechnique: system.category === "technique",
@@ -915,34 +925,38 @@ export class ArcaneCharacterSheet
                 recoveryActive: isAptitudeOptionVisible(system, "recovery"),
                 castingActive: isAptitudeOptionVisible(system, "casting"),
                 durationActive,
-                effectRemaining: system.effectDuration.enabled ? system.effectDuration.remaining : system.durationTurns,
-                effectUnit: system.effectDuration.enabled ? system.effectDuration.unit : system.durationUnit,
+                effectRemaining: hasEffectDuration ? system.effectDuration.remaining : system.durationTurns,
+                effectUnit: hasEffectDuration ? system.effectDuration.unit : system.durationUnit,
                 units: list(unitLabels),
-                targetModes: list({ self: "Soi-même", single: "Cible unique", multiple: "Cibles séparées", area: "Zone" }),
-                shapes: list({ circle: "Cercle", cone: "Cône", line: "Ligne", rectangle: "Rectangle", free: "Libre" }),
+                targetModes: list(APTITUDE_TARGET_MODES),
+                shapes: list(APTITUDE_AREA_SHAPES),
                 origins: list({ caster: "Lanceur", target: "Point ciblé" }),
                 propagations: list({ projectile: "Projectile", beam: "Rayon", instant: "Instantané", wave: "Onde" }),
-                conditions: Object.entries(system.conditions).map(([id, condition]) => ({
-                    id, label: condition.label, automatic: condition.kind === "automatic", consumes: condition.consumes
-                }))
+                conditions: Object.entries(aptitude.system.conditions).map(([id, condition]) => ({
+                    id, label: condition.label, automatic: condition.kind === "automatic"
+                })),
+                rolls: Object.entries(aptitude.system.rolls).map(([id, roll]) => ({ id, name: roll.name }))
             }
         );
+        content.innerHTML = await renderOptions();
 
         const readCounter = (fields, name) => {
             const remaining = Number(fields.get(name + ".remaining"));
             const max = Number(fields.get(name + ".max"));
             if (!Number.isSafeInteger(remaining) || !Number.isSafeInteger(max)
-                || remaining < 0 || max < 0 || remaining > max) throw Error("Compteur invalide : " + name);
+                || remaining < 0 || max < 0 || remaining > max) {
+                throw Error(`${APTITUDE_OPTIONS[name]} — la valeur restante ne peut pas dépasser le maximum.`);
+            }
             const unit = fields.get(name + ".unit");
             if (unit && !Object.hasOwn(APTITUDE_RECOVERY_UNITS, unit)) throw Error("Unité invalide.");
             return { remaining, max, unit };
         };
         const dialog = new DialogV2({
             window: { title: "Options — " + aptitude.name },
-            position: { width: 675 }, content, modal: true, form: { closeOnSubmit: false },
+            position: { width: 590 }, content, modal: true, form: { closeOnSubmit: false },
             buttons: [
                 {
-                    action: "save", label: "Enregistrer / Appliquer",
+                    action: "save", label: "Enregistrer",
                     callback: async (_event, button, app) => {
                         if (!button.form.reportValidity()) return;
                         const values = new FormData(button.form);
@@ -950,37 +964,43 @@ export class ArcaneCharacterSheet
                         try {
                             if (system.category !== "technique") {
                                 for (const name of ["charge", "recovery", "casting"]) {
-                                    const counter = readCounter(values, name);
                                     const base = name + "Counter";
-                                    updates["system.showOptions." + name] = values.has("enable." + name);
+                                    const enabled = values.has("enable." + name);
+                                    updates["system.showOptions." + name] = enabled;
+                                    if (!enabled) continue;
+                                    const counter = readCounter(values, name);
                                     updates["system." + base + ".remaining"] = counter.remaining;
                                     updates["system." + base + ".max"] = counter.max;
                                     if (counter.unit) updates["system." + base + ".unit"] = counter.unit;
                                 }
                             }
-                            const effectRemaining = Number(values.get("effect.remaining"));
-                            const effectUnit = values.get("effect.unit");
-                            if (!Number.isSafeInteger(effectRemaining) || effectRemaining < 0
-                                || !Object.hasOwn(APTITUDE_RECOVERY_UNITS, effectUnit)) throw Error("Durée d'effet invalide.");
-                            updates["system.effectDuration.enabled"] = values.has("effect.enabled");
-                            updates["system.effectDuration.remaining"] = effectRemaining;
-                            updates["system.effectDuration.unit"] = effectUnit;
-                            updates["system.showOptions.duration"] = values.has("effect.enabled");
-                            updates["system.durationTurns"] = effectRemaining;
-                            // La migration conserve les anciennes unités tout en offrant Minutes et Repos dans le nouveau champ.
-                            if (Object.hasOwn(APTITUDE_DURATION_UNITS, effectUnit)) updates["system.durationUnit"] = effectUnit;
+                            const effectEnabled = values.has("effect.enabled");
+                            updates["system.effectDuration.enabled"] = effectEnabled;
+                            updates["system.showOptions.duration"] = effectEnabled;
+                            if (effectEnabled) {
+                                const effectRemaining = Number(values.get("effect.remaining"));
+                                const effectUnit = values.get("effect.unit");
+                                if (!Number.isSafeInteger(effectRemaining) || effectRemaining < 0
+                                    || !Object.hasOwn(APTITUDE_RECOVERY_UNITS, effectUnit)) throw Error("Durée d’effet invalide.");
+                                updates["system.effectDuration.remaining"] = effectRemaining;
+                                updates["system.effectDuration.unit"] = effectUnit;
+                                updates["system.durationTurns"] = effectRemaining;
+                                if (Object.hasOwn(APTITUDE_DURATION_UNITS, effectUnit)) updates["system.durationUnit"] = effectUnit;
+                            }
                             const validChoices = {
-                                mode: ["self", "single", "multiple", "area"],
-                                shape: ["circle", "cone", "line", "rectangle", "free"],
+                                mode: Object.keys(APTITUDE_TARGET_MODES),
+                                shape: Object.keys(APTITUDE_AREA_SHAPES),
                                 origin: ["caster", "target"],
                                 propagation: ["projectile", "beam", "instant", "wave"]
                             };
                             for (const [key, choices] of Object.entries(validChoices)) {
+                                if (!values.has("target." + key)) continue;
                                 const value = values.get("target." + key);
                                 if (!choices.includes(value)) throw Error("Paramètre de ciblage invalide : " + key);
                                 updates["system.targeting." + key] = value;
                             }
                             for (const key of ["maxTargets", "range", "radius", "length", "width", "angle"]) {
+                                if (!values.has("target." + key)) continue;
                                 const value = Number(values.get("target." + key));
                                 if (!Number.isFinite(value) || value < 0 || (key === "angle" && value > 360)
                                     || (key === "maxTargets" && !Number.isSafeInteger(value))) {
@@ -988,7 +1008,9 @@ export class ArcaneCharacterSheet
                                 }
                                 updates["system.targeting." + key] = value;
                             }
-                            updates["system.targeting.travels"] = values.has("target.travels");
+                            if (values.get("target.mode") !== "self") {
+                                updates["system.targeting.travels"] = values.has("target.travels");
+                            }
                         } catch (error) {
                             ui.notifications.warn(error.message);
                             return;
@@ -1001,21 +1023,56 @@ export class ArcaneCharacterSheet
                     callback: (_event, _button, app) => app.close() }
             ]
         });
-        for (const control of content.querySelectorAll("[data-aa-add-condition]")) {
-            control.addEventListener("click", async () => {
-                await dialog.close();
-                await this._openAptitudeConditionEditor(aptitude, null, control.dataset.aaAddCondition);
+        dialog.addEventListener("render", () => {
+            const editor = dialog.element.querySelector(".aa-aptitude-options-editor");
+            const updateFields = () => {
+                const mode = editor.querySelector('[name="target.mode"]').value;
+                const shape = editor.querySelector('[name="target.shape"]').value;
+                const visibleGroups = new Set();
+                if (mode !== "self") visibleGroups.add("ranged");
+                if (mode === "multiple") visibleGroups.add("multiple");
+                if (mode === "area") {
+                    visibleGroups.add("area");
+                    visibleGroups.add(shape);
+                }
+                for (const toggle of editor.querySelectorAll('input[type="checkbox"]:checked')) {
+                    visibleGroups.add(toggle.name);
+                }
+                for (const group of editor.querySelectorAll("[data-aa-fields]")) {
+                    const visible = group.dataset.aaFields.split(" ").some(key => visibleGroups.has(key));
+                    group.hidden = !visible;
+                    for (const field of group.querySelectorAll("input, select")) field.disabled = !visible;
+                }
+            };
+            updateFields();
+            editor.addEventListener("change", updateFields);
+            editor.addEventListener("invalid", event => {
+                const section = event.target.closest("details");
+                if (section) section.open = true;
+            }, true);
+            editor.addEventListener("click", async event => {
+                const control = event.target.closest("[data-aa-condition], [data-aa-roll]");
+                if (!control) return;
+                const data = control.dataset;
+                const child = Object.hasOwn(data, "aaCondition")
+                    ? await this._openAptitudeConditionEditor(aptitude, data.aaCondition || null, data.kind, dialog)
+                    : await ArcaneCharacterSheet._onEditAptitudeRoll.call(this, null, {
+                        dataset: { itemId: aptitude.id, rollId: data.aaRoll }
+                    }, dialog);
+                child?.addEventListener("close", async () => {
+                    const refreshed = editor.ownerDocument.createElement("div");
+                    refreshed.innerHTML = await renderOptions();
+                    const section = Object.hasOwn(data, "aaCondition") ? "conditions" : "rolls";
+                    const selector = `[data-aa-options-list="${section}"]`;
+                    const list = editor.querySelector(selector);
+                    const replacement = refreshed.querySelector(selector);
+                    if (list.innerHTML !== replacement.innerHTML) {
+                        const restoreFocus = list.contains(editor.ownerDocument.activeElement);
+                        list.replaceChildren(...replacement.childNodes);
+                        if (restoreFocus) (list.querySelector("button") ?? list.nextElementSibling.querySelector("button")).focus();
+                    }
+                }, { once: true });
             });
-        }
-        for (const control of content.querySelectorAll("[data-aa-edit-condition]")) {
-            control.addEventListener("click", async () => {
-                await dialog.close();
-                await this._openAptitudeConditionEditor(aptitude, control.dataset.aaEditCondition);
-            });
-        }
-        content.querySelector("[data-aa-add-roll]")?.addEventListener("click", async () => {
-            await dialog.close();
-            await ArcaneCharacterSheet._onEditAptitudeRoll.call(this, null, { dataset: { itemId: aptitude.id } });
         });
         await dialog.render({ force: true });
     }
@@ -1037,7 +1094,7 @@ export class ArcaneCharacterSheet
         await this._openAptitudeConditionEditor(aptitude, target.dataset.conditionId);
     }
 
-    async _openAptitudeConditionEditor(aptitude, conditionId = null, requestedKind = "manual") {
+    async _openAptitudeConditionEditor(aptitude, conditionId = null, requestedKind = "manual", parent = null) {
         if (!this.isEditable) return;
         const current = conditionId ? aptitude.system.conditions[conditionId] : null;
         if (conditionId && !current) return;
@@ -1101,7 +1158,7 @@ export class ArcaneCharacterSheet
             window: { title: kind === "automatic" ? "Condition automatique" : "Condition manuelle" },
             position: { width: 510 }, content, modal: true, form: { closeOnSubmit: false }, buttons
         });
-        await dialog.render({ force: true });
+        return parent ? parent.renderChild(dialog) : dialog.render({ force: true });
     }
 
     static async _onRollAptitude(event, target) {
@@ -1110,7 +1167,7 @@ export class ArcaneCharacterSheet
     }
 
 
-    static async _onEditAptitudeRoll(event, target) {
+    static async _onEditAptitudeRoll(event, target, parent = null) {
         if (!this.isEditable) return;
         const { itemId, rollId } = target.dataset;
         const item = this.actor.items.get(itemId);
@@ -1193,7 +1250,7 @@ export class ArcaneCharacterSheet
             form: { closeOnSubmit: false },
             buttons
         });
-        await dialog.render({ force: true });
+        return parent ? parent.renderChild(dialog) : dialog.render({ force: true });
     }
 
 
@@ -2105,29 +2162,13 @@ export class ArcaneCharacterSheet
                 })
             }
         );
-        const domainSelect = content.querySelector("[data-expertise-domain]");
-        domainSelect.addEventListener("change", () => {
-            content.querySelector("[data-expertise-weapon-filters]").hidden =
-                domainSelect.value !== "weaponClass";
-        });
-        const states = ["neutral", "required", "excluded"];
-        for (const toggle of content.querySelectorAll("[data-aa-property-toggle]")) {
-            toggle.addEventListener("click", () => {
-                const next = states[(states.indexOf(toggle.dataset.state) + 1) % states.length];
-                toggle.dataset.state = next;
-                toggle.textContent = PROPERTY_FILTER_STATES[next];
-                toggle.className = "aa-expertise-property-toggle state-" + next;
-                toggle.nextElementSibling.value = next;
-            });
-        }
-
         const dialog = new DialogV2({
             window: { title: "Options — " + expertise.name },
             position: { width: 500 }, content, modal: true,
             form: { closeOnSubmit: false },
             buttons: [
                 {
-                    action: "save", label: "Enregistrer / Appliquer",
+                    action: "save", label: "Enregistrer",
                     callback: async (_event, button, app) => {
                         if (!button.form.reportValidity()) return;
                         const values = new FormData(button.form);
@@ -2182,6 +2223,23 @@ export class ArcaneCharacterSheet
                 { action: "cancel", label: "Annuler", type: "button",
                     callback: (_event, _button, app) => app.close() }
             ]
+        });
+        dialog.addEventListener("render", () => {
+            const editor = dialog.element.querySelector(".aa-expertise-editor");
+            const domain = editor.querySelector("[data-expertise-domain]");
+            const filters = editor.querySelector("[data-expertise-weapon-filters]");
+            domain.addEventListener("change", () => { filters.hidden = domain.value !== "weaponClass"; });
+            const states = ["neutral", "required", "excluded"];
+            for (const toggle of filters.querySelectorAll("[data-aa-property-toggle]")) {
+                toggle.addEventListener("click", () => {
+                    const field = toggle.nextElementSibling;
+                    const next = states[(states.indexOf(field.value) + 1) % states.length];
+                    field.value = next;
+                    toggle.dataset.state = next;
+                    toggle.textContent = PROPERTY_FILTER_STATES[next];
+                    toggle.setAttribute("aria-label", `${toggle.dataset.propertyLabel} · ${toggle.textContent}`);
+                });
+            }
         });
         await dialog.render({ force: true });
     }

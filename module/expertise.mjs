@@ -48,6 +48,7 @@ export function expertiseMatches(expertise, item, { requireEquipped = true } = {
     const { domain, propertyFilters } = expertise?.system ?? {};
     if (domain === "other") return true;
     if (!Object.hasOwn(EXPERTISE_DOMAINS, domain) || !item) return false;
+    if (domain === "weaponClass" && item.type !== "weapon") return false;
 
     const className = itemClassForDomain(item, domain).trim().toLocaleLowerCase("fr");
     const classes = normalizedClasses(expertise).map(name => name.toLocaleLowerCase("fr"));

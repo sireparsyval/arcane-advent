@@ -1,93 +1,107 @@
-<section class="aa-editor-form aa-aptitude-options-editor standard-form">
-    <p class="hint">Les paramètres décrivent l'Aptitude et ses contraintes. Aucun jet n'est bloqué automatiquement.</p>
-    <fieldset>
-        <legend>Contraintes</legend>
-        {{#if isTechnique}}
-            <p class="hint">Les Techniques n'utilisent pas de charges, de délai de récupération ni de temps d'incantation.</p>
-        {{else}}
-            <label class="checkbox"><input type="checkbox" name="enable.charge" {{#if chargeActive}}checked{{/if}}> Charges multiples</label>
-            <div class="aa-aptitude-options-inline">
-                <label>Restantes<input type="number" name="charge.remaining" min="0" step="1" value="{{system.chargeCounter.remaining}}"></label>
-                <label>Max<input type="number" name="charge.max" min="0" step="1" value="{{system.chargeCounter.max}}"></label>
-            </div>
-            <label class="checkbox"><input type="checkbox" name="enable.recovery" {{#if recoveryActive}}checked{{/if}}> Délai de récupération</label>
-            <div class="aa-aptitude-options-inline">
-                <label>Restant<input type="number" name="recovery.remaining" min="0" step="1" value="{{system.recoveryCounter.remaining}}"></label>
-                <label>Max<input type="number" name="recovery.max" min="0" step="1" value="{{system.recoveryCounter.max}}"></label>
-                <label>Unité<select name="recovery.unit">
-                    {{#each units}}<option value="{{key}}" {{#if (eq key ../system.recoveryCounter.unit)}}selected{{/if}}>{{label}}</option>{{/each}}
+<section class="aa-editor-form aa-aptitude-options-editor">
+    <details class="aa-options-section" open>
+        <summary>Charges et durée</summary>
+        <div class="aa-options-section-body">
+            {{#unless isTechnique}}
+                <label class="checkbox"><input type="checkbox" name="enable.charge" {{#if chargeActive}}checked{{/if}}> Charges multiples</label>
+                <div class="aa-aptitude-options-grid" data-aa-fields="enable.charge" {{#unless chargeActive}}hidden{{/unless}}>
+                    <label>Charges restantes<input type="number" name="charge.remaining" min="0" step="1" required value="{{system.chargeCounter.remaining}}"></label>
+                    <label>Charges maximales<input type="number" name="charge.max" min="0" step="1" required value="{{system.chargeCounter.max}}"></label>
+                </div>
+                <label class="checkbox"><input type="checkbox" name="enable.recovery" {{#if recoveryActive}}checked{{/if}}> Récupération</label>
+                <div class="aa-aptitude-options-grid" data-aa-fields="enable.recovery" {{#unless recoveryActive}}hidden{{/unless}}>
+                    <label>Temps restant<input type="number" name="recovery.remaining" min="0" step="1" required value="{{system.recoveryCounter.remaining}}"></label>
+                    <label>Durée totale<input type="number" name="recovery.max" min="0" step="1" required value="{{system.recoveryCounter.max}}"></label>
+                    <label>Unité<select name="recovery.unit">
+                        {{#each units}}<option value="{{key}}" {{#if (eq key ../system.recoveryCounter.unit)}}selected{{/if}}>{{label}}</option>{{/each}}
+                    </select></label>
+                </div>
+                <label class="checkbox"><input type="checkbox" name="enable.casting" {{#if castingActive}}checked{{/if}}> Incantation</label>
+                <div class="aa-aptitude-options-grid" data-aa-fields="enable.casting" {{#unless castingActive}}hidden{{/unless}}>
+                    <label>Temps écoulé<input type="number" name="casting.remaining" min="0" step="1" required value="{{system.castingCounter.remaining}}"></label>
+                    <label>Durée totale<input type="number" name="casting.max" min="0" step="1" required value="{{system.castingCounter.max}}"></label>
+                    <label>Unité<select name="casting.unit">
+                        {{#each units}}<option value="{{key}}" {{#if (eq key ../system.castingCounter.unit)}}selected{{/if}}>{{label}}</option>{{/each}}
+                    </select></label>
+                </div>
+            {{/unless}}
+            <label class="checkbox"><input type="checkbox" name="effect.enabled" {{#if durationActive}}checked{{/if}}> Durée des effets</label>
+            <div class="aa-aptitude-options-grid" data-aa-fields="effect.enabled" {{#unless durationActive}}hidden{{/unless}}>
+                <label>Temps restant<input type="number" name="effect.remaining" min="0" step="1" required value="{{effectRemaining}}"></label>
+                <label>Unité<select name="effect.unit">
+                    {{#each units}}<option value="{{key}}" {{#if (eq key ../effectUnit)}}selected{{/if}}>{{label}}</option>{{/each}}
                 </select></label>
             </div>
-            <label class="checkbox"><input type="checkbox" name="enable.casting" {{#if castingActive}}checked{{/if}}> Temps d'incantation</label>
-            <div class="aa-aptitude-options-inline">
-                <label>Progression<input type="number" name="casting.remaining" min="0" step="1" value="{{system.castingCounter.remaining}}"></label>
-                <label>Max<input type="number" name="casting.max" min="0" step="1" value="{{system.castingCounter.max}}"></label>
-                <label>Unité<select name="casting.unit">
-                    {{#each units}}<option value="{{key}}" {{#if (eq key ../system.castingCounter.unit)}}selected{{/if}}>{{label}}</option>{{/each}}
+        </div>
+    </details>
+
+    <details class="aa-options-section">
+        <summary>Ciblage</summary>
+        <div class="aa-options-section-body">
+            <div class="aa-aptitude-options-grid">
+                <label>Ciblage<select name="target.mode">
+                    {{#each targetModes}}<option value="{{key}}" {{#if (eq key ../system.targeting.mode)}}selected{{/if}}>{{label}}</option>{{/each}}
+                </select></label>
+                <label data-aa-fields="multiple">Nombre maximal de cibles<input name="target.maxTargets" type="number" min="0" step="1" required value="{{system.targeting.maxTargets}}"></label>
+                <label data-aa-fields="ranged">Portée (m)<input name="target.range" type="number" min="0" step="any" required value="{{system.targeting.range}}"></label>
+                <label data-aa-fields="area">Forme de zone<select name="target.shape">
+                    {{#each shapes}}<option value="{{key}}" {{#if (eq key ../system.targeting.shape)}}selected{{/if}}>{{label}}</option>{{/each}}
+                </select></label>
+                <label data-aa-fields="circle">Rayon (m)<input name="target.radius" type="number" min="0" step="any" required value="{{system.targeting.radius}}"></label>
+                <label data-aa-fields="cone line rectangle">Longueur (m)<input name="target.length" type="number" min="0" step="any" required value="{{system.targeting.length}}"></label>
+                <label data-aa-fields="line rectangle">Largeur (m)<input name="target.width" type="number" min="0" step="any" required value="{{system.targeting.width}}"></label>
+                <label data-aa-fields="cone">Angle (°)<input name="target.angle" type="number" min="0" max="360" step="any" required value="{{system.targeting.angle}}"></label>
+                <label data-aa-fields="ranged">Origine de l’effet<select name="target.origin">
+                    {{#each origins}}<option value="{{key}}" {{#if (eq key ../system.targeting.origin)}}selected{{/if}}>{{label}}</option>{{/each}}
+                </select></label>
+                <label data-aa-fields="ranged">Propagation<select name="target.propagation">
+                    {{#each propagations}}<option value="{{key}}" {{#if (eq key ../system.targeting.propagation)}}selected{{/if}}>{{label}}</option>{{/each}}
                 </select></label>
             </div>
-        {{/if}}
-    </fieldset>
-
-    <fieldset>
-        <legend>Conditions individuelles</legend>
-        <div class="aa-condition-chips">
-            {{#each conditions}}
-                <button type="button" class="aa-condition-chip" data-aa-edit-condition="{{id}}" title="Modifier {{label}}">
-                    {{#if automatic}}⚙{{else}}☑{{/if}} {{label}}
-                </button>
-            {{else}}
-                <p class="hint">Aucune condition.</p>
-            {{/each}}
+            <label class="checkbox" data-aa-fields="ranged">
+                <input name="target.travels" type="checkbox" {{#if system.targeting.travels}}checked{{/if}}>
+                Affecte le trajet jusqu’à la cible
+            </label>
         </div>
-        <div class="aa-aptitude-options-inline">
-            <button type="button" data-aa-add-condition="manual">+ Toggle manuel</button>
-            <button type="button" data-aa-add-condition="automatic">+ Condition automatique</button>
-        </div>
-        <label>Notes de conditions (facultatif)
-            <textarea name="requirements" rows="2">{{system.requirements}}</textarea>
-        </label>
-    </fieldset>
+    </details>
 
-    <fieldset>
-        <legend>Effets et ciblage</legend>
-        <label class="checkbox"><input type="checkbox" name="effect.enabled" {{#if durationActive}}checked{{/if}}>
-            Durée des effets</label>
-        <div class="aa-aptitude-options-inline">
-            <label>Restant<input type="number" name="effect.remaining" min="0" step="1" value="{{effectRemaining}}"></label>
-            <label>Unité<select name="effect.unit">
-                {{#each units}}<option value="{{key}}" {{#if (eq key ../effectUnit)}}selected{{/if}}>{{label}}</option>{{/each}}
-            </select></label>
+    <details class="aa-options-section">
+        <summary>Conditions</summary>
+        <div class="aa-options-section-body">
+            <div class="aa-condition-chips" data-aa-options-list="conditions">
+                {{#each conditions}}
+                    <button type="button" class="aa-condition-chip" data-aa-condition="{{id}}" title="Modifier {{label}}">
+                        <i class="fa-solid {{#if automatic}}fa-gear{{else}}fa-check-square{{/if}}" aria-hidden="true"></i> {{label}}
+                    </button>
+                {{else}}
+                    <p class="hint">Aucune condition.</p>
+                {{/each}}
+            </div>
+            <div class="aa-aptitude-option-actions">
+                <button type="button" data-aa-condition data-kind="manual"><i class="fa-solid fa-plus" aria-hidden="true"></i> Condition manuelle</button>
+                <button type="button" data-aa-condition data-kind="automatic"><i class="fa-solid fa-plus" aria-hidden="true"></i> Condition automatique</button>
+            </div>
+            <label>Notes sur les conditions
+                <textarea name="requirements" rows="2">{{system.requirements}}</textarea>
+            </label>
         </div>
+    </details>
 
-        <div class="aa-aptitude-options-grid">
-            <label>Ciblage<select name="target.mode">
-                {{#each targetModes}}<option value="{{key}}" {{#if (eq key ../system.targeting.mode)}}selected{{/if}}>{{label}}</option>{{/each}}
-            </select></label>
-            <label>Nombre maximal de cibles<input name="target.maxTargets" type="number" min="0" step="1" value="{{system.targeting.maxTargets}}"></label>
-            <label>Portée (m)<input name="target.range" type="number" min="0" step="any" value="{{system.targeting.range}}"></label>
-            <label>Forme de zone<select name="target.shape">
-                {{#each shapes}}<option value="{{key}}" {{#if (eq key ../system.targeting.shape)}}selected{{/if}}>{{label}}</option>{{/each}}
-            </select></label>
-            <label>Rayon (m)<input name="target.radius" type="number" min="0" step="any" value="{{system.targeting.radius}}"></label>
-            <label>Longueur (m)<input name="target.length" type="number" min="0" step="any" value="{{system.targeting.length}}"></label>
-            <label>Largeur (m)<input name="target.width" type="number" min="0" step="any" value="{{system.targeting.width}}"></label>
-            <label>Angle (degrés)<input name="target.angle" type="number" min="0" max="360" step="any" value="{{system.targeting.angle}}"></label>
-            <label>Origine de l'effet<select name="target.origin">
-                {{#each origins}}<option value="{{key}}" {{#if (eq key ../system.targeting.origin)}}selected{{/if}}>{{label}}</option>{{/each}}
-            </select></label>
-            <label>Propagation<select name="target.propagation">
-                {{#each propagations}}<option value="{{key}}" {{#if (eq key ../system.targeting.propagation)}}selected{{/if}}>{{label}}</option>{{/each}}
-            </select></label>
+    <details class="aa-options-section">
+        <summary>Jets</summary>
+        <div class="aa-options-section-body">
+            <div class="aa-condition-chips" data-aa-options-list="rolls">
+                {{#each rolls}}
+                    <button type="button" class="aa-condition-chip" data-aa-roll="{{id}}" title="Modifier {{name}}">
+                        <i class="fa-solid fa-pen" aria-hidden="true"></i> {{name}}
+                    </button>
+                {{else}}
+                    <p class="hint">Aucun jet personnalisé.</p>
+                {{/each}}
+            </div>
+            <div class="aa-aptitude-option-actions">
+                <button type="button" data-aa-roll><i class="fa-solid fa-plus" aria-hidden="true"></i> Ajouter un jet</button>
+            </div>
         </div>
-        <label class="checkbox"><input name="target.travels" type="checkbox" {{#if system.targeting.travels}}checked{{/if}}>
-            Le trajet depuis le lanceur jusqu'à la cible est parcouru / affecté</label>
-        <p class="hint">Formes et distances sont descriptives : placement et résolution restent manuels.</p>
-    </fieldset>
-
-    <fieldset>
-        <legend>Créateur de jets</legend>
-        <p class="hint">Créez plusieurs jets personnalisés, avec caractéristiques, Compétence et Expertise associées.</p>
-        <button type="button" data-aa-add-roll>+ Ajouter un jet 🎲</button>
-    </fieldset>
+    </details>
 </section>

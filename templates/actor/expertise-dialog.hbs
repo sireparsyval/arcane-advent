@@ -1,7 +1,12 @@
-<section class="aa-editor-form standard-form">
-    <label>Nom de l’Expertise
-        <input name="name" type="text" value="{{name}}" required pattern=".*\S.*">
-    </label>
+<section class="aa-editor-form aa-expertise-editor">
+    <div class="aa-expertise-editor-identity">
+        <label>Nom
+            <input name="name" type="text" value="{{name}}" required pattern=".*\S.*" autofocus>
+        </label>
+        <label>Niveau
+            <input name="bonus" type="number" step="1" required value="{{bonus}}">
+        </label>
+    </div>
     <label>Domaine ciblé
         <select name="domain" data-expertise-domain>
             {{#each domains}}
@@ -9,26 +14,24 @@
             {{/each}}
         </select>
     </label>
-    <label>Classes d’équipement / d’objet (une par ligne)
-        <textarea name="classes" rows="4" placeholder="Ex. : Espadon&#10;Claymore">{{classesText}}</textarea>
+    <label>Classes d’équipement ou d’objet
+        <textarea name="classes" rows="3" placeholder="Espadon&#10;Claymore">{{classesText}}</textarea>
     </label>
-    <p class="hint">Les classes sont alternatives (OU). Une Expertise ne se cumule pas avec elle-même lorsque plusieurs critères sont remplis. Pour « Autre », les classes ne sont pas nécessaires.</p>
+    <p class="hint">Une classe par ligne. L’objet doit correspondre à l’une des classes indiquées.</p>
     <fieldset data-expertise-weapon-filters {{#unless isWeapon}}hidden{{/unless}}>
         <legend>Propriétés d’arme</legend>
-        <p class="hint">Toutes les propriétés « Requis » doivent être présentes, et aucune propriété « À exclure » ne doit l’être.</p>
+        <p class="hint">Cliquez pour changer l’état. L’arme doit avoir toutes les propriétés requises et aucune propriété exclue.</p>
         <div class="aa-expertise-property-grid">
         {{#each properties}}
             <div class="aa-expertise-property-choice">
                 <span>{{label}}</span>
-                <button type="button" class="aa-expertise-property-toggle state-{{state}}"
-                    data-aa-property-toggle="{{key}}" data-state="{{state}}"
-                    title="Cliquer pour passer de Neutre à Requis, À exclure puis Neutre">{{stateLabel}}</button>
+                <button type="button" class="aa-expertise-property-toggle"
+                    data-aa-property-toggle data-state="{{state}}" data-property-label="{{label}}"
+                    aria-label="{{label}} · {{stateLabel}}"
+                    title="Neutre → Requis → À exclure">{{stateLabel}}</button>
                 <input type="hidden" name="property.{{key}}" value="{{state}}">
             </div>
         {{/each}}
         </div>
     </fieldset>
-    <label>Niveau / bonus d’Expertise
-        <input name="bonus" type="number" step="1" required value="{{bonus}}">
-    </label>
 </section>
