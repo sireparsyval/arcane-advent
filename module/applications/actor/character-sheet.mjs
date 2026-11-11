@@ -475,7 +475,8 @@ export class ArcaneCharacterSheet
                     const expertiseBonus =
                         this.actor.getExpertiseBonus(
                             "weaponClass",
-                            item.system.weaponClass
+                            item.system.weaponClass,
+                            item
                         );
 
                     return {
@@ -533,7 +534,8 @@ export class ArcaneCharacterSheet
                     expertiseBonus:
                         this.actor.getExpertiseBonus(
                             "shieldClass",
-                            item.system.shieldClass
+                            item.system.shieldClass,
+                            item
                         )
                 })),
 
