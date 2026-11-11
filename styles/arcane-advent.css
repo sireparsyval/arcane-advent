@@ -2002,3 +2002,22 @@ body.detached > .aa-detached-sheet .window-content {
 .arcane-advent button[draggable="true"][data-action^="roll"]:active {
     cursor: grabbing;
 }
+
+.aa-expertise-property-choice {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+.aa-expertise-property-toggle {
+    width: 104px;
+    min-width: 88px;
+    padding: 3px 6px;
+    font-size: .82em;
+}
+.aa-expertise-property-toggle.state-required {
+    border-color: rgba(61, 164, 105, .7);
+}
+.aa-expertise-property-toggle.state-excluded {
+    border-color: rgba(206, 79, 85, .75);
+}
