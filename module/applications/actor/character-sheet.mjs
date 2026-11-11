@@ -2099,11 +2099,10 @@ export class ArcaneCharacterSheet
                 domains: Object.entries(EXPERTISE_DOMAINS).map(([key, label]) =>
                     ({ key, label, selected: key === expertise.system.domain })),
                 isWeapon: expertise.system.domain === "weaponClass",
-                properties: Object.entries(WEAPON_PROPERTIES).map(([key, label]) => ({
-                    key, label,
-                    states: Object.entries(PROPERTY_FILTER_STATES).map(([value, title]) =>
-                        ({ key: value, label: title, selected: value === (expertise.system.propertyFilters[key] ?? "neutral") }))
-                }))
+                properties: Object.entries(WEAPON_PROPERTIES).map(([key, label]) => {
+                    const state = expertise.system.propertyFilters[key] ?? "neutral";
+                    return { key, label, state, stateLabel: PROPERTY_FILTER_STATES[state] };
+                })
             }
         );
         const domainSelect = content.querySelector("[data-expertise-domain]");
@@ -2111,6 +2110,16 @@ export class ArcaneCharacterSheet
             content.querySelector("[data-expertise-weapon-filters]").hidden =
                 domainSelect.value !== "weaponClass";
         });
+        const states = Object.keys(PROPERTY_FILTER_STATES);
+        for (const toggle of content.querySelectorAll("[data-aa-property-toggle]")) {
+            toggle.addEventListener("click", () => {
+                const next = states[(states.indexOf(toggle.dataset.state) + 1) % states.length];
+                toggle.dataset.state = next;
+                toggle.textContent = PROPERTY_FILTER_STATES[next];
+                toggle.className = "aa-expertise-property-toggle state-" + next;
+                toggle.nextElementSibling.value = next;
+            });
+        }
 
         const dialog = new DialogV2({
             window: { title: "Options — " + expertise.name },
