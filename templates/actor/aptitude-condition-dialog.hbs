@@ -30,6 +30,7 @@
             <textarea name="expression" rows="2" placeholder="pdc &lt; pdcMax * 0.5">{{current.expression}}</textarea>
         </label>
         <p class="hint">Variables : pdc, pdcMax, pdf, pdfMax, FOR, DEX, CON, INT, SAG, CHA. Comparaisons : &lt;, &lt;=, &gt;, &gt;=, ==, !=. Logique : &amp;&amp;, ||, !. Aucun JavaScript exécutable.</p>
+        <label class="checkbox"><input type="checkbox" name="consumes" {{#if current.consumes}}checked{{/if}}> Objet / Luqa à consommer lors de l'utilisation (rappel manuel)</label>
         <p class="hint">Présence (altération / équipement / Expertise) : utilisez « = 1 ». Absence : « = 0 ». Inventaire et Luqa : renseignez une quantité et l'opérateur.</p>
     {{/if}}
 </section>
