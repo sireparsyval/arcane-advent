@@ -1,13 +1,7 @@
 import { buildInventory, canPlaceInContainer, EQUIPMENT_TYPES, isInventoryContainer, isInventoryItem } from "../inventory.mjs";
 import { getEquipmentConflictType } from "./item.mjs";
 import { guardValues } from "../guard.mjs";
-
-const EXPERTISE_EQUIPMENT_TYPES = {
-    weaponClass: ["weapon"],
-    shieldClass: ["shield"],
-    armorClass: ["protection"],
-    toolObject: ["weapon", "shield", "protection", "accessory"]
-};
+import { expertiseMatches, matchingExpertiseBonus } from "../expertise.mjs";
 
 const SORT_SPACING = 100000;
 
@@ -413,17 +407,8 @@ export class ArcaneActor extends Actor {
     }
 
     _canApplyAptitudeExpertise(expertise) {
-        const { domain, target } = expertise.system;
-        if (!Object.hasOwn(EXPERTISE_EQUIPMENT_TYPES, domain)) return domain === "other";
-
-        const normalized = target.trim().toLowerCase();
-        if (!normalized) return false;
-
-        return this.items.some(item => {
-            if (!item.system.equipped || !EXPERTISE_EQUIPMENT_TYPES[domain].includes(item.type)) return false;
-            const equipmentTarget = domain === "toolObject" ? item.name : item.system[domain];
-            return equipmentTarget?.trim().toLowerCase() === normalized;
-        });
+        if (expertise.system.domain === "other") return true;
+        return this.items.some(item => expertiseMatches(expertise, item));
     }
 
 
@@ -443,7 +428,8 @@ export class ArcaneActor extends Actor {
         const expertiseBonus =
             this.getExpertiseBonus(
                 "weaponClass",
-                weapon.system.weaponClass
+                weapon.system.weaponClass,
+                weapon
             );
 
 
@@ -585,28 +571,21 @@ export class ArcaneActor extends Actor {
         };
     }
 
-    getExpertiseBonus(domain, target) {
-        const normalizedTarget =
-            target?.trim().toLowerCase();
+    getExpertiseBonus(domain, target, item = null) {
+        // Une source réelle permet de vérifier toutes les propriétés, pas seulement la classe.
+        const source = item ?? (typeof target === "object" ? target : null);
+        if (source) return matchingExpertiseBonus([...this.items], source, domain);
 
-        if (!normalizedTarget) {
-            return 0;
-        }
-
-
-        return this.items
-            .filter(item =>
-                item.type === "expertise"
-                && item.system.domain === domain
-                && item.system.target
-                    .trim()
-                    .toLowerCase() === normalizedTarget
-            )
-            .reduce(
-                (total, expertise) =>
-                    total + expertise.system.bonus,
-                0
-            );
+        // Compatibilité des usages qui ne possèdent qu'un nom de classe.
+        const name = String(target ?? "").trim();
+        if (!name) return 0;
+        const type = { weaponClass: "weapon", shieldClass: "shield",
+            armorClass: "protection", toolObject: "object" }[domain];
+        if (!type) return 0;
+        const system = { equipped: true, properties: new Set() };
+        system[domain] = name;
+        if (domain === "toolObject") system.objectClass = name;
+        return matchingExpertiseBonus([...this.items], { type, name, system }, domain);
     }
 
     getGuardStatistics(item) {
@@ -614,9 +593,9 @@ export class ArcaneActor extends Actor {
 
         const { strength, dexterity, constitution } = this.system.abilities;
         const expertiseBonus = item.type === "weapon"
-            ? this.getExpertiseBonus("weaponClass", item.system.weaponClass)
+            ? this.getExpertiseBonus("weaponClass", item.system.weaponClass, item)
             : item.type === "shield"
-                ? this.getExpertiseBonus("shieldClass", item.system.shieldClass)
+                ? this.getExpertiseBonus("shieldClass", item.system.shieldClass, item)
                 : 0;
 
         return guardValues(item, {
