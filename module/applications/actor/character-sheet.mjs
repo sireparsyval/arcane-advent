@@ -185,11 +185,9 @@ export class ArcaneCharacterSheet
             editCondition: this._onEditCondition,
             deleteCondition: this._onDeleteStateItem,
             addAptitude: this._onAddAptitude,
-            toggleAptitudeConfig: this._onToggleAptitudeConfig,
             editAptitudeOptions: this._onEditAptitudeOptions,
             editAptitudeCondition: this._onEditAptitudeCondition,
             toggleManualAptitudeCondition: this._onToggleManualAptitudeCondition,
-            toggleAptitudeOption: this._onToggleAptitudeOption,
             editAptitudeRoll: this._onEditAptitudeRoll,
             rollAptitude: this._onRollAptitude,
             deleteAptitude: this._onDeleteStateItem,
@@ -282,10 +280,6 @@ export class ArcaneCharacterSheet
             label,
             selected: key === rollMode
         }));
-        const openConfigs = new Set(Array.from(
-            this.element?.querySelectorAll("[data-aptitude-config]:not([hidden])") ?? [],
-            panel => panel.dataset.aptitudeConfig
-        ));
         const openDescriptions = new Set(Array.from(
             this.element?.querySelectorAll("details[data-aptitude-description][open]") ?? [],
             panel => panel.dataset.aptitudeDescription
@@ -346,7 +340,6 @@ export class ArcaneCharacterSheet
                     : "",
             durationUnitLabel: APTITUDE_DURATION_UNITS[item.system.durationUnit],
             recoveryUnitLabel: APTITUDE_RECOVERY_UNITS[item.system.recoveryCounter.unit],
-            configOpen: openConfigs.has(item.id),
             descriptionOpen: openDescriptions.has(item.id),
             rolls: Object.entries(item.system.rolls).map(([id, roll]) => ({
                 id,
@@ -895,27 +888,6 @@ export class ArcaneCharacterSheet
             await trait.update({ [`system.${key}`]: value });
         }
     }
-
-    static _onToggleAptitudeConfig(event, target) {
-        const config = target.closest(".aa-aptitude-row")?.querySelector("[data-aptitude-config]");
-        if (!config) return;
-
-        config.hidden = !config.hidden;
-        target.setAttribute("aria-expanded", String(!config.hidden));
-    }
-
-
-    static async _onToggleAptitudeOption(event, target) {
-        if (!this.isEditable) return;
-        const { itemId, option } = target.dataset;
-        const item = this.actor.items.get(itemId);
-        if (item?.type !== "aptitude" || !Object.hasOwn(APTITUDE_OPTIONS, option)) return;
-
-        await item.update({
-            [`system.showOptions.${option}`]: !isAptitudeOptionVisible(item.system, option)
-        });
-    }
-
 
     static async _onEditAptitudeOptions(event, target) {
         if (!this.isEditable) return;
