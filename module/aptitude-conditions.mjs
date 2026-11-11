@@ -1,4 +1,4 @@
-import { itemClassForDomain, expertiseMatches } from "./expertise.mjs";
+import { expertiseMatches } from "./expertise.mjs";
 
 export const CONDITION_METRICS = Object.freeze({
     pdcRatio: "PdC (% du maximum)",
@@ -89,6 +89,8 @@ export function evaluateAptitudeExpression(source, variables) {
 export function aptitudeConditionStatus(actor, condition) {
     if (condition.kind === "manual") return Boolean(condition.enabled);
     const { metric, operator, key, value, expression } = condition;
+    // Un champ libre vide ne doit jamais correspondre aux champs vides des objets.
+    if (["alteration", "equipped", "expertise", "inventory"].includes(metric) && !normalize(key)) return false;
     const { consciousness, fever, abilities } = actor.system;
     const items = [...actor.items];
     const check = n => Number.isFinite(n) && compareValues(n, operator, value);
@@ -120,7 +122,8 @@ export function aptitudeConditionStatus(actor, condition) {
             return check(count);
         }
         case "luqa": {
-            const denomination = ["copper", "silver", "gold", "platinum"].includes(key) ? key : "copper";
+            if (!["copper", "silver", "gold", "platinum"].includes(key)) return false;
+            const denomination = key;
             const coins = items.filter(item => item.type === "purse")
                 .reduce((sum, item) => sum + (item.system.coins?.[denomination] ?? 0), 0);
             return check(coins);
