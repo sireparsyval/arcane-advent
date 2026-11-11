@@ -3,6 +3,7 @@ import { VOLUME_LABELS, ENCUMBRANCE_STAGES } from "../../encumbrance.mjs";
 import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedModifier } from "../../modifiers.mjs";
 import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
 import { EXPERTISE_DOMAINS, WEAPON_PROPERTIES, PROPERTY_FILTER_STATES, normalizedClasses } from "../../expertise.mjs";
+import { CONDITION_METRICS, aptitudeConditionStatus } from "../../aptitude-conditions.mjs";
 import {
     EQUIPMENT_TYPES, LUQA_DENOMINATIONS, canPlaceInContainer,
     isInventoryContainer, isInventoryItem, luqaCounters, purseCoinWeight
@@ -184,6 +185,9 @@ export class ArcaneCharacterSheet
             deleteCondition: this._onDeleteStateItem,
             addAptitude: this._onAddAptitude,
             toggleAptitudeConfig: this._onToggleAptitudeConfig,
+            editAptitudeOptions: this._onEditAptitudeOptions,
+            editAptitudeCondition: this._onEditAptitudeCondition,
+            toggleManualAptitudeCondition: this._onToggleManualAptitudeCondition,
             toggleAptitudeOption: this._onToggleAptitudeOption,
             editAptitudeRoll: this._onEditAptitudeRoll,
             rollAptitude: this._onRollAptitude,
@@ -320,6 +324,24 @@ export class ArcaneCharacterSheet
             linkedTraitName: traitsById.get(item.system.traitId)?.name ?? "",
             linkedTraitId: traitsById.get(item.system.traitId)?.id ?? "",
             categoryLabel: APTITUDE_CATEGORIES[item.system.category],
+            isPassive: item.system.category === "passive",
+            isTechnique: item.system.category === "technique",
+            conditions: Object.entries(item.system.conditions ?? {}).map(([id, condition]) => ({
+                id,
+                label: condition.label,
+                automatic: condition.kind === "automatic",
+                satisfied: aptitudeConditionStatus(this.actor, condition)
+            })),
+            effectDuration: {
+                active: item.system.effectDuration.enabled || isAptitudeOptionVisible(item.system, "duration"),
+                remaining: item.system.effectDuration.enabled ? item.system.effectDuration.remaining : item.system.durationTurns,
+                label: APTITUDE_RECOVERY_UNITS[item.system.effectDuration.enabled ? item.system.effectDuration.unit : item.system.durationUnit]
+            },
+            targetingSummary: item.system.targeting?.mode === "multiple"
+                ? `Cibles : ${item.system.targeting.maxTargets}`
+                : item.system.targeting?.mode === "area"
+                    ? `Zone · ${item.system.targeting.shape}`
+                    : "",
             durationUnitLabel: APTITUDE_DURATION_UNITS[item.system.durationUnit],
             recoveryUnitLabel: APTITUDE_RECOVERY_UNITS[item.system.recoveryCounter.unit],
             configOpen: openConfigs.has(item.id),
@@ -328,7 +350,9 @@ export class ArcaneCharacterSheet
                 id,
                 name: roll.name.replace(/^(?:🎲\uFE0F?\s*)+/u, "")
             })),
-            options: Object.entries(APTITUDE_OPTIONS).map(([key, label]) => ({
+            options: Object.entries(APTITUDE_OPTIONS)
+                .filter(([key]) => key !== "duration" && item.system.category !== "technique")
+                .map(([key, label]) => ({
                 key,
                 label,
                 value: key === "duration" ? item.system.durationTurns : item.system[`${key}Counter`],
