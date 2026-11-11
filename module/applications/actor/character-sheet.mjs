@@ -1139,7 +1139,11 @@ export class ArcaneCharacterSheet
             "systems/arcane-advent/templates/actor/aptitude-roll-dialog.hbs",
             {
                 current,
-                abilities: APTITUDE_ROLL_ABILITIES,
+                abilities: Object.entries(APTITUDE_ROLL_ABILITIES).map(([key, label]) => ({
+                    key, label, selected: current.abilities?.size
+                        ? current.abilities.has(key)
+                        : current.ability === key
+                })),
                 skills: this.actor.items.filter(entry => entry.type === "skill"),
                 expertises: this.actor.items.filter(entry => entry.type === "expertise")
             }
@@ -1166,7 +1170,8 @@ export class ArcaneCharacterSheet
                     [`system.rolls.${id}`]: {
                         name: fields.get("name").trim(),
                         formula,
-                        ability: fields.get("ability"),
+                        ability: "",
+                        abilities: fields.getAll("abilities").filter(key => Object.hasOwn(APTITUDE_ROLL_ABILITIES, key)),
                         skillId: fields.get("skillId"),
                         expertiseId: fields.get("expertiseId")
                     }
