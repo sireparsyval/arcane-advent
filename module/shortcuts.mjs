@@ -64,7 +64,7 @@ export function registerArcaneHotbar() {
                 ability: data.ability ?? ""
             };
             const command = "await game.arcaneAdvent.runShortcut(" + JSON.stringify(payload) + ");";
-            const macro = await Macro.create({
+            const macro = await foundry.documents.Macro.create({
                 name: name.startsWith("🎲") ? name : "🎲 " + name,
                 type: "script",
                 img: actor.img || "icons/svg/d20-highlight.svg",
