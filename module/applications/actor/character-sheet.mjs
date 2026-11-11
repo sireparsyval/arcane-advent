@@ -2110,7 +2110,7 @@ export class ArcaneCharacterSheet
             content.querySelector("[data-expertise-weapon-filters]").hidden =
                 domainSelect.value !== "weaponClass";
         });
-        const states = Object.keys(PROPERTY_FILTER_STATES);
+        const states = ["neutral", "required", "excluded"];
         for (const toggle of content.querySelectorAll("[data-aa-property-toggle]")) {
             toggle.addEventListener("click", () => {
                 const next = states[(states.indexOf(toggle.dataset.state) + 1) % states.length];
