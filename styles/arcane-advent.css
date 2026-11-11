@@ -1880,3 +1880,58 @@ body.detached > .aa-detached-sheet .window-content {
     .aa-header-physical { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .aa-info-row { grid-template-columns: minmax(85px, 25%) minmax(0, 1fr); }
 }
+
+/* Éditeurs modulaires : les règles avancées restent dans les fenêtres Options. */
+.arcane-advent .aa-expertise-compact {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 3px 2px;
+}
+.arcane-advent .aa-expertise-compact .aa-expertise-name {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.arcane-advent .aa-expertise-compact .aa-expertise-level {
+    min-width: 3ch;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.arcane-advent .aa-expertise-compact button {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+}
+.aa-editor-form {
+    display: grid;
+    gap: 10px;
+    padding: 5px 1px;
+}
+.aa-editor-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.aa-editor-form :is(input, select, textarea) {
+    width: 100%;
+}
+.aa-editor-form fieldset {
+    min-width: 0;
+}
+.aa-expertise-property-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+    gap: 6px;
+}
+.aa-expertise-property-grid label {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+.aa-expertise-property-grid select {
+    max-width: 115px;
+}
