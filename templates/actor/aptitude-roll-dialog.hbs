@@ -9,15 +9,15 @@
         <input type="text" name="formula" value="{{current.formula}}" placeholder="1d20" required>
     </label>
 
-    <label>
-        Caractéristique
-        <select name="ability">
-            <option value="">Aucune</option>
-            {{#each abilities}}
-                <option value="{{@key}}" {{#if (eq @key ../current.ability)}}selected{{/if}}>{{this}}</option>
-            {{/each}}
-        </select>
-    </label>
+    <fieldset class="aa-aptitude-ability-choices">
+        <legend>Caractéristiques à ajouter (plusieurs possibles)</legend>
+        {{#each abilities}}
+            <label class="checkbox">
+                <input type="checkbox" name="abilities" value="{{key}}" {{#if selected}}checked{{/if}}>
+                {{label}}
+            </label>
+        {{/each}}
+    </fieldset>
 
     <label>
         Compétence (bonus de maîtrise)
