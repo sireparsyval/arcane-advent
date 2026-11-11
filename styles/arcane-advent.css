@@ -1252,6 +1252,29 @@ body.detached > .aa-detached-sheet .window-content {
     width: auto;
 }
 
+.aa-guard-roll {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+    max-width: 100%;
+}
+
+.aa-guard-name {
+    overflow-wrap: anywhere;
+}
+
+.aa-guard-values {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.aa-guard-values strong {
+    font-weight: 700;
+    color: var(--aa-accent);
+}
+
 
 /* ========================================================= */
 /* STATUT                                                    */
