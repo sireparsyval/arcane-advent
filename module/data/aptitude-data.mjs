@@ -1,6 +1,6 @@
 import { BaseItemData } from "./base-item-data.mjs";
 
-const { BooleanField, NumberField, SchemaField, StringField, TypedObjectField } = foundry.data.fields;
+const { BooleanField, NumberField, SchemaField, SetField, StringField, TypedObjectField } = foundry.data.fields;
 
 export const APTITUDE_CATEGORIES = Object.freeze({
     technique: "Technique",
@@ -12,13 +12,16 @@ export const APTITUDE_CATEGORIES = Object.freeze({
 export const APTITUDE_OPTIONS = Object.freeze({
     duration: "Durée",
     recovery: "Récupération",
-    charge: "Charge"
+    charge: "Charges",
+    casting: "Incantation"
 });
 
 export const APTITUDE_DURATION_UNITS = Object.freeze({
     turns: "Tours",
+    minutes: "Minutes",
     hours: "Heures",
-    days: "Jours"
+    days: "Jours",
+    rests: "Repos"
 });
 
 export const APTITUDE_RECOVERY_UNITS = Object.freeze({
@@ -108,10 +111,47 @@ export class AptitudeData extends BaseItemData {
                 remaining: countField(),
                 max: countField()
             }),
+            castingCounter: new SchemaField({
+                remaining: countField(),
+                max: countField(),
+                unit: new StringField({ choices: Object.keys(APTITUDE_RECOVERY_UNITS), initial: "turns" })
+            }),
+            // La durée en cours d'un effet n'est pas son temps d'incantation.
+            effectDuration: new SchemaField({
+                enabled: new BooleanField({ initial: false }),
+                remaining: countField(),
+                unit: new StringField({ choices: Object.keys(APTITUDE_RECOVERY_UNITS), initial: "turns" })
+            }),
+            targeting: new SchemaField({
+                mode: new StringField({ choices: ["self", "single", "multiple", "area"], initial: "single" }),
+                maxTargets: countField(1),
+                shape: new StringField({ choices: ["circle", "cone", "line", "rectangle", "free"], initial: "circle" }),
+                range: new NumberField({ min: 0, initial: 0 }),
+                radius: new NumberField({ min: 0, initial: 0 }),
+                length: new NumberField({ min: 0, initial: 0 }),
+                width: new NumberField({ min: 0, initial: 0 }),
+                angle: new NumberField({ min: 0, max: 360, initial: 90 }),
+                origin: new StringField({ choices: ["caster", "target"], initial: "caster" }),
+                propagation: new StringField({ choices: ["projectile", "beam", "instant", "wave"], initial: "instant" }),
+                travels: new BooleanField({ initial: false })
+            }),
+            conditions: new TypedObjectField(new SchemaField({
+                label: new StringField({ blank: false, initial: "Condition" }),
+                kind: new StringField({ choices: ["manual", "automatic"], initial: "manual" }),
+                enabled: new BooleanField({ initial: false }),
+                metric: new StringField({ choices: ["pdcRatio", "pdfRatio", "ability", "alteration", "equipped", "expertise", "inventory", "luqa", "formula"], initial: "pdcRatio" }),
+                operator: new StringField({ choices: ["<", "<=", "=", ">=", ">", "!="], initial: "<" }),
+                value: new NumberField({ initial: 50 }),
+                key: new StringField({ blank: true, initial: "" }),
+                expression: new StringField({ blank: true, initial: "" })
+            }), { required: true, nullable: false, initial: {} }),
             rolls: new TypedObjectField(new SchemaField({
                 name: new StringField({ blank: false, initial: "Jet" }),
                 formula: new StringField({ blank: false, initial: "1d20" }),
                 ability: new StringField({ blank: true, initial: "" }),
+                abilities: new SetField(new StringField({ required: true, blank: false }), {
+                    required: true, nullable: false, initial: []
+                }),
                 skillId: new StringField({ blank: true, initial: "" }),
                 expertiseId: new StringField({ blank: true, initial: "" })
             }), { required: true, nullable: false, initial: {} }),
@@ -124,7 +164,7 @@ export class AptitudeData extends BaseItemData {
     }
 
     static migrateData(source, options) {
-        for (const key of Object.keys(APTITUDE_OPTIONS)) {
+        for (const key of ["duration", "recovery", "charge"]) {
             if (typeof source[key] !== "string") continue;
             const value = parseLegacyAptitudeOption(key, source[key]);
             if (value === null) continue;
@@ -143,7 +183,7 @@ export class AptitudeData extends BaseItemData {
 
     static validateJoint(data) {
         super.validateJoint(data);
-        for (const key of ["recovery", "charge"]) {
+        for (const key of ["recovery", "charge", "casting"]) {
             const { remaining, max } = data[`${key}Counter`];
             if (remaining > max) {
                 throw new Error(`${APTITUDE_OPTIONS[key]} — la valeur restante dépasse le maximum.`);
