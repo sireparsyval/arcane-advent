@@ -18,14 +18,13 @@
         <p class="hint">Toutes les propriétés « Requis » doivent être présentes, et aucune propriété « À exclure » ne doit l’être.</p>
         <div class="aa-expertise-property-grid">
         {{#each properties}}
-            <label>
+            <div class="aa-expertise-property-choice">
                 <span>{{label}}</span>
-                <select name="property.{{key}}">
-                    {{#each states}}
-                        <option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>
-                    {{/each}}
-                </select>
-            </label>
+                <button type="button" class="aa-expertise-property-toggle state-{{state}}"
+                    data-aa-property-toggle="{{key}}" data-state="{{state}}"
+                    title="Cliquer pour passer de Neutre à Requis, À exclure puis Neutre">{{stateLabel}}</button>
+                <input type="hidden" name="property.{{key}}" value="{{state}}">
+            </div>
         {{/each}}
         </div>
     </fieldset>
