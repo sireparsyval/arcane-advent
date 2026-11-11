@@ -17,10 +17,14 @@ import { ArcaneItem } from "./module/documents/item.mjs";
 
 import { ArcaneCharacterSheet } from "./module/applications/actor/character-sheet.mjs";
 import { ArcaneInventoryItemSheet } from "./module/applications/item/inventory-item-sheet.mjs";
+import { registerArcaneHotbar, runArcaneShortcut } from "./module/shortcuts.mjs";
 
 
 Hooks.once("init", () => {
     console.log("Arcane Advent | Initialisation");
+
+    game.arcaneAdvent = { runShortcut: runArcaneShortcut };
+    registerArcaneHotbar();
 
     CONFIG.Actor.documentClass = ArcaneActor;
     CONFIG.Item.documentClass = ArcaneItem;

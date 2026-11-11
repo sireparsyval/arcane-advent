@@ -1,17 +1,8 @@
 import { isInventoryContainer, luqaCounters } from "../../inventory.mjs";
+import { WEAPON_PROPERTIES } from "../../expertise.mjs";
 
 const { DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
-
-const WEAPON_PROPERTIES = {
-    twoHanded: "Deux mains",
-    finesse: "Finesse",
-    thrown: "Lancer",
-    light: "Légère",
-    heavy: "Lourde",
-    versatile: "Polyvalente",
-    ammunition: "Munitions"
-};
 
 const PROTECTION_ZONES = {
     head: "Tête",

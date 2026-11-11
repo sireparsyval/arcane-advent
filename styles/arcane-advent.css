@@ -360,10 +360,6 @@ body.detached > .aa-detached-sheet .window-content {
 }
 
 .aa-aptitude-edit-roll {
-    display: none;
-}
-
-.aa-aptitude-config:not([hidden]) ~ .aa-aptitude-rolls .aa-aptitude-edit-roll {
     display: inline-flex;
     align-items: center;
 }
@@ -1879,4 +1875,149 @@ body.detached > .aa-detached-sheet .window-content {
     .aa-header-portrait-block { width: min(210px, 100%); justify-self: center; }
     .aa-header-physical { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .aa-info-row { grid-template-columns: minmax(85px, 25%) minmax(0, 1fr); }
+}
+
+/* Éditeurs modulaires : les règles avancées restent dans les fenêtres Options. */
+.arcane-advent .aa-expertise-compact {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    padding: 3px 2px;
+}
+.arcane-advent .aa-expertise-compact .aa-expertise-name {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.arcane-advent .aa-expertise-compact .aa-expertise-level {
+    min-width: 3ch;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.arcane-advent .aa-expertise-compact button {
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    padding: 2px 6px;
+}
+.aa-editor-form {
+    display: grid;
+    gap: 10px;
+    padding: 5px 1px;
+}
+.aa-editor-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.aa-editor-form :is(input, select, textarea) {
+    width: 100%;
+}
+.aa-editor-form fieldset {
+    min-width: 0;
+}
+.aa-expertise-property-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+    gap: 6px;
+}
+.aa-expertise-property-grid label {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+.aa-expertise-property-grid select {
+    max-width: 115px;
+}
+
+/* Créateur d'Aptitudes : panneaux configurables hors de la fiche, indicateurs compacts. */
+.aa-aptitude-options-editor fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.aa-aptitude-options-inline, .aa-aptitude-options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+    gap: 8px;
+    align-items: end;
+}
+.aa-editor-form label.checkbox {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+}
+.aa-editor-form label.checkbox input[type="checkbox"] {
+    width: auto;
+    flex: 0 0 auto;
+}
+.aa-condition-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-width: 100%;
+}
+.aa-condition-chips .aa-condition-chip {
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+    padding: 2px 7px;
+    font-size: .78rem;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+}
+.aa-condition-chips .aa-condition-chip.is-satisfied {
+    border-color: rgba(61, 164, 105, .65);
+}
+.aa-condition-chips .aa-condition-chip.is-unmet {
+    border-color: rgba(206, 79, 85, .75);
+    opacity: .85;
+}
+.aa-condition-chips .aa-condition-chip.is-manual {
+    border-color: var(--aa-border);
+}
+.aa-aptitude-condition-indicators {
+    margin: 3px 0;
+}
+.aa-aptitude-ability-choices {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+.aa-aptitude-ability-choices legend {
+    grid-column: 1 / -1;
+}
+.aa-aptitude-ability-choices label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.arcane-advent button[draggable="true"][data-action^="roll"] {
+    cursor: grab;
+}
+.arcane-advent button[draggable="true"][data-action^="roll"]:active {
+    cursor: grabbing;
+}
+
+.aa-expertise-property-choice {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+.aa-expertise-property-toggle {
+    width: 104px;
+    min-width: 88px;
+    padding: 3px 6px;
+    font-size: .82em;
+}
+.aa-expertise-property-toggle.state-required {
+    border-color: rgba(61, 164, 105, .7);
+}
+.aa-expertise-property-toggle.state-excluded {
+    border-color: rgba(206, 79, 85, .75);
 }

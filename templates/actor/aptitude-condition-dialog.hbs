@@ -1,0 +1,36 @@
+<section class="aa-editor-form standard-form">
+    <label>Nom de l'indicateur
+        <input name="label" type="text" value="{{current.label}}" required pattern=".*\S.*">
+    </label>
+    <p class="hint">{{#if automatic}}Cet indicateur s'actualisera automatiquement ; cliquer dessus ouvre sa configuration. Il ne bloque aucun jet.{{else}}Cet indicateur est activé/désactivé manuellement, sans lien avec la fiche.{{/if}}</p>
+    {{#if automatic}}
+        <label>Type de condition
+            <select name="metric">
+                {{#each metrics}}
+                    <option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+                {{/each}}
+            </select>
+        </label>
+        <div class="aa-aptitude-options-grid">
+            <label>Opérateur
+                <select name="operator">
+                    {{#each operators}}
+                        <option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+                    {{/each}}
+                </select>
+            </label>
+            <label>Valeur / seuil
+                <input name="value" type="number" step="any" value="{{current.value}}">
+            </label>
+        </div>
+        <label>Clé (caractéristique, nom, classe, ID ou dénomination des Luqa)
+            <input name="key" type="text" value="{{current.key}}" placeholder="Ex. : strength, Espadon, gold">
+        </label>
+        <label>Formule logique avancée (pour le type Formule)
+            <textarea name="expression" rows="2" placeholder="pdc &lt; pdcMax * 0.5">{{current.expression}}</textarea>
+        </label>
+        <p class="hint">Variables : pdc, pdcMax, pdf, pdfMax, FOR, DEX, CON, INT, SAG, CHA. Comparaisons : &lt;, &lt;=, &gt;, &gt;=, ==, !=. Logique : &amp;&amp;, ||, !. Aucun JavaScript exécutable.</p>
+        <label class="checkbox"><input type="checkbox" name="consumes" {{#if current.consumes}}checked{{/if}}> Objet / Luqa à consommer lors de l'utilisation (rappel manuel)</label>
+        <p class="hint">Présence (altération / équipement / Expertise) : utilisez « = 1 ». Absence : « = 0 ». Inventaire et Luqa : renseignez une quantité et l'opérateur.</p>
+    {{/if}}
+</section>

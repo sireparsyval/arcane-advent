@@ -37,6 +37,8 @@
             {{> aaInventoryItemField label="Poids unitaire (kg)" type="number" name="system.weight"
                 value=system.weight min=0 step="any" required=true}}
         {{/if}}
+        {{> aaInventoryItemField label="Classe d’objet (pour les Expertises)" type="text" name="system.objectClass"
+            value=system.objectClass}}
         {{#if isObject}}
             {{> aaInventoryItemField label="Quantité" type="number" name="system.quantity"
                 value=system.quantity min=1 step="1" required=true}}

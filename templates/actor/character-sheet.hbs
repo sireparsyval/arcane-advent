@@ -462,20 +462,22 @@
                                             {{/each}}
                                         </select>
                                     </label>
+                                    {{#unless isPassive}}
                                     <label class="aa-aptitude-level">
                                         <span>Niv.</span>
                                         <input type="number" min="0" step="1" required value="{{system.level}}"
                                             data-aptitude-field="level" data-item-id="{{id}}">
                                     </label>
+                                    {{/unless}}
                                     <label class="aa-aptitude-name">
                                         <span>Nom</span>
                                         <input type="text" required pattern=".*\S.*" value="{{name}}"
                                             data-aptitude-field="name" data-item-id="{{id}}">
                                     </label>
                                     <div class="aa-aptitude-actions">
-                                        <button type="button" data-action="toggleAptitudeConfig" aria-expanded="{{configOpen}}"
-                                            aria-label="Champs facultatifs de {{name}}" title="Champs facultatifs">
-                                            <i class="fa-solid fa-gear" aria-hidden="true"></i>
+                                        <button type="button" data-action="editAptitudeOptions" data-item-id="{{id}}"
+                                            aria-label="Options de {{name}}" title="Options et créateur de compétence">
+                                            <i class="fa-solid fa-gear" aria-hidden="true"></i> Options
                                         </button>
                                         {{#if linkedTraitId}}
                                             <button type="button" data-action="goToLinkedTrait" data-trait-id="{{linkedTraitId}}"
@@ -489,23 +491,10 @@
                                         {{/if}}
                                     </div>
                                 </div>
-                                <div class="aa-aptitude-config" data-aptitude-config="{{id}}" {{#unless configOpen}}hidden{{/unless}}>
-                                    {{#each options}}
-                                        <button type="button" data-action="toggleAptitudeOption" data-item-id="{{../id}}"
-                                            data-option="{{key}}" aria-pressed="{{active}}">{{label}}</button>
-                                    {{/each}}
-                                    <button type="button" class="aa-aptitude-add-roll" data-action="editAptitudeRoll" data-item-id="{{id}}"
-                                        aria-label="Ajouter un jet" title="Ajouter un jet">+🎲</button>
-                                    <label class="aa-aptitude-requirements-editor">
-                                        <span>Conditions requises</span>
-                                        <textarea rows="2" data-aptitude-field="requirements" data-item-id="{{id}}"
-                                            placeholder="Conditions nécessaires pour utiliser cette Aptitude…">{{system.requirements}}</textarea>
-                                    </label>
-                                </div>
                             {{else}}
                                 <div class="aa-aptitude-identity">
                                     <strong>{{name}}</strong>
-                                    <span class="aa-condition-level">{{categoryLabel}} · Niv. {{system.level}} ({{system.level}} PdF)</span>
+                                    <span class="aa-condition-level">{{categoryLabel}}{{#unless isPassive}} · Niv. {{system.level}} ({{system.level}} PdF){{/unless}}</span>
                                 </div>
                             {{/if}}
                             {{#if linkedTraitName}}
@@ -514,57 +503,46 @@
                             {{#if system.requirements}}
                                 <div class="aa-requirements-note"><strong>Conditions requises :</strong> {{system.requirements}}</div>
                             {{/if}}
+                            {{#if conditions.length}}
+                                <div class="aa-condition-chips aa-aptitude-condition-indicators" aria-label="Conditions de l'aptitude">
+                                    {{#each conditions}}
+                                        {{#if automatic}}
+                                            <button type="button" class="aa-condition-chip {{#if satisfied}}is-satisfied{{else}}is-unmet{{/if}}"
+                                                data-action="editAptitudeCondition" data-item-id="{{../id}}" data-condition-id="{{id}}"
+                                                title="{{label}} · {{#if satisfied}}Remplie{{else}}Non remplie{{/if}} · Cliquer pour configurer"
+                                                {{#unless @root.canEditState}}disabled{{/unless}}>
+                                                {{#if satisfied}}✓{{else}}✕{{/if}} {{label}}{{#if consumes}} · consommable{{/if}}
+                                            </button>
+                                        {{else}}
+                                            <button type="button" class="aa-condition-chip {{#if satisfied}}is-satisfied{{else}}is-manual{{/if}}"
+                                                data-action="toggleManualAptitudeCondition" data-item-id="{{../id}}" data-condition-id="{{id}}"
+                                                aria-pressed="{{satisfied}}" title="{{label}} · condition manuelle"
+                                                {{#unless @root.canEditState}}disabled{{/unless}}>
+                                                {{#if satisfied}}☑{{else}}☐{{/if}} {{label}}
+                                            </button>
+                                        {{/if}}
+                                    {{/each}}
+                                </div>
+                            {{/if}}
+                            {{#if effectDuration.active}}
+                                <div class="aa-aptitude-option"><strong>Durée d'effet</strong>
+                                    <span>{{effectDuration.remaining}} {{effectDuration.label}}</span>
+                                </div>
+                            {{/if}}
                             <div class="aa-aptitude-optional">
                                 {{#each options}}
                                     {{#if active}}
-                                        <div class="aa-aptitude-option aa-aptitude-option-{{key}}">
+                                        <div class="aa-aptitude-option">
                                             <strong>{{label}}</strong>
-                                            {{#if @root.canEditState}}
-                                                {{#if (eq key "duration")}}
-                                                    <div class="aa-aptitude-option-line">
-                                                        <input type="number" min="0" step="1" required value="{{value}}"
-                                                            data-aptitude-field="durationTurns" data-item-id="{{../id}}" aria-label="Durée">
-                                                        <select class="aa-aptitude-duration-unit" data-aptitude-field="durationUnit"
-                                                            data-item-id="{{../id}}" aria-label="Unité de durée">
-                                                            {{#each @root.aptitudeDurationUnits}}
-                                                                <option value="{{@key}}" {{#if (eq @key ../../system.durationUnit)}}selected{{/if}}>{{this}}</option>
-                                                            {{/each}}
-                                                        </select>
-                                                    </div>
-                                                {{else}}
-                                                    <div class="aa-aptitude-option-line">
-                                                        <div class="aa-aptitude-counter">
-                                                            <input type="number" min="0" max="{{value.max}}" step="1" required value="{{value.remaining}}"
-                                                                data-aptitude-field="{{key}}Counter.remaining" data-item-id="{{../id}}"
-                                                                aria-label="{{label}} — restant" title="Restant">
-                                                            <span aria-hidden="true">/</span>
-                                                            <input type="number" min="0" step="1" required value="{{value.max}}"
-                                                                data-aptitude-field="{{key}}Counter.max" data-item-id="{{../id}}"
-                                                                aria-label="{{label}} — max" title="Max">
-                                                        </div>
-                                                        {{#if (eq key "recovery")}}
-                                                            <select data-aptitude-field="recoveryCounter.unit" data-item-id="{{../id}}" aria-label="Unité de récupération">
-                                                                {{#each @root.aptitudeRecoveryUnits}}
-                                                                    <option value="{{@key}}" {{#if (eq @key ../value.unit)}}selected{{/if}}>{{this}}</option>
-                                                                {{/each}}
-                                                            </select>
-                                                        {{/if}}
-                                                    </div>
-                                                {{/if}}
-                                            {{else}}
-                                                <span>
-                                                    {{#if (eq key "duration")}}
-                                                        {{value}} {{../durationUnitLabel}}
-                                                    {{else}}
-                                                        {{value.remaining}} / {{value.max}}{{#if (eq key "recovery")}} {{../recoveryUnitLabel}}{{/if}}
-                                                    {{/if}}
-                                                </span>
-                                            {{/if}}
-                                            {{#if note}}<small>Ancienne valeur · {{note}}</small>{{/if}}
+                                            <span>{{value.remaining}} / {{value.max}}
+                                                {{#if (eq key "recovery")}} {{unitLabel}}{{/if}}
+                                                {{#if (eq key "casting")}} {{unitLabel}}{{/if}}
+                                            </span>
                                         </div>
                                     {{/if}}
                                 {{/each}}
                             </div>
+                            {{#if targetingSummary}}<small class="aa-aptitude-targeting-summary">{{targetingSummary}}</small>{{/if}}
                             {{#if rolls}}
                                 <div class="aa-aptitude-rolls">
                                     {{#each rolls}}
@@ -583,7 +561,7 @@
                                 </div>
                             {{/if}}
                             <details data-aptitude-description="{{id}}" {{#if descriptionOpen}}open{{/if}}>
-                                <summary>Effets et utilisation</summary>
+                                <summary>Description et effets conditionnels</summary>
                                 {{#if @root.canEditState}}
                                     <textarea rows="4" data-aptitude-field="description" data-item-id="{{id}}"
                                         aria-label="Effets et utilisation de {{name}}">{{system.description}}</textarea>
@@ -1290,113 +1268,23 @@
                         </div>
 
 
-                        <div class="aa-expertise-header">
-                            <span></span>
-                            <span>Expertise</span>
-                            <span>Domaine</span>
-                            <span>Cible</span>
-                            <span>Bonus</span>
-                            <span></span>
-                        </div>
-
-
                         <div class="aa-expertise-list">
-
                             {{#each expertises}}
-
-                                <div class="aa-expertise-row" data-sheet-sort-drop="{{id}}">
-                                    {{#if @root.canEditState}}<span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}" aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>{{else}}<span></span>{{/if}}
-
-                                    <input
-                                        type="text"
-                                        value="{{name}}"
-                                        data-expertise-edit
-                                        data-expertise-id="{{id}}"
-                                        data-expertise-field="name"
-                                    >
-
-
-                                    <select
-                                        data-expertise-edit
-                                        data-expertise-id="{{id}}"
-                                        data-expertise-field="system.domain"
-                                    >
-
-                                        <option
-                                            value="weaponClass"
-                                            {{#if (eq domain "weaponClass")}}selected{{/if}}
-                                        >
-                                            Classe d'arme
-                                        </option>
-
-                                        <option
-                                            value="shieldClass"
-                                            {{#if (eq domain "shieldClass")}}selected{{/if}}
-                                        >
-                                            Classe de bouclier
-                                        </option>
-
-                                        <option
-                                            value="armorClass"
-                                            {{#if (eq domain "armorClass")}}selected{{/if}}
-                                        >
-                                            Classe d'armure
-                                        </option>
-
-                                        <option
-                                            value="toolObject"
-                                            {{#if (eq domain "toolObject")}}selected{{/if}}
-                                        >
-                                            Outil / Objet
-                                        </option>
-
-                                        <option
-                                            value="other"
-                                            {{#if (eq domain "other")}}selected{{/if}}
-                                        >
-                                            Autre
-                                        </option>
-
-                                    </select>
-
-
-                                    <input
-                                        type="text"
-                                        value="{{target}}"
-                                        placeholder="ex : Épée"
-                                        data-expertise-edit
-                                        data-expertise-id="{{id}}"
-                                        data-expertise-field="system.target"
-                                    >
-
-
-                                    <input
-                                        type="number"
-                                        value="{{bonus}}"
-                                        data-expertise-edit
-                                        data-expertise-id="{{id}}"
-                                        data-expertise-field="system.bonus"
-                                    >
-
-
-                                    <button
-                                        type="button"
-                                        data-action="deleteExpertise"
-                                        data-expertise-id="{{id}}"
-                                    >
-                                        ×
-                                    </button>
-
+                                <div class="aa-expertise-row aa-expertise-compact" data-sheet-sort-drop="{{id}}">
+                                    {{#if @root.canEditState}}<span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}"
+                                        aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>{{/if}}
+                                    <span class="aa-expertise-name" title="{{name}}">{{name}}</span>
+                                    <strong class="aa-expertise-level" title="Niveau / bonus d'Expertise">{{bonusLabel}}</strong>
+                                    {{#if @root.canEditState}}
+                                        <button type="button" data-action="editExpertise" data-expertise-id="{{id}}"
+                                            title="Configurer {{name}}" aria-label="Options de {{name}}">⚙ Options</button>
+                                        <button type="button" data-action="deleteExpertise" data-expertise-id="{{id}}"
+                                            title="Supprimer {{name}}" aria-label="Supprimer {{name}}">×</button>
+                                    {{/if}}
                                 </div>
-
                             {{else}}
-
-                                <p class="aa-empty-skills">
-                                    Aucune expertise.
-                                </p>
-
+                                <p class="aa-empty-skills">Aucune expertise.</p>
                             {{/each}}
-
                         </div>
 
                     </section>

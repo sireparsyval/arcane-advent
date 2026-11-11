@@ -2,6 +2,9 @@ import { ARCANE_NEEDS } from "../../config.mjs";
 import { VOLUME_LABELS, ENCUMBRANCE_STAGES } from "../../encumbrance.mjs";
 import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedModifier } from "../../modifiers.mjs";
 import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
+import { EXPERTISE_DOMAINS, WEAPON_PROPERTIES, PROPERTY_FILTER_STATES, normalizedClasses } from "../../expertise.mjs";
+import { CONDITION_METRICS, aptitudeConditionStatus } from "../../aptitude-conditions.mjs";
+import { hotbarRollData } from "../../shortcuts.mjs";
 import {
     EQUIPMENT_TYPES, LUQA_DENOMINATIONS, canPlaceInContainer,
     isInventoryContainer, isInventoryItem, luqaCounters, purseCoinWeight
@@ -182,8 +185,9 @@ export class ArcaneCharacterSheet
             editCondition: this._onEditCondition,
             deleteCondition: this._onDeleteStateItem,
             addAptitude: this._onAddAptitude,
-            toggleAptitudeConfig: this._onToggleAptitudeConfig,
-            toggleAptitudeOption: this._onToggleAptitudeOption,
+            editAptitudeOptions: this._onEditAptitudeOptions,
+            editAptitudeCondition: this._onEditAptitudeCondition,
+            toggleManualAptitudeCondition: this._onToggleManualAptitudeCondition,
             editAptitudeRoll: this._onEditAptitudeRoll,
             rollAptitude: this._onRollAptitude,
             deleteAptitude: this._onDeleteStateItem,
@@ -222,6 +226,7 @@ export class ArcaneCharacterSheet
             rollWeaponVersatileDamage: this._onRollWeaponVersatileDamage,
 
             addExpertise: this._onAddExpertise,
+            editExpertise: this._onEditExpertise,
             deleteExpertise: this._onDeleteExpertise,
 
             addWeaponDamageType: this._onAddWeaponDamageType,
@@ -275,10 +280,6 @@ export class ArcaneCharacterSheet
             label,
             selected: key === rollMode
         }));
-        const openConfigs = new Set(Array.from(
-            this.element?.querySelectorAll("[data-aptitude-config]:not([hidden])") ?? [],
-            panel => panel.dataset.aptitudeConfig
-        ));
         const openDescriptions = new Set(Array.from(
             this.element?.querySelectorAll("details[data-aptitude-description][open]") ?? [],
             panel => panel.dataset.aptitudeDescription
@@ -318,18 +319,39 @@ export class ArcaneCharacterSheet
             linkedTraitName: traitsById.get(item.system.traitId)?.name ?? "",
             linkedTraitId: traitsById.get(item.system.traitId)?.id ?? "",
             categoryLabel: APTITUDE_CATEGORIES[item.system.category],
+            isPassive: item.system.category === "passive",
+            isTechnique: item.system.category === "technique",
+            conditions: Object.entries(item.system.conditions ?? {}).map(([id, condition]) => ({
+                id,
+                label: condition.label,
+                automatic: condition.kind === "automatic",
+                satisfied: aptitudeConditionStatus(this.actor, condition),
+                consumes: condition.consumes
+            })),
+            effectDuration: {
+                active: item.system.effectDuration.enabled || isAptitudeOptionVisible(item.system, "duration"),
+                remaining: item.system.effectDuration.enabled ? item.system.effectDuration.remaining : item.system.durationTurns,
+                label: APTITUDE_RECOVERY_UNITS[item.system.effectDuration.enabled ? item.system.effectDuration.unit : item.system.durationUnit]
+            },
+            targetingSummary: item.system.targeting?.mode === "multiple"
+                ? `Cibles : ${item.system.targeting.maxTargets}`
+                : item.system.targeting?.mode === "area"
+                    ? `Zone · ${item.system.targeting.shape}`
+                    : "",
             durationUnitLabel: APTITUDE_DURATION_UNITS[item.system.durationUnit],
             recoveryUnitLabel: APTITUDE_RECOVERY_UNITS[item.system.recoveryCounter.unit],
-            configOpen: openConfigs.has(item.id),
             descriptionOpen: openDescriptions.has(item.id),
             rolls: Object.entries(item.system.rolls).map(([id, roll]) => ({
                 id,
                 name: roll.name.replace(/^(?:🎲\uFE0F?\s*)+/u, "")
             })),
-            options: Object.entries(APTITUDE_OPTIONS).map(([key, label]) => ({
+            options: Object.entries(APTITUDE_OPTIONS)
+                .filter(([key]) => key !== "duration" && item.system.category !== "technique")
+                .map(([key, label]) => ({
                 key,
                 label,
                 value: key === "duration" ? item.system.durationTurns : item.system[`${key}Counter`],
+                unitLabel: APTITUDE_RECOVERY_UNITS[item.system[`${key}Counter`]?.unit] ?? "",
                 note: item.system[key] && parseLegacyAptitudeOption(key, item.system[key]) === null
                     ? item.system[key].trim()
                     : "",
@@ -475,7 +497,8 @@ export class ArcaneCharacterSheet
                     const expertiseBonus =
                         this.actor.getExpertiseBonus(
                             "weaponClass",
-                            item.system.weaponClass
+                            item.system.weaponClass,
+                            item
                         );
 
                     return {
@@ -533,7 +556,8 @@ export class ArcaneCharacterSheet
                     expertiseBonus:
                         this.actor.getExpertiseBonus(
                             "shieldClass",
-                            item.system.shieldClass
+                            item.system.shieldClass,
+                            item
                         )
                 })),
 
@@ -592,7 +616,8 @@ export class ArcaneCharacterSheet
                 name: expertise.name,
                 domain: expertise.system.domain,
                 target: expertise.system.target,
-                bonus: expertise.system.bonus
+                bonus: expertise.system.bonus,
+                bonusLabel: signedModifier(expertise.system.bonus)
             }));
 
         context.deathSaves = Object.entries(DEATH_SAVE_LABELS).map(([key, label]) => ({
@@ -864,26 +889,220 @@ export class ArcaneCharacterSheet
         }
     }
 
-    static _onToggleAptitudeConfig(event, target) {
-        const config = target.closest(".aa-aptitude-row")?.querySelector("[data-aptitude-config]");
-        if (!config) return;
+    static async _onEditAptitudeOptions(event, target) {
+        if (!this.isEditable) return;
+        const aptitude = this.actor.items.get(target.dataset.itemId);
+        if (aptitude?.type !== "aptitude") return;
 
-        config.hidden = !config.hidden;
-        target.setAttribute("aria-expanded", String(!config.hidden));
+        const { DialogV2 } = foundry.applications.api;
+        const system = aptitude.system;
+        const content = document.createElement("div");
+        const durationActive = system.effectDuration.enabled || isAptitudeOptionVisible(system, "duration");
+        const list = data => Object.entries(data).map(([key, label]) => ({ key, label }));
+        // Cinq unités proposées pour les nouvelles Aptitudes, sans supprimer les valeurs historiques.
+        const unitLabels = { ...APTITUDE_DURATION_UNITS };
+        for (const unit of [system.recoveryCounter.unit, system.castingCounter.unit,
+            system.effectDuration.unit, system.durationUnit]) {
+            if (Object.hasOwn(APTITUDE_RECOVERY_UNITS, unit) && !Object.hasOwn(unitLabels, unit)) {
+                unitLabels[unit] = APTITUDE_RECOVERY_UNITS[unit];
+            }
+        }
+        content.innerHTML = await foundry.applications.handlebars.renderTemplate(
+            "systems/arcane-advent/templates/actor/aptitude-options-dialog.hbs", {
+                system,
+                isTechnique: system.category === "technique",
+                chargeActive: isAptitudeOptionVisible(system, "charge"),
+                recoveryActive: isAptitudeOptionVisible(system, "recovery"),
+                castingActive: isAptitudeOptionVisible(system, "casting"),
+                durationActive,
+                effectRemaining: system.effectDuration.enabled ? system.effectDuration.remaining : system.durationTurns,
+                effectUnit: system.effectDuration.enabled ? system.effectDuration.unit : system.durationUnit,
+                units: list(unitLabels),
+                targetModes: list({ self: "Soi-même", single: "Cible unique", multiple: "Cibles séparées", area: "Zone" }),
+                shapes: list({ circle: "Cercle", cone: "Cône", line: "Ligne", rectangle: "Rectangle", free: "Libre" }),
+                origins: list({ caster: "Lanceur", target: "Point ciblé" }),
+                propagations: list({ projectile: "Projectile", beam: "Rayon", instant: "Instantané", wave: "Onde" }),
+                conditions: Object.entries(system.conditions).map(([id, condition]) => ({
+                    id, label: condition.label, automatic: condition.kind === "automatic", consumes: condition.consumes
+                }))
+            }
+        );
+
+        const readCounter = (fields, name) => {
+            const remaining = Number(fields.get(name + ".remaining"));
+            const max = Number(fields.get(name + ".max"));
+            if (!Number.isSafeInteger(remaining) || !Number.isSafeInteger(max)
+                || remaining < 0 || max < 0 || remaining > max) throw Error("Compteur invalide : " + name);
+            const unit = fields.get(name + ".unit");
+            if (unit && !Object.hasOwn(APTITUDE_RECOVERY_UNITS, unit)) throw Error("Unité invalide.");
+            return { remaining, max, unit };
+        };
+        const dialog = new DialogV2({
+            window: { title: "Options — " + aptitude.name },
+            position: { width: 675 }, content, modal: true, form: { closeOnSubmit: false },
+            buttons: [
+                {
+                    action: "save", label: "Enregistrer / Appliquer",
+                    callback: async (_event, button, app) => {
+                        if (!button.form.reportValidity()) return;
+                        const values = new FormData(button.form);
+                        const updates = { "system.requirements": String(values.get("requirements") ?? "").trim() };
+                        try {
+                            if (system.category !== "technique") {
+                                for (const name of ["charge", "recovery", "casting"]) {
+                                    const counter = readCounter(values, name);
+                                    const base = name + "Counter";
+                                    updates["system.showOptions." + name] = values.has("enable." + name);
+                                    updates["system." + base + ".remaining"] = counter.remaining;
+                                    updates["system." + base + ".max"] = counter.max;
+                                    if (counter.unit) updates["system." + base + ".unit"] = counter.unit;
+                                }
+                            }
+                            const effectRemaining = Number(values.get("effect.remaining"));
+                            const effectUnit = values.get("effect.unit");
+                            if (!Number.isSafeInteger(effectRemaining) || effectRemaining < 0
+                                || !Object.hasOwn(APTITUDE_RECOVERY_UNITS, effectUnit)) throw Error("Durée d'effet invalide.");
+                            updates["system.effectDuration.enabled"] = values.has("effect.enabled");
+                            updates["system.effectDuration.remaining"] = effectRemaining;
+                            updates["system.effectDuration.unit"] = effectUnit;
+                            updates["system.showOptions.duration"] = values.has("effect.enabled");
+                            updates["system.durationTurns"] = effectRemaining;
+                            // La migration conserve les anciennes unités tout en offrant Minutes et Repos dans le nouveau champ.
+                            if (Object.hasOwn(APTITUDE_DURATION_UNITS, effectUnit)) updates["system.durationUnit"] = effectUnit;
+                            const validChoices = {
+                                mode: ["self", "single", "multiple", "area"],
+                                shape: ["circle", "cone", "line", "rectangle", "free"],
+                                origin: ["caster", "target"],
+                                propagation: ["projectile", "beam", "instant", "wave"]
+                            };
+                            for (const [key, choices] of Object.entries(validChoices)) {
+                                const value = values.get("target." + key);
+                                if (!choices.includes(value)) throw Error("Paramètre de ciblage invalide : " + key);
+                                updates["system.targeting." + key] = value;
+                            }
+                            for (const key of ["maxTargets", "range", "radius", "length", "width", "angle"]) {
+                                const value = Number(values.get("target." + key));
+                                if (!Number.isFinite(value) || value < 0 || (key === "angle" && value > 360)
+                                    || (key === "maxTargets" && !Number.isSafeInteger(value))) {
+                                    throw Error("Valeur de ciblage invalide : " + key);
+                                }
+                                updates["system.targeting." + key] = value;
+                            }
+                            updates["system.targeting.travels"] = values.has("target.travels");
+                        } catch (error) {
+                            ui.notifications.warn(error.message);
+                            return;
+                        }
+                        if (this.actor.items.has(aptitude.id)) await aptitude.update(updates);
+                        await app.close();
+                    }
+                },
+                { action: "cancel", label: "Annuler", type: "button",
+                    callback: (_event, _button, app) => app.close() }
+            ]
+        });
+        for (const control of content.querySelectorAll("[data-aa-add-condition]")) {
+            control.addEventListener("click", async () => {
+                await dialog.close();
+                await this._openAptitudeConditionEditor(aptitude, null, control.dataset.aaAddCondition);
+            });
+        }
+        for (const control of content.querySelectorAll("[data-aa-edit-condition]")) {
+            control.addEventListener("click", async () => {
+                await dialog.close();
+                await this._openAptitudeConditionEditor(aptitude, control.dataset.aaEditCondition);
+            });
+        }
+        content.querySelector("[data-aa-add-roll]")?.addEventListener("click", async () => {
+            await dialog.close();
+            await ArcaneCharacterSheet._onEditAptitudeRoll.call(this, null, { dataset: { itemId: aptitude.id } });
+        });
+        await dialog.render({ force: true });
     }
 
-
-    static async _onToggleAptitudeOption(event, target) {
+    static async _onToggleManualAptitudeCondition(event, target) {
         if (!this.isEditable) return;
-        const { itemId, option } = target.dataset;
-        const item = this.actor.items.get(itemId);
-        if (item?.type !== "aptitude" || !Object.hasOwn(APTITUDE_OPTIONS, option)) return;
-
-        await item.update({
-            [`system.showOptions.${option}`]: !isAptitudeOptionVisible(item.system, option)
+        const aptitude = this.actor.items.get(target.dataset.itemId);
+        const condition = aptitude?.system.conditions?.[target.dataset.conditionId];
+        if (aptitude?.type !== "aptitude" || condition?.kind !== "manual") return;
+        await aptitude.update({
+            [`system.conditions.${target.dataset.conditionId}.enabled`]: !condition.enabled
         });
     }
 
+    static async _onEditAptitudeCondition(event, target) {
+        if (!this.isEditable) return;
+        const aptitude = this.actor.items.get(target.dataset.itemId);
+        if (aptitude?.type !== "aptitude") return;
+        await this._openAptitudeConditionEditor(aptitude, target.dataset.conditionId);
+    }
+
+    async _openAptitudeConditionEditor(aptitude, conditionId = null, requestedKind = "manual") {
+        if (!this.isEditable) return;
+        const current = conditionId ? aptitude.system.conditions[conditionId] : null;
+        if (conditionId && !current) return;
+        const kind = current?.kind ?? (requestedKind === "automatic" ? "automatic" : "manual");
+        const starting = current ?? {
+            label: "Nouvelle condition", kind, enabled: false,
+            metric: "pdcRatio", operator: "<", value: 50, key: "", expression: "", consumes: false
+        };
+        const content = document.createElement("div");
+        content.innerHTML = await foundry.applications.handlebars.renderTemplate(
+            "systems/arcane-advent/templates/actor/aptitude-condition-dialog.hbs", {
+                current: starting,
+                automatic: kind === "automatic",
+                metrics: Object.entries(CONDITION_METRICS).map(([key, label]) =>
+                    ({ key, label, selected: key === starting.metric })),
+                operators: ["<", "<=", "=", ">=", ">", "!="].map(key =>
+                    ({ key, label: key, selected: key === starting.operator }))
+            }
+        );
+        const buttons = [{
+            action: "save", label: "Enregistrer / Appliquer",
+            callback: async (_event, button, app) => {
+                if (!button.form.reportValidity()) return;
+                const fields = new FormData(button.form);
+                const label = String(fields.get("label") ?? "").trim();
+                if (!label) return;
+                const data = { ...starting, label, kind };
+                if (kind === "automatic") {
+                    data.metric = fields.get("metric");
+                    data.operator = fields.get("operator");
+                    data.value = Number(fields.get("value"));
+                    data.key = String(fields.get("key") ?? "").trim();
+                    data.expression = String(fields.get("expression") ?? "").trim();
+                    data.consumes = fields.has("consumes");
+                    if (!Object.hasOwn(CONDITION_METRICS, data.metric)
+                        || !["<", "<=", "=", ">=", ">", "!="].includes(data.operator)
+                        || !Number.isFinite(data.value)) {
+                        ui.notifications.warn("Condition automatique invalide.");
+                        return;
+                    }
+                }
+                const id = conditionId ?? foundry.utils.randomID();
+                if (this.actor.items.has(aptitude.id)) {
+                    await aptitude.update({ [`system.conditions.${id}`]: data });
+                }
+                await app.close();
+            }
+        }];
+        if (conditionId) buttons.push({
+            action: "delete", label: "Supprimer", type: "button",
+            callback: async (_event, _button, app) => {
+                if (this.actor.items.has(aptitude.id)) await aptitude.update({
+                    system: { conditions: { [conditionId]: new foundry.data.operators.ForcedDeletion() } }
+                });
+                await app.close();
+            }
+        });
+        buttons.push({ action: "cancel", label: "Annuler", type: "button",
+            callback: (_event, _button, app) => app.close() });
+        const dialog = new foundry.applications.api.DialogV2({
+            window: { title: kind === "automatic" ? "Condition automatique" : "Condition manuelle" },
+            position: { width: 510 }, content, modal: true, form: { closeOnSubmit: false }, buttons
+        });
+        await dialog.render({ force: true });
+    }
 
     static async _onRollAptitude(event, target) {
         const { itemId, rollId } = target.dataset;
@@ -904,7 +1123,11 @@ export class ArcaneCharacterSheet
             "systems/arcane-advent/templates/actor/aptitude-roll-dialog.hbs",
             {
                 current,
-                abilities: APTITUDE_ROLL_ABILITIES,
+                abilities: Object.entries(APTITUDE_ROLL_ABILITIES).map(([key, label]) => ({
+                    key, label, selected: current.abilities?.size
+                        ? current.abilities.has(key)
+                        : current.ability === key
+                })),
                 skills: this.actor.items.filter(entry => entry.type === "skill"),
                 expertises: this.actor.items.filter(entry => entry.type === "expertise")
             }
@@ -931,7 +1154,8 @@ export class ArcaneCharacterSheet
                     [`system.rolls.${id}`]: {
                         name: fields.get("name").trim(),
                         formula,
-                        ability: fields.get("ability"),
+                        ability: "",
+                        abilities: fields.getAll("abilities").filter(key => Object.hasOwn(APTITUDE_ROLL_ABILITIES, key)),
                         skillId: fields.get("skillId"),
                         expertiseId: fields.get("expertiseId")
                     }
@@ -1183,6 +1407,21 @@ export class ArcaneCharacterSheet
 
         tabs.bind(this.element);
 
+        // Les boutons de jets peuvent être glissés sur la barre native de Foundry.
+        // Les raccourcis appelleront les jets d'origine, avec leurs modificateurs actuels.
+        for (const button of this.element.querySelectorAll("button[data-action]")) {
+            if (!hotbarRollData(this.actor, button)) continue;
+            button.draggable = true;
+            button.title = (button.title ? button.title + " · " : "") + "Glisser vers la barre de raccourcis";
+            button.addEventListener("dragstart", event => {
+                const data = hotbarRollData(this.actor, button);
+                if (!data || !event.dataTransfer) return;
+                event.dataTransfer.setData("text/plain", JSON.stringify(data));
+                event.dataTransfer.effectAllowed = "copy";
+                event.stopPropagation();
+            });
+        }
+
         for (const field of this.element.querySelectorAll("[data-aptitude-field]")) {
             field.addEventListener("change", this._onAptitudeEdit.bind(this));
         }
@@ -1241,17 +1480,7 @@ export class ArcaneCharacterSheet
             )) control.disabled = false;
         }
 
-        const expertiseFields =
-            this.element.querySelectorAll(
-                "[data-expertise-edit]"
-            );
 
-        for (const field of expertiseFields) {
-            field.addEventListener(
-                "change",
-                this._onExpertiseEdit.bind(this)
-            );
-        }
     }
 
 
@@ -1855,33 +2084,106 @@ export class ArcaneCharacterSheet
         );
     }
 
-    async _onExpertiseEdit(event) {
-        event.stopPropagation();
+    static async _onEditExpertise(event, target) {
+        if (!this.isEditable) return;
+        const expertise = this.actor.items.get(target.dataset.expertiseId);
+        if (expertise?.type !== "expertise") return;
 
-        const field = event.currentTarget;
-
-        const expertiseId =
-            field.dataset.expertiseId;
-
-        const expertiseField =
-            field.dataset.expertiseField;
-
-        const expertise =
-            this.actor.items.get(expertiseId);
-
-        if (!expertise) return;
-
-
-        let value = field.value;
-
-        if (field.type === "number") {
-            value = Number(value) || 0;
+        const { DialogV2 } = foundry.applications.api;
+        const content = document.createElement("div");
+        content.innerHTML = await foundry.applications.handlebars.renderTemplate(
+            "systems/arcane-advent/templates/actor/expertise-dialog.hbs", {
+                name: expertise.name,
+                bonus: expertise.system.bonus,
+                classesText: normalizedClasses(expertise).join("\n"),
+                domains: Object.entries(EXPERTISE_DOMAINS).map(([key, label]) =>
+                    ({ key, label, selected: key === expertise.system.domain })),
+                isWeapon: expertise.system.domain === "weaponClass",
+                properties: Object.entries(WEAPON_PROPERTIES).map(([key, label]) => {
+                    const state = expertise.system.propertyFilters[key] ?? "neutral";
+                    return { key, label, state, stateLabel: PROPERTY_FILTER_STATES[state] };
+                })
+            }
+        );
+        const domainSelect = content.querySelector("[data-expertise-domain]");
+        domainSelect.addEventListener("change", () => {
+            content.querySelector("[data-expertise-weapon-filters]").hidden =
+                domainSelect.value !== "weaponClass";
+        });
+        const states = ["neutral", "required", "excluded"];
+        for (const toggle of content.querySelectorAll("[data-aa-property-toggle]")) {
+            toggle.addEventListener("click", () => {
+                const next = states[(states.indexOf(toggle.dataset.state) + 1) % states.length];
+                toggle.dataset.state = next;
+                toggle.textContent = PROPERTY_FILTER_STATES[next];
+                toggle.className = "aa-expertise-property-toggle state-" + next;
+                toggle.nextElementSibling.value = next;
+            });
         }
 
-
-        await expertise.update({
-            [expertiseField]: value
+        const dialog = new DialogV2({
+            window: { title: "Options — " + expertise.name },
+            position: { width: 500 }, content, modal: true,
+            form: { closeOnSubmit: false },
+            buttons: [
+                {
+                    action: "save", label: "Enregistrer / Appliquer",
+                    callback: async (_event, button, app) => {
+                        if (!button.form.reportValidity()) return;
+                        const values = new FormData(button.form);
+                        const name = String(values.get("name") ?? "").trim();
+                        const bonus = Number(values.get("bonus"));
+                        if (!name || !Number.isSafeInteger(bonus)) {
+                            ui.notifications.warn("Nom ou niveau d’Expertise invalide.");
+                            return;
+                        }
+                        const domain = values.get("domain");
+                        if (!Object.hasOwn(EXPERTISE_DOMAINS, domain)) return;
+                        const classes = [...new Set(String(values.get("classes") ?? "").split(/\r?\n/u)
+                            .map(v => v.trim()).filter(Boolean))];
+                        const propertyFilters = {};
+                        for (const key of Object.keys(WEAPON_PROPERTIES)) {
+                            const state = values.get("property." + key);
+                            if (!Object.hasOwn(PROPERTY_FILTER_STATES, state)) return;
+                            propertyFilters[key] = state;
+                        }
+                        if (domain !== "other" && !classes.length
+                            && !(domain === "weaponClass"
+                                && Object.values(propertyFilters).includes("required"))) {
+                            ui.notifications.warn("Précisez au moins une classe ou une propriété d'arme requise.");
+                            return;
+                        }
+                        if (!this.actor.items.has(expertise.id)) { await app.close(); return; }
+                        await expertise.update({
+                            name,
+                            "system.domain": domain,
+                            "system.target": classes[0] ?? "",
+                            "system.classes": classes,
+                            "system.propertyFilters": propertyFilters,
+                            "system.bonus": bonus
+                        });
+                        await app.close();
+                    }
+                },
+                {
+                    action: "delete", label: "Supprimer", type: "button",
+                    callback: async (_event, _button, app) => {
+                        const confirmed = await DialogV2.confirm({
+                            window: { title: "Supprimer l’Expertise" },
+                            content: "Supprimer cette Expertise ?", yes: { label: "Supprimer" },
+                            no: { label: "Annuler" }, rejectClose: false
+                        });
+                        if (confirmed && this.actor.items.has(expertise.id)) {
+                            await expertise.delete();
+                            await app.close();
+                        }
+                    }
+                },
+                { action: "cancel", label: "Annuler", type: "button",
+                    callback: (_event, _button, app) => app.close() }
+            ]
         });
+        await dialog.render({ force: true });
     }
 
     static async _onAddWeaponDamageType(
