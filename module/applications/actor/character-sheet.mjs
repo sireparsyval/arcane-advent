@@ -358,6 +358,7 @@ export class ArcaneCharacterSheet
                 key,
                 label,
                 value: key === "duration" ? item.system.durationTurns : item.system[`${key}Counter`],
+                unitLabel: APTITUDE_RECOVERY_UNITS[item.system[`${key}Counter`]?.unit] ?? "",
                 note: item.system[key] && parseLegacyAptitudeOption(key, item.system[key]) === null
                     ? item.system[key].trim()
                     : "",
