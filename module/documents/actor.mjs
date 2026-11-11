@@ -1,5 +1,6 @@
 import { buildInventory, canPlaceInContainer, EQUIPMENT_TYPES, isInventoryContainer, isInventoryItem } from "../inventory.mjs";
 import { getEquipmentConflictType } from "./item.mjs";
+import { guardValues } from "../guard.mjs";
 
 const EXPERTISE_EQUIPMENT_TYPES = {
     weaponClass: ["weapon"],
@@ -608,30 +609,36 @@ export class ArcaneActor extends Actor {
             );
     }
 
+    getGuardStatistics(item) {
+        if (!item) return null;
+
+        const { strength, dexterity } = this.system.abilities;
+        const expertiseBonus = item.type === "weapon"
+            ? this.getExpertiseBonus("weaponClass", item.system.weaponClass)
+            : item.type === "shield"
+                ? this.getExpertiseBonus("shieldClass", item.system.shieldClass)
+                : 0;
+
+        return guardValues(item, {
+            strengthModifier: strength.modifier,
+            dexterityModifier: dexterity.modifier,
+            expertiseBonus
+        });
+    }
+
+    // Compatibilité avec les macros qui récupèrent déjà le modificateur du JS de Garde.
     getGuardModifier(item) {
-        if (!item?.system.equipped || !item.system.guardEnabled) return null;
-
-        const { strength, dexterity, constitution } = this.system.abilities;
-        if (item.type === "weapon" && item.system.properties.has("twoHanded")) {
-            return strength.modifier + Math.min(dexterity.modifier, 0)
-                + this.getExpertiseBonus("weaponClass", item.system.weaponClass);
-        }
-
-        if (item.type === "shield") {
-            return strength.modifier + Math.min(constitution.modifier, 0)
-                + item.system.defenseBonus
-                + this.getExpertiseBonus("shieldClass", item.system.shieldClass);
-        }
-
-        return null;
+        return this.getGuardStatistics(item)?.savingThrowModifier ?? null;
     }
 
 
     async rollGuard(itemId, mode = "normal") {
         const item = this.items.get(itemId);
-        const modifier = this.getGuardModifier(item);
-        if (modifier === null) return;
+        const stats = this.getGuardStatistics(item);
+        if (!stats) return;
 
-        return this._rollD20(modifier, mode, foundry.utils.escapeHTML("Garde — " + item.name));
+        // Un clic lance uniquement le JS de Garde (et non la Défense fixe).
+        return this._rollD20(stats.savingThrowModifier, mode,
+            foundry.utils.escapeHTML("Jet de sauvegarde de Garde — " + item.name));
     }
 }
