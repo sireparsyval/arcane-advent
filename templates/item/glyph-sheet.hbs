@@ -1,0 +1,31 @@
+<section class="aa-glyph-editor standard-form">
+    <div class="aa-glyph-reference-heading">
+        <label>Identifiant du glyphe
+            <input type="text" name="system.glyphId" value="{{system.glyphId}}" required
+                pattern="[Gg][0-9]{3,}" {{#unless canEdit}}disabled{{/unless}}>
+        </label>
+        <output aria-label="{{symbol.id}}">
+            {{#if symbol.character}}<span class="aa-arc-character">{{symbol.character}}</span>
+            {{else}}<span class="aa-arc-pending">{{symbol.id}}</span>{{/if}}
+        </output>
+    </div>
+    <label>Signification réelle
+        <input type="text" name="system.meaning" value="{{system.meaning}}" {{#unless canEdit}}disabled{{/unless}}>
+    </label>
+    <label>Prononciation réelle
+        <input type="text" name="system.pronunciation" value="{{system.pronunciation}}" {{#unless canEdit}}disabled{{/unless}}>
+    </label>
+    <label>Famille
+        <input type="text" name="system.category" value="{{system.category}}" {{#unless canEdit}}disabled{{/unless}}>
+    </label>
+    <label>Schéma somatique
+        <textarea rows="3" name="system.somatic" {{#unless canEdit}}disabled{{/unless}}>{{system.somatic}}</textarea>
+    </label>
+    <label>Notes MJ
+        <textarea rows="4" name="system.description" {{#unless canEdit}}disabled{{/unless}}>{{system.description}}</textarea>
+    </label>
+    <footer class="form-footer">
+        {{#if canEdit}}<button type="submit"><i class="fa-solid fa-save" aria-hidden="true"></i> Enregistrer</button>{{/if}}
+        <button type="button" data-action="showGlyph">Montrer le symbole au chat</button>
+    </footer>
+</section>

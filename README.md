@@ -1,5 +1,22 @@
 # arcane-advent
 
+## Répertoire des glyphes du MJ
+
+Dans l’onglet **Compendiums**, le bouton **Glyphes — MJ** ouvre les références
+du monde. Il est également accessible dans les paramètres du système.
+La première ouverture crée le compendium privé `world.arcane-glyphs` et les
+entrées correspondant aux 16 symboles disponibles, avec leurs IDs.
+
+Le MJ peut renseigner la signification, la prononciation, le schéma somatique,
+la famille et ses notes. **Montrer le symbole au chat** partage uniquement l’ID
+et son caractère visuel. Les références sont conservées dans le monde Foundry.
+
+**Importer des références** accepte un fichier JSON privé sous la forme
+`{"format":"arcane-advent.glyph-references","version":1,"glyphs":[{"glyphId":"G019","meaning":"…","pronunciation":"…"}]}`.
+Les champs facultatifs sont `somatic`, `category` et `description`. Les champs
+renseignés mettent à jour l’entrée du même ID. Les champs vides sont ignorés.
+Le fichier d’import contenant les références réelles se conserve côté MJ.
+
 ## Carnet d’Arcanologie
 
 L’onglet **Arcanologie** conserve les glyphes et Versets personnels de chaque

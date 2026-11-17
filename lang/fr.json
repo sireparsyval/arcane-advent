@@ -5,6 +5,7 @@
             "injury": "Blessure ou maladie",
             "aptitude": "Aptitude",
             "trait": "Trait",
+            "glyph": "Référence de glyphe",
             "object": "Objet ordinaire",
             "container": "Contenant",
             "purse": "Bourse"

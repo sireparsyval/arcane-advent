@@ -1,0 +1,41 @@
+<section class="aa-glyph-catalog-content">
+    <header class="aa-glyph-catalog-toolbar">
+        <label>Rechercher
+            <input type="search" data-glyph-query value="{{query}}" placeholder="ID, signification, prononciation ou famille">
+        </label>
+        <button type="button" data-action="createGlyph" {{#if busy}}disabled{{/if}}>Ajouter un glyphe</button>
+        <button type="button" data-action="importGlyphs" {{#if busy}}disabled{{/if}}>Importer des références</button>
+        <input type="file" data-glyph-import accept=".json,application/json" hidden>
+    </header>
+    <div class="aa-glyph-catalog-table">
+        <table>
+            <thead>
+                <tr><th>Glyphe</th><th>ID</th><th>Signification</th><th>Prononciation</th><th>Famille</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+                {{#each rows}}
+                    <tr data-glyph-search="{{search}}" {{#unless visible}}hidden{{/unless}}>
+                        <td>{{#if character}}<span class="aa-arc-character" aria-label="{{glyphId}}">{{character}}</span>
+                            {{else}}<span class="aa-arc-pending" title="Symbole à venir">—</span>{{/if}}</td>
+                        <td>{{glyphId}}</td>
+                        <td>{{meaning}}</td><td>{{pronunciation}}</td><td>{{category}}</td>
+                        <td>
+                            <div class="aa-glyph-catalog-actions">
+                                <button type="button" data-action="editGlyph" data-glyph-entry="{{id}}" {{#if ../busy}}disabled{{/if}}>Ouvrir</button>
+                                <button type="button" data-action="showGlyph" data-glyph-entry="{{id}}" title="Partager uniquement le symbole au chat"
+                                    aria-label="Montrer le symbole au chat" {{#if ../busy}}disabled{{/if}}>
+                                    <i class="fa-solid fa-comment" aria-hidden="true"></i>
+                                </button>
+                                <button type="button" data-action="deleteGlyph" data-glyph-entry="{{id}}" title="Supprimer la référence"
+                                    aria-label="Supprimer la référence" {{#if ../busy}}disabled{{/if}}>
+                                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                {{/each}}
+            </tbody>
+        </table>
+    </div>
+    <p class="aa-glyph-catalog-count" role="status"><span data-glyph-count>{{count}}</span> référence(s)</p>
+</section>
