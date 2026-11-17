@@ -18,6 +18,7 @@ import { ArcaneItem } from "./module/documents/item.mjs";
 import { ArcaneCharacterSheet } from "./module/applications/actor/character-sheet.mjs";
 import { ArcaneInventoryItemSheet } from "./module/applications/item/inventory-item-sheet.mjs";
 import { registerArcaneHotbar, runArcaneShortcut } from "./module/shortcuts.mjs";
+import { registerArcaneText } from "./module/arcane-text.mjs";
 
 
 Hooks.once("init", () => {
@@ -25,6 +26,7 @@ Hooks.once("init", () => {
 
     game.arcaneAdvent = { runShortcut: runArcaneShortcut };
     registerArcaneHotbar();
+    registerArcaneText();
 
     CONFIG.Actor.documentClass = ArcaneActor;
     CONFIG.Item.documentClass = ArcaneItem;

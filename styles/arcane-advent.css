@@ -2079,6 +2079,28 @@ body.detached > .aa-detached-sheet .window-content {
     background: rgba(206, 79, 85, .18);
 }
 
+@font-face {
+    font-family: "ArcaneGlyphs";
+    src: url("../assets/fonts/ArcaneGlyphs.woff2") format("woff2");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+.aa-arc-text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+.aa-arc-text .aa-arc-character {
+    font-size: 1.5em;
+    vertical-align: middle;
+    font-weight: 400;
+    font-style: normal;
+}
+.aa-arc-verse-message {
+    margin-top: 4px;
+}
+
 /* Carnet d’Arcanologie */
 .aa-arcanology {
     container-type: inline-size;
@@ -2186,6 +2208,8 @@ body.detached > .aa-detached-sheet .window-content {
 }
 .aa-arc-character {
     font-family: var(--aa-glyph-font, "ArcaneGlyphs"), serif;
+    font-weight: 400;
+    font-style: normal;
     font-size: 2rem;
     line-height: 1.5;
 }

@@ -9,15 +9,23 @@ y compris lors d’une mise à jour d’une autre partie de la fiche. Cliquer su
 **Enregistrer** pour les conserver durablement.
 
 Le registre public `module/glyphs.mjs` associe uniquement les IDs stables aux
-caractères visuels. Il est initialement vide. Une entrée comme
-`G042: "\uE000"` pourra être ajoutée à `GLYPH_CHARACTERS` avec la future police
-**ArcaneGlyphs**, à déclarer dans la feuille de styles avec `@font-face`.
-Les IDs déjà saisis afficheront alors leurs symboles. Les significations et
-prononciations de référence peuvent être conservées dans des journaux dont
+caractères visuels de la police **ArcaneGlyphs**. Les 16 premiers caractères sont
+inclus avec leurs sources vectorielles dans `assets/glyphs/`. Les significations
+et prononciations de référence peuvent être conservées dans des journaux dont
 le MJ règle les permissions d’accès.
 
 Les Versets conservent la formule saisie, ses regroupements et ses retours à
 la ligne. Le bouton **Insérer** ajoute un ID du carnet à la position du curseur.
+**Envoyer au chat** publie la formule actuellement affichée avec son nom personnel.
+Une formule peut également être saisie directement dans un message ou un journal
+avec `@Arcane[G019 G742]`. Les IDs restent enregistrés dans les messages et
+s’affichent avec leur symbole dès qu’il est disponible.
+
+Pour ajouter un caractère, placer son SVG en contours pleins sur une page
+`0 0 1000 1000` dans `assets/glyphs/`, puis lui attribuer un nouveau caractère
+privé Unicode dans `GLYPH_CHARACTERS`. Conserver les associations déjà attribuées.
+Installer `fonttools` et `brotli`, puis lancer
+`python tools/build-glyph-font.py` pour reconstruire la police WOFF2.
 
 ## Fiche personnage (Foundry VTT 14)
 

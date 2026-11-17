@@ -1,8 +1,23 @@
 // Registre visuel public. Les identifiants restent stables au fil des dessins.
-// Ajouter ici les caractères de la future police, par exemple
-// G042: "\uE000"
 // Les significations et prononciations de référence appartiennent aux documents du MJ.
-export const GLYPH_CHARACTERS = Object.freeze({});
+export const GLYPH_CHARACTERS = Object.freeze({
+    G019: "\uE000",
+    G094: "\uE001",
+    G137: "\uE002",
+    G168: "\uE003",
+    G271: "\uE004",
+    G304: "\uE005",
+    G380: "\uE006",
+    G453: "\uE007",
+    G517: "\uE008",
+    G586: "\uE009",
+    G639: "\uE00A",
+    G742: "\uE00B",
+    G805: "\uE00C",
+    G862: "\uE00D",
+    G927: "\uE00E",
+    G956: "\uE00F"
+});
 
 export function normalizeGlyphId(value) {
     return String(value ?? "").trim().toUpperCase();

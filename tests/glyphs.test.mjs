@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { glyphDisplay, insertGlyphId, isGlyphId, verseSegments } from "../module/glyphs.mjs";
 
 test("les IDs gardent leur identité lors d’un changement de symbole", () => {
-    assert.deepEqual(glyphDisplay(" g042 "), { id: "G042", character: "", pending: true });
+    assert.deepEqual(glyphDisplay(" g042 ", {}), { id: "G042", character: "", pending: true });
     assert.deepEqual(glyphDisplay("G042", { G042: "\uE000" }),
         { id: "G042", character: "\uE000", pending: false });
     assert.equal(isGlyphId("G1000"), true);

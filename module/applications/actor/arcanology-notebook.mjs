@@ -1,4 +1,5 @@
 import { glyphDisplay, insertGlyphId, isGlyphId, normalizeGlyphId, verseSegments } from "../../glyphs.mjs";
+import { sendArcaneVerse } from "../../arcane-text.mjs";
 
 const FIELDS = Object.freeze({
     glyphs: ["glyphId", "meaning", "pronunciation", "somatic", "notes"],
@@ -142,6 +143,8 @@ export class ArcanologyNotebook {
             }
             preview.append(symbol);
         }
+        const send = this.element.querySelector('[data-notebook-command="chat"]');
+        if (send) send.disabled = !draft.values.formula?.trim();
     }
 
     async command(button) {
@@ -182,6 +185,14 @@ export class ArcanologyNotebook {
             textarea.setSelectionRange(result.cursor, result.cursor);
         } else if (command === "save") {
             await this.save();
+        } else if (command === "chat" && this.view === "verses") {
+            button.disabled = true;
+            try {
+                await sendArcaneVerse(this.sheet.actor, this.draft().values);
+                this.status("Verset envoyé au chat");
+            } finally {
+                button.disabled = false;
+            }
         } else if (command === "delete") {
             await this.remove();
         } else if (command === "cancel") {
