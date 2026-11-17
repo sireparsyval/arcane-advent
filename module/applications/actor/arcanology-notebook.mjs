@@ -55,6 +55,7 @@ export class ArcanologyNotebook {
                 id, selected: id === this.selected[this.view],
                 label: this.view === "glyphs" ? entry.glyphId : entry.name,
                 meaning: this.view === "glyphs" ? entry.meaning : "",
+                pronunciation: this.view === "glyphs" ? entry.pronunciation : "",
                 character: this.view === "glyphs" ? glyphDisplay(entry.glyphId).character : "",
                 dirty: Boolean(this.drafts.get(this.draftKey(this.view, id))?.dirty)
             })),
@@ -165,8 +166,7 @@ export class ArcanologyNotebook {
                 original: {}, dirty: true, isNew: true
             });
             await this.sheet.render();
-            const field = this.view === "glyphs" ? "glyphId" : "name";
-            this.element.querySelector(`[data-notebook-field="${field}"]`)?.focus();
+            this.element.querySelector("[data-notebook-field]")?.focus();
         } else if (command === "insert") {
             const id = this.element.querySelector("[data-notebook-insert]").value;
             const textarea = this.element.querySelector('[data-notebook-field="formula"]');

@@ -10,9 +10,17 @@
             <div class="aa-arc-list" aria-label="{{#if isGlyphs}}Glyphes du carnet{{else}}Versets personnels{{/if}}">
                 {{#each rows}}
                     <button type="button" data-notebook-command="select" data-entry-id="{{id}}"
-                        aria-pressed="{{selected}}" {{#if ../busy}}disabled{{/if}}>
-                        {{#if character}}<span class="aa-arc-character" aria-hidden="true">{{character}}</span>{{/if}}
-                        <span>{{label}}{{#if dirty}} *{{/if}}{{#if meaning}}<small>{{meaning}}</small>{{/if}}</span>
+                        aria-pressed="{{selected}}" {{#if ../busy}}disabled{{/if}}
+                        {{#if ../isGlyphs}}class="aa-arc-list-glyph" title="{{label}}"{{/if}}>
+                        {{#if ../isGlyphs}}
+                            <span class="aa-arc-list-symbol" aria-label="{{label}}">
+                                {{#if character}}<span class="aa-arc-character" aria-hidden="true">{{character}}</span>{{else}}{{label}}{{/if}}{{#if dirty}} *{{/if}}
+                            </span>
+                            <span>{{#if meaning}}{{meaning}}{{else}}—{{/if}}</span>
+                            <span>{{#if pronunciation}}{{pronunciation}}{{else}}—{{/if}}</span>
+                        {{else}}
+                            <span>{{label}}{{#if dirty}} *{{/if}}</span>
+                        {{/if}}
                     </button>
                 {{else}}
                     <p class="aa-arc-empty">{{#if isGlyphs}}Aucun glyphe consigné.{{else}}Aucun Verset consigné.{{/if}}</p>
@@ -30,8 +38,11 @@
                 <fieldset class="aa-arc-fields" {{#unless canEdit}}disabled{{/unless}} {{#if busy}}disabled{{/if}}>
                     {{#if isGlyphs}}
                         <div class="aa-arc-glyph-heading">
-                            <div class="aa-arc-glyph-symbol">
-                                <span>Glyphe</span>
+                            <label>Identifiant du glyphe
+                                <input type="text" data-notebook-field="glyphId" value="{{values.glyphId}}"
+                                    placeholder="G042" autocomplete="off" spellcheck="false">
+                            </label>
+                            <div>
                                 <output class="aa-arc-symbol" data-notebook-preview aria-label="Symbole du glyphe" aria-live="polite">
                                     {{#if symbol.character}}
                                         <span class="aa-arc-character" aria-label="{{symbol.id}}">{{symbol.character}}</span>
@@ -41,6 +52,8 @@
                                 </output>
                                 <small data-notebook-symbol-state {{#unless symbol.pending}}hidden{{/unless}}>Symbole à venir</small>
                             </div>
+                        </div>
+                        <div class="aa-arc-pair">
                             <label>Signification supposée
                                 <input type="text" data-notebook-field="meaning" value="{{values.meaning}}">
                             </label>
@@ -48,10 +61,6 @@
                                 <input type="text" data-notebook-field="pronunciation" value="{{values.pronunciation}}">
                             </label>
                         </div>
-                        <label class="aa-arc-glyph-id">Identifiant du glyphe
-                            <input type="text" data-notebook-field="glyphId" value="{{values.glyphId}}"
-                                placeholder="G042" autocomplete="off" spellcheck="false">
-                        </label>
                         <label>Schéma somatique supposé
                             <textarea rows="3" data-notebook-field="somatic">{{values.somatic}}</textarea>
                         </label>

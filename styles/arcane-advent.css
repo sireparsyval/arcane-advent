@@ -2133,9 +2133,15 @@ body.detached > .aa-detached-sheet .window-content {
     min-width: 0;
     overflow-wrap: anywhere;
 }
-.aa-arc-list small {
-    display: block;
-    margin-top: 2px;
+.aa-arc-list .aa-arc-list-glyph {
+    display: grid;
+    grid-template-columns: minmax(2.5rem, .7fr) repeat(2, minmax(0, 1fr));
+    align-items: center;
+}
+.aa-arc-list-symbol {
+    display: flex;
+    align-items: center;
+    gap: 2px;
 }
 .aa-arc-editor {
     min-width: 0;
@@ -2162,19 +2168,21 @@ body.detached > .aa-detached-sheet .window-content {
     resize: vertical;
     min-height: 4rem;
 }
-.aa-arc-glyph-heading {
+.aa-arc-pair {
     display: grid;
-    grid-template-columns: minmax(90px, .6fr) repeat(2, minmax(0, 1fr));
-    align-items: start;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
 }
-.aa-arc-glyph-symbol {
+.aa-arc-glyph-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+}
+.aa-arc-glyph-heading > div {
     display: grid;
     justify-items: start;
     gap: 4px;
-}
-.aa-arc-glyph-id {
-    max-width: 12rem;
 }
 .aa-arc-character {
     font-family: var(--aa-glyph-font, "ArcaneGlyphs"), serif;
@@ -2246,8 +2254,12 @@ body.detached > .aa-detached-sheet .window-content {
         width: auto;
         max-width: 100%;
     }
+    .aa-arc-list .aa-arc-list-glyph {
+        width: 100%;
+    }
 }
 @container (max-width: 380px) {
+    .aa-arc-pair,
     .aa-arc-glyph-heading {
         grid-template-columns: minmax(0, 1fr);
     }
