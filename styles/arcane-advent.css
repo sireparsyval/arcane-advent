@@ -2147,6 +2147,8 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-arc-list button {
     display: flex;
     align-items: center;
+    height: auto;
+    min-height: 2.5rem;
     gap: 8px;
     width: 100%;
     text-align: start;
@@ -2214,7 +2216,9 @@ body.detached > .aa-detached-sheet .window-content {
     line-height: 1.5;
 }
 .aa-arc-list .aa-arc-character {
+    display: block;
     font-size: 1.5rem;
+    line-height: 1;
 }
 .aa-arc-pending {
     display: inline-block;
