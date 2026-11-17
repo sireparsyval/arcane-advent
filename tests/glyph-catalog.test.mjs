@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { GLYPH_CHARACTERS } from "../module/glyphs.mjs";
 import { getGlyphCatalog, GLYPH_PACK, importGlyphReferences, parseGlyphReferences, showGlyphInChat } from "../module/glyph-catalog.mjs";
+import { sortGlyphReferences } from "../module/glyph-catalog.mjs";
 
 function environment() {
     const documents = new Map();
@@ -63,6 +64,25 @@ function environment() {
 }
 
 const file = glyphs => ({ format: "arcane-advent.glyph-references", version: 1, glyphs });
+
+test("les quatre colonnes se trient en français dans les deux sens", () => {
+    const entries = [
+        { glyphId: "G094", meaning: "Zèbre", pronunciation: "Beta", category: "Famille 10" },
+        { glyphId: "G019", meaning: "Énergie", pronunciation: "alpha", category: "Famille 2" },
+        { glyphId: "G304", meaning: "Air", pronunciation: "Gamma", category: "Famille 2" }
+    ];
+    const expected = {
+        glyphId: [["G019", "G094", "G304"], ["G304", "G094", "G019"]],
+        meaning: [["G304", "G019", "G094"], ["G094", "G019", "G304"]],
+        pronunciation: [["G019", "G094", "G304"], ["G304", "G094", "G019"]],
+        category: [["G019", "G304", "G094"], ["G094", "G019", "G304"]]
+    };
+    for (const [field, [ascending, descending]] of Object.entries(expected)) {
+        assert.deepEqual(sortGlyphReferences(entries, field).map(row => row.glyphId), ascending);
+        assert.deepEqual(sortGlyphReferences(entries, field, "descending").map(row => row.glyphId), descending);
+    }
+    assert.deepEqual(entries.map(row => row.glyphId), ["G094", "G019", "G304"]);
+});
 
 test("l’import valide les références et ignore les propriétés étrangères", () => {
     assert.deepEqual(parseGlyphReferences(file([{ glyphId: " g019 ", meaning: "Hypothèse", actorId: "secret" }])),

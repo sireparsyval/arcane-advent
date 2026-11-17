@@ -1,9 +1,22 @@
 import { GLYPH_CHARACTERS, isGlyphId, normalizeGlyphId } from "./glyphs.mjs";
 
 export const GLYPH_PACK = "world.arcane-glyphs";
+export const GLYPH_SORT_FIELDS = Object.freeze({
+    glyphId: "ID", meaning: "Signification", pronunciation: "Prononciation", category: "Famille"
+});
+const COLLATOR = new Intl.Collator("fr", { numeric: true, sensitivity: "base" });
 const FIELDS = ["meaning", "pronunciation", "somatic", "category", "description"];
 const OWNERSHIP = Object.freeze({ GAMEMASTER: "OWNER", ASSISTANT: "OWNER", TRUSTED: "NONE", PLAYER: "NONE" });
 let loading;
+
+export function sortGlyphReferences(entries, field = "glyphId", direction = "ascending") {
+    const key = Object.hasOwn(GLYPH_SORT_FIELDS, field) ? field : "glyphId";
+    const order = direction === "descending" ? -1 : 1;
+    return [...entries].sort((a, b) =>
+        order * COLLATOR.compare(a[key] ?? "", b[key] ?? "")
+        || COLLATOR.compare(a.glyphId ?? "", b.glyphId ?? "")
+    );
+}
 
 export function requireGlyphGM() {
     if (!game.user.isGM) throw new Error("Le répertoire des glyphes est réservé au MJ.");

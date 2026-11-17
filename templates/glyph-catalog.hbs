@@ -10,7 +10,19 @@
     <div class="aa-glyph-catalog-table">
         <table>
             <thead>
-                <tr><th>Glyphe</th><th>ID</th><th>Signification</th><th>Prononciation</th><th>Famille</th><th>Actions</th></tr>
+                <tr>
+                    <th scope="col">Glyphe</th>
+                    {{#each columns}}
+                        <th scope="col" aria-sort="{{sort}}">
+                            <button type="button" class="aa-glyph-sort" data-action="sortGlyphs" data-glyph-sort="{{field}}"
+                                aria-label="Trier par {{label}}" {{#if ../busy}}disabled{{/if}}>
+                                <span>{{label}}</span>
+                                {{#if active}}<span aria-hidden="true">{{#if descending}}▼{{else}}▲{{/if}}</span>{{/if}}
+                            </button>
+                        </th>
+                    {{/each}}
+                    <th scope="col">Actions</th>
+                </tr>
             </thead>
             <tbody>
                 {{#each rows}}

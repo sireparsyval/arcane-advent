@@ -2341,6 +2341,24 @@ body.detached > .aa-detached-sheet .window-content {
     font-size: 1.75rem;
     line-height: 1;
 }
+.aa-glyph-catalog .aa-glyph-sort {
+    display: flex;
+    align-items: center;
+    justify-content: start;
+    gap: 6px;
+    width: 100%;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+}
+.aa-glyph-sort:is(:hover, :focus-visible) {
+    text-decoration: underline;
+}
 .aa-glyph-catalog-actions {
     display: flex;
     gap: 4px;

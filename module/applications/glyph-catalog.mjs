@@ -1,5 +1,8 @@
 import { glyphDisplay, isGlyphId, normalizeGlyphId } from "../glyphs.mjs";
-import { getGlyphCatalog, GLYPH_PACK, importGlyphReferences, requireGlyphGM, showGlyphInChat } from "../glyph-catalog.mjs";
+import {
+    getGlyphCatalog, GLYPH_PACK, GLYPH_SORT_FIELDS, importGlyphReferences,
+    requireGlyphGM, showGlyphInChat, sortGlyphReferences
+} from "../glyph-catalog.mjs";
 
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const searchText = value => value.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("fr");
@@ -15,7 +18,8 @@ export class GlyphCatalog extends HandlebarsApplicationMixin(ApplicationV2) {
             editGlyph: this._edit,
             deleteGlyph: this._delete,
             showGlyph: this._show,
-            importGlyphs: this._import
+            importGlyphs: this._import,
+            sortGlyphs: this._sort
         }
     };
 
@@ -27,6 +31,8 @@ export class GlyphCatalog extends HandlebarsApplicationMixin(ApplicationV2) {
     };
 
     _query = "";
+    _sortField = "glyphId";
+    _sortDirection = "ascending";
     _hooks = [];
     _busy = false;
 
@@ -40,16 +46,26 @@ export class GlyphCatalog extends HandlebarsApplicationMixin(ApplicationV2) {
         const pack = await getGlyphCatalog();
         const documents = await pack.getDocuments({ type: "glyph" });
         const query = searchText(this._query);
-        const rows = documents.sort((a, b) => a.system.glyphId.localeCompare(b.system.glyphId, "fr", { numeric: true }))
-            .map(item => {
-                const { system } = item;
-                const search = searchText([system.glyphId, system.meaning, system.pronunciation, system.category].join(" "));
-                return {
-                    id: item.id, ...system.toObject(), character: glyphDisplay(system.glyphId).character,
-                    search, visible: search.includes(query)
-                };
-            });
-        return { ...context, rows, query: this._query, count: rows.filter(row => row.visible).length, busy: this._busy };
+        const rows = sortGlyphReferences(documents.map(item => {
+            const { system } = item;
+            const search = searchText([system.glyphId, system.meaning, system.pronunciation, system.category].join(" "));
+            return {
+                id: item.id, ...system.toObject(), character: glyphDisplay(system.glyphId).character,
+                search, visible: search.includes(query)
+            };
+        }), this._sortField, this._sortDirection);
+        const columns = Object.entries(GLYPH_SORT_FIELDS).map(([field, label]) => {
+            const active = field === this._sortField;
+            return {
+                field, label, active,
+                sort: active ? this._sortDirection : "none",
+                descending: active && this._sortDirection === "descending"
+            };
+        });
+        return {
+            ...context, rows, columns, query: this._query,
+            count: rows.filter(row => row.visible).length, busy: this._busy
+        };
     }
 
     async _onRender(context, options) {
@@ -110,6 +126,17 @@ export class GlyphCatalog extends HandlebarsApplicationMixin(ApplicationV2) {
         const item = await pack.getDocument(target.dataset.glyphEntry);
         if (item?.type !== "glyph") throw new Error("Cette référence a été supprimée.");
         return item;
+    }
+
+    static async _sort(_event, target) {
+        requireGlyphGM();
+        const field = target.dataset.glyphSort;
+        if (this._busy || !Object.hasOwn(GLYPH_SORT_FIELDS, field)) return;
+        this._sortDirection = field === this._sortField && this._sortDirection === "ascending"
+            ? "descending" : "ascending";
+        this._sortField = field;
+        await this.render({ force: false });
+        this.element.querySelector(`[data-glyph-sort="${field}"]`)?.focus({ preventScroll: true });
     }
 
     static async _create() {
