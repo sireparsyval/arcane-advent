@@ -30,11 +30,8 @@
                 <fieldset class="aa-arc-fields" {{#unless canEdit}}disabled{{/unless}} {{#if busy}}disabled{{/if}}>
                     {{#if isGlyphs}}
                         <div class="aa-arc-glyph-heading">
-                            <label>Identifiant du glyphe
-                                <input type="text" data-notebook-field="glyphId" value="{{values.glyphId}}"
-                                    placeholder="G042" autocomplete="off" spellcheck="false">
-                            </label>
-                            <div>
+                            <div class="aa-arc-glyph-symbol">
+                                <span>Glyphe</span>
                                 <output class="aa-arc-symbol" data-notebook-preview aria-label="Symbole du glyphe" aria-live="polite">
                                     {{#if symbol.character}}
                                         <span class="aa-arc-character" aria-label="{{symbol.id}}">{{symbol.character}}</span>
@@ -44,8 +41,6 @@
                                 </output>
                                 <small data-notebook-symbol-state {{#unless symbol.pending}}hidden{{/unless}}>Symbole à venir</small>
                             </div>
-                        </div>
-                        <div class="aa-arc-pair">
                             <label>Signification supposée
                                 <input type="text" data-notebook-field="meaning" value="{{values.meaning}}">
                             </label>
@@ -53,6 +48,10 @@
                                 <input type="text" data-notebook-field="pronunciation" value="{{values.pronunciation}}">
                             </label>
                         </div>
+                        <label class="aa-arc-glyph-id">Identifiant du glyphe
+                            <input type="text" data-notebook-field="glyphId" value="{{values.glyphId}}"
+                                placeholder="G042" autocomplete="off" spellcheck="false">
+                        </label>
                         <label>Schéma somatique supposé
                             <textarea rows="3" data-notebook-field="somatic">{{values.somatic}}</textarea>
                         </label>

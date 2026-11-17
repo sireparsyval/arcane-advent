@@ -165,7 +165,8 @@ export class ArcanologyNotebook {
                 original: {}, dirty: true, isNew: true
             });
             await this.sheet.render();
-            this.element.querySelector("[data-notebook-field]")?.focus();
+            const field = this.view === "glyphs" ? "glyphId" : "name";
+            this.element.querySelector(`[data-notebook-field="${field}"]`)?.focus();
         } else if (command === "insert") {
             const id = this.element.querySelector("[data-notebook-insert]").value;
             const textarea = this.element.querySelector('[data-notebook-field="formula"]');

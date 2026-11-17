@@ -2162,21 +2162,19 @@ body.detached > .aa-detached-sheet .window-content {
     resize: vertical;
     min-height: 4rem;
 }
-.aa-arc-pair {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-}
 .aa-arc-glyph-heading {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: center;
+    grid-template-columns: minmax(90px, .6fr) repeat(2, minmax(0, 1fr));
+    align-items: start;
     gap: 12px;
 }
-.aa-arc-glyph-heading > div {
+.aa-arc-glyph-symbol {
     display: grid;
     justify-items: start;
     gap: 4px;
+}
+.aa-arc-glyph-id {
+    max-width: 12rem;
 }
 .aa-arc-character {
     font-family: var(--aa-glyph-font, "ArcaneGlyphs"), serif;
@@ -2250,7 +2248,6 @@ body.detached > .aa-detached-sheet .window-content {
     }
 }
 @container (max-width: 380px) {
-    .aa-arc-pair,
     .aa-arc-glyph-heading {
         grid-template-columns: minmax(0, 1fr);
     }
