@@ -2078,3 +2078,180 @@ body.detached > .aa-detached-sheet .window-content {
     border-color: #ce4f55;
     background: rgba(206, 79, 85, .18);
 }
+
+/* Carnet d’Arcanologie */
+.aa-arcanology {
+    container-type: inline-size;
+    min-width: 0;
+}
+.aa-arcanology [hidden] {
+    display: none;
+}
+.aa-arc-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--aa-border);
+}
+.aa-arcanology button {
+    width: auto;
+    min-height: 30px;
+    padding: 4px 10px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+.aa-arcanology button[aria-pressed="true"] {
+    background: var(--aa-surface);
+    border-color: var(--aa-accent);
+    box-shadow: inset 0 -2px var(--aa-accent);
+}
+.aa-arc-layout {
+    display: grid;
+    grid-template-columns: minmax(160px, 1fr) minmax(0, 3fr);
+    gap: 16px;
+    margin-top: 12px;
+}
+.aa-arc-sidebar {
+    min-width: 0;
+    border-inline-end: 1px solid var(--aa-border);
+    padding-inline-end: 12px;
+}
+.aa-arc-list {
+    display: grid;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+.aa-arc-list button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    text-align: start;
+}
+.aa-arc-list button > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.aa-arc-list small {
+    display: block;
+    margin-top: 2px;
+}
+.aa-arc-editor {
+    min-width: 0;
+}
+.aa-arc-fields {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+.aa-arc-fields label {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+.aa-arc-fields :is(input, textarea, select) {
+    box-sizing: border-box;
+    min-width: 0;
+    width: 100%;
+}
+.aa-arc-fields textarea {
+    resize: vertical;
+    min-height: 4rem;
+}
+.aa-arc-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.aa-arc-glyph-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+}
+.aa-arc-glyph-heading > div {
+    display: grid;
+    justify-items: start;
+    gap: 4px;
+}
+.aa-arc-character {
+    font-family: var(--aa-glyph-font, "ArcaneGlyphs"), serif;
+    font-size: 2rem;
+    line-height: 1.5;
+}
+.aa-arc-list .aa-arc-character {
+    font-size: 1.5rem;
+}
+.aa-arc-pending {
+    display: inline-block;
+    padding: 2px 5px;
+    border: 1px dashed var(--aa-border);
+    border-radius: 4px;
+    font-family: monospace;
+}
+.aa-arc-formula,
+.aa-arc-verse-preview {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    tab-size: 4;
+}
+.aa-arc-verse-preview {
+    display: block;
+    padding: 8px;
+    border: 1px solid var(--aa-border);
+    border-radius: 5px;
+    min-height: 3rem;
+    background: var(--aa-surface);
+}
+.aa-arc-insert {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: end;
+}
+.aa-arc-insert label {
+    flex: 1 1 12rem;
+}
+.aa-arc-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+}
+.aa-arc-actions .aa-arc-delete {
+    margin-inline-start: auto;
+}
+.aa-arc-message,
+.aa-arc-empty {
+    margin: 6px 0;
+    overflow-wrap: anywhere;
+}
+@container (max-width: 600px) {
+    .aa-arc-layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 10px;
+    }
+    .aa-arc-sidebar {
+        border-inline-end: 0;
+        border-bottom: 1px solid var(--aa-border);
+        padding: 0 0 10px;
+    }
+    .aa-arc-list {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    .aa-arc-list button {
+        width: auto;
+        max-width: 100%;
+    }
+}
+@container (max-width: 380px) {
+    .aa-arc-pair,
+    .aa-arc-glyph-heading {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

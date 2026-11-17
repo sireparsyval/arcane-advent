@@ -1,5 +1,24 @@
 # arcane-advent
 
+## Carnet d’Arcanologie
+
+L’onglet **Arcanologie** conserve les glyphes et Versets personnels de chaque
+personnage. Les interprétations, prononciations, gestes et notes sont des saisies
+libres. Les brouillons restent disponibles pendant que la fiche est ouverte,
+y compris lors d’une mise à jour d’une autre partie de la fiche. Cliquer sur
+**Enregistrer** pour les conserver durablement.
+
+Le registre public `module/glyphs.mjs` associe uniquement les IDs stables aux
+caractères visuels. Il est initialement vide. Une entrée comme
+`G042: "\uE000"` pourra être ajoutée à `GLYPH_CHARACTERS` avec la future police
+**ArcaneGlyphs**, à déclarer dans la feuille de styles avec `@font-face`.
+Les IDs déjà saisis afficheront alors leurs symboles. Les significations et
+prononciations de référence peuvent être conservées dans des journaux dont
+le MJ règle les permissions d’accès.
+
+Les Versets conservent la formule saisie, ses regroupements et ses retours à
+la ligne. Le bouton **Insérer** ajoute un ID du carnet à la position du curseur.
+
 ## Fiche personnage (Foundry VTT 14)
 
 ### Expertises

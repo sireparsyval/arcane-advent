@@ -5,6 +5,7 @@ import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
 import { EXPERTISE_DOMAINS, WEAPON_PROPERTIES, PROPERTY_FILTER_STATES, normalizedClasses } from "../../expertise.mjs";
 import { CONDITION_METRICS, aptitudeConditionStatus } from "../../aptitude-conditions.mjs";
 import { hotbarRollData } from "../../shortcuts.mjs";
+import { ArcanologyNotebook } from "./arcanology-notebook.mjs";
 import {
     EQUIPMENT_TYPES, LUQA_DENOMINATIONS, canPlaceInContainer,
     isInventoryContainer, isInventoryItem, luqaCounters, purseCoinWeight
@@ -243,6 +244,7 @@ export class ArcaneCharacterSheet
     };
 
     _collapsedInventory = new Set();
+    _arcanology = new ArcanologyNotebook(this);
     _showInventoryWeights = true;
     _inventoryDragId = null;
     _inventoryDropTarget = null;
@@ -274,6 +276,10 @@ export class ArcaneCharacterSheet
         context.activeSheetTab = this._activeTab ?? "core";
 
         context.canEditState = this.isEditable;
+        context.arcanologyHTML = await foundry.applications.handlebars.renderTemplate(
+            "systems/arcane-advent/templates/actor/arcanology-notebook.hbs",
+            this._arcanology.prepare()
+        );
         context.genderOptions = IDENTITY_GENDERS;
         context.volumeOptions = VOLUME_LABELS;
         context.ageEstimateOptions = AGE_ESTIMATES;
@@ -1450,6 +1456,7 @@ export class ArcaneCharacterSheet
 
     async _onRender(context, options) {
         await super._onRender(context, options);
+        this._arcanology.bind(this.element.querySelector(".aa-arcanology"));
         const isDetached = this.window.windowId === this.id;
         this.element.classList.toggle("aa-detached-sheet", isDetached);
         if (isDetached) this.element.ownerDocument.title = this.title;

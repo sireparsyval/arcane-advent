@@ -1,0 +1,104 @@
+<section class="aa-arcanology" aria-label="Carnet d’Arcanologie">
+    <nav class="aa-arc-tabs" aria-label="Pages du carnet">
+        <button type="button" data-notebook-command="view" data-view="glyphs"
+            aria-pressed="{{isGlyphs}}" {{#if busy}}disabled{{/if}}>Glyphes</button>
+        <button type="button" data-notebook-command="view" data-view="verses"
+            aria-pressed="{{#if isGlyphs}}false{{else}}true{{/if}}" {{#if busy}}disabled{{/if}}>Versets</button>
+    </nav>
+    <div class="aa-arc-layout">
+        <aside class="aa-arc-sidebar">
+            <div class="aa-arc-list" aria-label="{{#if isGlyphs}}Glyphes du carnet{{else}}Versets personnels{{/if}}">
+                {{#each rows}}
+                    <button type="button" data-notebook-command="select" data-entry-id="{{id}}"
+                        aria-pressed="{{selected}}" {{#if ../busy}}disabled{{/if}}>
+                        {{#if character}}<span class="aa-arc-character" aria-hidden="true">{{character}}</span>{{/if}}
+                        <span>{{label}}{{#if dirty}} *{{/if}}{{#if meaning}}<small>{{meaning}}</small>{{/if}}</span>
+                    </button>
+                {{else}}
+                    <p class="aa-arc-empty">{{#if isGlyphs}}Aucun glyphe consigné.{{else}}Aucun Verset consigné.{{/if}}</p>
+                {{/each}}
+            </div>
+            {{#if canEdit}}
+                <button type="button" class="aa-arc-add" data-notebook-command="add" {{#if busy}}disabled{{/if}}>
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                    {{#if isGlyphs}}Ajouter un glyphe{{else}}Ajouter un Verset{{/if}}
+                </button>
+            {{/if}}
+        </aside>
+        <div class="aa-arc-editor">
+            {{#if hasDraft}}
+                <fieldset class="aa-arc-fields" {{#unless canEdit}}disabled{{/unless}} {{#if busy}}disabled{{/if}}>
+                    {{#if isGlyphs}}
+                        <div class="aa-arc-glyph-heading">
+                            <label>Identifiant du glyphe
+                                <input type="text" data-notebook-field="glyphId" value="{{values.glyphId}}"
+                                    placeholder="G042" autocomplete="off" spellcheck="false">
+                            </label>
+                            <div>
+                                <output class="aa-arc-symbol" data-notebook-preview aria-label="Symbole du glyphe" aria-live="polite">
+                                    {{#if symbol.character}}
+                                        <span class="aa-arc-character" aria-label="{{symbol.id}}">{{symbol.character}}</span>
+                                    {{else}}
+                                        <span class="aa-arc-pending" title="Symbole à venir">{{#if symbol.id}}{{symbol.id}}{{else}}Identifiant du glyphe{{/if}}</span>
+                                    {{/if}}
+                                </output>
+                                <small data-notebook-symbol-state {{#unless symbol.pending}}hidden{{/unless}}>Symbole à venir</small>
+                            </div>
+                        </div>
+                        <div class="aa-arc-pair">
+                            <label>Signification supposée
+                                <input type="text" data-notebook-field="meaning" value="{{values.meaning}}">
+                            </label>
+                            <label>Prononciation supposée
+                                <input type="text" data-notebook-field="pronunciation" value="{{values.pronunciation}}">
+                            </label>
+                        </div>
+                        <label>Schéma somatique supposé
+                            <textarea rows="3" data-notebook-field="somatic">{{values.somatic}}</textarea>
+                        </label>
+                    {{else}}
+                        <label>Nom personnel
+                            <input type="text" data-notebook-field="name" value="{{values.name}}">
+                        </label>
+                        <label>Suite d’identifiants
+                            <textarea rows="3" class="aa-arc-formula" data-notebook-field="formula" spellcheck="false"
+                                placeholder="G042 G017 G108">{{values.formula}}</textarea>
+                        </label>
+                        {{#if canEdit}}
+                            {{#if insertionChoices.length}}
+                                <div class="aa-arc-insert">
+                                    <label>Depuis le carnet
+                                        <select data-notebook-insert>
+                                            {{#each insertionChoices}}<option value="{{id}}">{{label}}</option>{{/each}}
+                                        </select>
+                                    </label>
+                                    <button type="button" data-notebook-command="insert">Insérer</button>
+                                </div>
+                            {{/if}}
+                        {{/if}}
+                        <output class="aa-arc-verse-preview" data-notebook-preview aria-label="Aperçu du Verset" aria-live="polite">{{#each segments}}{{#if glyph}}{{#if character}}<span class="aa-arc-character" title="{{id}}" aria-label="{{id}}">{{character}}</span>{{else}}<span class="aa-arc-pending" title="Symbole à venir">{{id}}</span>{{/if}}{{else}}{{text}}{{/if}}{{/each}}</output>
+                        <label>Traduction supposée
+                            <textarea rows="2" data-notebook-field="translation">{{values.translation}}</textarea>
+                        </label>
+                    {{/if}}
+                    <label>Notes et observations
+                        <textarea rows="4" data-notebook-field="notes">{{values.notes}}</textarea>
+                    </label>
+                </fieldset>
+                {{#if deleted}}
+                    <p class="aa-arc-message">Cette entrée a été supprimée. Copiez vos notes dans une nouvelle entrée.</p>
+                {{/if}}
+                {{#if canEdit}}
+                    <div class="aa-arc-actions">
+                        <button type="button" data-notebook-command="save" {{#if busy}}disabled{{/if}} {{#if deleted}}disabled{{/if}}>Enregistrer</button>
+                        <button type="button" data-notebook-command="cancel" {{#if busy}}disabled{{/if}}>Annuler</button>
+                        <button type="button" class="aa-arc-delete" data-notebook-command="delete" {{#if busy}}disabled{{/if}}>Supprimer</button>
+                    </div>
+                {{/if}}
+                <p class="aa-arc-message" data-notebook-status role="status">{{#if dirty}}Modifications à enregistrer{{/if}}</p>
+            {{else}}
+                <p class="aa-arc-empty">{{#if isGlyphs}}Consignez les glyphes découverts et vos hypothèses.{{else}}Conservez vos formules, traductions supposées et observations.{{/if}}</p>
+            {{/if}}
+        </div>
+    </div>
+</section>

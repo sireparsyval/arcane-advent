@@ -1,4 +1,5 @@
 import { ARCANE_NEEDS } from "../config.mjs";
+import { arcanologyField } from "./arcanology-data.mjs";
 import { buildInventory } from "../inventory.mjs";
 import { VOLUME_FACTORS, carryingCapacity, calculateEncumbrance, encumberedSpeed } from "../encumbrance.mjs";
 import { modifierSchema, modifierTotals as collectModifierTotals, ABILITY_MODIFIER_KEYS, abilityScoreModifier } from "../modifiers.mjs";
@@ -102,6 +103,7 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
 
     static defineSchema() {
         return {
+            arcanology: arcanologyField(),
             identity: identityField(),
             biography: biographyField(),
             // Ajustement manuel facultatif de la charge max., en kg.
