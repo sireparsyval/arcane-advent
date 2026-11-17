@@ -27,7 +27,7 @@ export function registerArcaneText() {
     };
     CONFIG.TextEditor.enrichers.push({
         id: "arcane-advent.glyphs",
-        pattern: /@Arcane\[([^\]]*)\]/giu,
+        pattern: /@(?:AA|Arcane)\[([^\]]*)\]/giu,
         enricher: match => renderArcaneText(match[1])
     });
 }
@@ -48,11 +48,11 @@ export async function sendArcaneVerse(actor, verse) {
     const content = document.createElement("div");
     content.className = "aa-arc-verse-message";
     // Garder les IDs dans le message pour qu’un symbole ajouté plus tard y apparaisse.
-    // Les crochets terminent une notation @Arcane, mais restent du texte dans le Verset.
+    // Les crochets terminent une notation @AA, mais restent du texte dans le Verset.
     for (const part of formula.split(/([\[\]])/u)) {
         if (!part) continue;
         if (part === "[" || part === "]") content.append(document.createTextNode(part));
-        else content.append(document.createTextNode("@Arcane[" + part + "]"));
+        else content.append(document.createTextNode("@AA[" + part + "]"));
     }
     container.append(content);
     return foundry.documents.ChatMessage.create({

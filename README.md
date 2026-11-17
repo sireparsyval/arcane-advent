@@ -35,8 +35,9 @@ Les Versets conservent la formule saisie, ses regroupements et ses retours à
 la ligne. Le bouton **Insérer** ajoute un ID du carnet à la position du curseur.
 **Envoyer au chat** publie la formule actuellement affichée avec son nom personnel.
 Une formule peut également être saisie directement dans un message ou un journal
-avec `@Arcane[G019 G742]`. Les IDs restent enregistrés dans les messages et
-s’affichent avec leur symbole dès qu’il est disponible.
+avec `@AA[G019 G742]`. Les IDs restent enregistrés dans les messages et
+s’affichent avec leur symbole dès qu’il est disponible. L’ancienne notation
+`@Arcane[...]` reste reconnue dans les messages et journaux existants.
 
 Pour ajouter un caractère, placer son SVG en contours pleins sur une page
 `0 0 1000 1000` dans `assets/glyphs/`, puis lui attribuer un nouveau caractère

@@ -130,6 +130,6 @@ export async function showGlyphInChat(glyphId) {
     if (!isGlyphId(id)) throw new Error("Identifiant de glyphe invalide.");
     // Le contenu du message ne contient que l’ID, sans nom ou données de référence.
     return foundry.documents.ChatMessage.create({
-        content: "@Arcane[" + id + "]"
+        content: "@AA[" + id + "]"
     });
 }

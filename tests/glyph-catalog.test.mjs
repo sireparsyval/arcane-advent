@@ -128,5 +128,5 @@ test("un import interrompu peut être repris sans doublons ni effacement des not
     assert.equal(existing.system.meaning, "Référence");
     assert.equal(existing.system.description, "Notes déjà saisies");
     await showGlyphInChat("G019");
-    assert.deepEqual(state.messages, [{ content: "@Arcane[G019]" }]);
+    assert.deepEqual(state.messages, [{ content: "@AA[G019]" }]);
 });
