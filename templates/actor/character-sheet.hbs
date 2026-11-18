@@ -79,7 +79,8 @@
 
     <header class="aa-header aa-character-header">
         <div class="aa-header-portrait-block">
-            <img class="aa-portrait" src="{{actor.img}}" alt="Portrait de {{actor.name}}">
+            <img class="aa-portrait" src="{{actor.img}}" alt="Portrait de {{actor.name}}"
+                {{#if canEditState}}data-action="editImage" data-edit="img" title="Changer le portrait (image du répertoire)"{{/if}}>
             <input class="aa-name" type="text" name="name" value="{{actor.name}}"
                 aria-label="Nom du personnage" {{#unless canEditState}}readonly{{/unless}}>
             <input class="aa-character-title" type="text" data-identity-field="title"

@@ -84,6 +84,8 @@ body.detached > .aa-detached-sheet .window-content {
     border-radius: 8px;
 }
 
+.aa-portrait[data-action="editImage"] { cursor: pointer; }
+
 .aa-identity {
     flex: 1;
 }
