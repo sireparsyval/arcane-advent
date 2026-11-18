@@ -19,21 +19,24 @@ export class ArcaneStorageSheet extends HandlebarsApplicationMixin(ActorSheetV2)
                 if (!game.user.isGM) return;
                 const item = this.actor.items.get(target.dataset.itemId);
                 if (!item) return;
+                const content = document.createElement("div");
                 const label = document.createElement("label");
                 label.textContent = "Destination ";
                 const select = document.createElement("select");
-                select.add(new Option("Hors contenant", ""));
+                select.name = "destination";
+                const current = item.system.containerId ?? "";
+                select.add(new Option("Hors contenant", "", current === ""));
                 for (const container of this.actor.items) {
                     if (isInventoryContainer(container) && canPlaceInContainer(this.actor.items, item.id, container.id)) {
-                        select.add(new Option(container.name, container.id));
+                        select.add(new Option(container.name, container.id, current === container.id));
                     }
                 }
-                select.value = item.system.containerId ?? "";
                 label.append(select);
+                content.append(label);
                 const destination = await foundry.applications.api.DialogV2.prompt({
-                    window: { title: "Déplacer dans un contenant" }, content: label, rejectClose: false,
+                    window: { title: "Déplacer dans un contenant" }, content, rejectClose: false,
                     buttons: [{ action: "cancel", label: "Annuler", callback: () => false }],
-                    ok: { label: "Déplacer", callback: () => select.value }
+                    ok: { label: "Déplacer", callback: (_event, button) => button.form.elements.destination.value }
                 });
                 if (typeof destination === "string") await this.actor.moveInventoryItem(item.id, destination || null);
             },

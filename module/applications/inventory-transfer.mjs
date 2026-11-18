@@ -20,33 +20,33 @@ export async function inventoryActionDialog(actor, action, initialId = null) {
             if (!sourceToken) throw new Error("Placez d’abord le personnage ou le stockage sur la scène active.");
         }
         const content = document.createElement("div");
-        content.className = "aa-transfer-picker";
+        // DialogV2 requires an attribute-free outer div and serializes its
+        // children. Keep styling inside and bind/read only the rendered DOM.
+        const picker = document.createElement("div");
+        picker.className = "aa-transfer-picker";
+        content.append(picker);
         const intro = document.createElement("p");
         intro.textContent = action === "transfer" ? `Destinataire : ${targetToken.name}` : "Les objets seront déposés à côté du jeton.";
         const note = document.createElement("p");
         note.textContent = "Un contenant sélectionné emporte tout son contenu. Les équipements reçus sont rangés dans l’inventaire.";
-        content.append(intro, note);
+        picker.append(intro, note);
         const items = [...actor.items].filter(isInventoryItem).sort((a,b) => (a.sort ?? 0) - (b.sort ?? 0));
         if (!items.length) throw new Error("Cet inventaire est vide.");
         const selectAll = document.createElement("button");
         selectAll.type = "button";
+        selectAll.dataset.transferSelectAll = "";
         selectAll.textContent = "Tout sélectionner / désélectionner";
         const list = document.createElement("div");
         list.className = "aa-transfer-choices";
-        selectAll.addEventListener("click", () => {
-            const checks = [...list.querySelectorAll('input[type="checkbox"]')];
-            const value = checks.some(input => !input.checked);
-            checks.forEach(input => { input.checked = value; });
-        });
-        content.append(selectAll, list);
-        const fields = [];
+        picker.append(selectAll, list);
         for (const item of items) {
             const row = document.createElement("div");
             row.className = "aa-transfer-choice";
             const label = document.createElement("label");
             const check = document.createElement("input");
             check.type = "checkbox";
-            check.checked = item.id === initialId;
+            check.dataset.transferItem = item.id;
+            check.defaultChecked = item.id === initialId;
             const name = document.createElement("span");
             const parent = actor.items.get(item.system.containerId);
             name.textContent = `${isInventoryContainer(item) ? "📦 " : ""}${item.name}${parent ? ` (dans ${parent.name})` : ""}${item.system.equipped ? " · équipé" : ""}`;
@@ -55,21 +55,32 @@ export async function inventoryActionDialog(actor, action, initialId = null) {
             let amount;
             if (item.type === "object") {
                 amount = document.createElement("input");
-                Object.assign(amount, { type: "number", min: "1", max: String(item.system.quantity), step: "1", value: String(item.system.quantity) });
+                Object.assign(amount, { type: "number", min: "1", max: String(item.system.quantity), step: "1", defaultValue: String(item.system.quantity) });
+                amount.dataset.transferQuantity = "";
                 amount.setAttribute("aria-label", `Quantité de ${item.name}`);
                 row.append(amount);
             }
-            fields.push({ item, check, amount });
             list.append(row);
         }
         const selections = await foundry.applications.api.DialogV2.prompt({
             window: { title: action === "transfer" ? "Transférer des objets" : "Déposer au sol" },
             position: { width: 600 }, content, rejectClose: false,
+            render: (_event, dialog) => {
+                const form = dialog.element;
+                form.querySelector("[data-transfer-select-all]").addEventListener("click", () => {
+                    const checks = [...form.querySelectorAll("[data-transfer-item]")];
+                    const value = checks.some(input => !input.checked);
+                    checks.forEach(input => { input.checked = value; });
+                });
+            },
             buttons: [{ action: "cancel", label: "Annuler", callback: () => null }],
-            ok: { label: action === "transfer" ? "Transférer" : "Déposer", callback: () => {
-                const selected = fields.filter(field => field.check.checked);
+            ok: { label: action === "transfer" ? "Transférer" : "Déposer", callback: (_event, button) => {
+                const selected = [...button.form.querySelectorAll("[data-transfer-item]:checked")];
                 if (!selected.length) throw new Error("Sélectionnez au moins un objet.");
-                return selected.map(({ item, amount }) => {
+                return selected.map(check => {
+                    const item = actor.items.get(check.dataset.transferItem);
+                    if (!item) throw new Error("Un objet sélectionné n’est plus disponible.");
+                    const amount = check.closest(".aa-transfer-choice").querySelector("[data-transfer-quantity]");
                     const quantity = amount ? amount.valueAsNumber : 1;
                     if (!Number.isSafeInteger(quantity) || quantity < 1 || (amount && quantity > Number(amount.max))) {
                         throw new Error(`Quantité invalide : ${item.name}.`);
