@@ -67,31 +67,33 @@ export function transferPlan(items, selections, randomID) {
 export async function executeTransfer(source, destination, selections, randomID) {
     if (source.uuid === destination.uuid) throw new Error("Choisissez un autre destinataire.");
     const plan = transferPlan(source.items, selections, randomID);
-    const options = { keepId: true, aaTransfer: true };
+    // Foundry mutates operations (parentUuid, data, updates, ids). Reusing one
+    // can redirect a world storage Item write into the recipient Actor.
+    const options = () => ({ keepId: true, aaTransfer: true });
     const ids = plan.creates.map(item => item._id);
     try {
-        const created = await destination.createEmbeddedDocuments("Item", plan.creates, options);
+        const created = await destination.createEmbeddedDocuments("Item", plan.creates, options());
         if (created.length !== ids.length || ids.some(id => !destination.items.get(id))) {
             throw new Error("Le stockage destinataire n’a pas accepté tous les objets.");
         }
         if (plan.updates.length) {
-            const updated = await source.updateEmbeddedDocuments("Item", plan.updates, options);
+            const updated = await source.updateEmbeddedDocuments("Item", plan.updates, options());
             if (updated.length !== plan.updates.length) throw new Error("Quantités non mises à jour.");
         }
         if (plan.deletes.length) {
-            await source.deleteEmbeddedDocuments("Item", plan.deletes, options);
+            await source.deleteEmbeddedDocuments("Item", plan.deletes, options());
             if (plan.deletes.some(id => source.items.get(id))) throw new Error("Le déplacement a été interrompu.");
         }
         return { count: plan.creates.length };
     } catch (error) {
         try {
             const missing = plan.originals.filter(item => !source.items.get(item._id));
-            if (missing.length) await source.createEmbeddedDocuments("Item", missing, options);
+            if (missing.length) await source.createEmbeddedDocuments("Item", missing, options());
             const existing = plan.originals.filter(item => source.items.get(item._id));
-            if (existing.length) await source.updateEmbeddedDocuments("Item", existing, options);
+            if (existing.length) await source.updateEmbeddedDocuments("Item", existing, options());
             if (plan.originals.some(item => !source.items.get(item._id))) throw new Error("Restauration incomplète.");
             const remaining = ids.filter(id => destination.items.get(id));
-            if (remaining.length) await destination.deleteEmbeddedDocuments("Item", remaining, options);
+            if (remaining.length) await destination.deleteEmbeddedDocuments("Item", remaining, options());
             if (ids.some(id => destination.items.get(id))) throw new Error("Annulation incomplète.");
         } catch (rollbackError) {
             console.error("Arcane Advent | Réconciliation nécessaire", { source: source.uuid,

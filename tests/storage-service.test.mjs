@@ -57,18 +57,18 @@ function actor(id, owner, type = "character") {
         getFlag(_scope, key) { return this.flags[key]; },
         async setFlag(_scope, key, data) { this.flags[key] = data; },
         async unsetFlag(_scope, key) { delete this.flags[key]; },
-        async createEmbeddedDocuments(_type, data) { return data.map(entry => {
+        async createEmbeddedDocuments(_type, data, options = {}) { options.parentUuid = this.uuid; options.data = data; return data.map(entry => {
             const result = item(entry._id, entry.system.quantity);
             Object.assign(result, { type: entry.type, name: entry.name, system: structuredClone(entry.system) });
             this.items.set(result.id, result); return result;
         }); },
-        async updateEmbeddedDocuments(_type, data) { return data.map(entry => {
+        async updateEmbeddedDocuments(_type, data, options = {}) { options.parentUuid = this.uuid; options.updates = data; return data.map(entry => {
             const result = this.items.get(entry._id);
             if (entry.system) result.system = { ...entry.system };
             if (Object.hasOwn(entry, "system.quantity")) result.system.quantity = entry["system.quantity"];
             return result;
         }); },
-        async deleteEmbeddedDocuments(_type, ids) { return ids.map(id => { const result = this.items.get(id); this.items.delete(id); return result; }); },
+        async deleteEmbeddedDocuments(_type, ids, options = {}) { options.parentUuid = this.uuid; options.ids = ids; return ids.map(id => { const result = this.items.get(id); this.items.delete(id); return result; }); },
         async getTokenDocument(position) { return { toObject: () => ({ actorId: this.id, actorLink: true, ...position }) }; },
         async delete() { documents.delete(this.uuid); game.actors.delete(this.id); }
     };
@@ -131,7 +131,11 @@ class StoredItem {
     toObject() { return structuredClone(this._source); }
     updateSource(changes) { merge(this._source, changes); }
     validate() { return true; }
-    async update(changes) { this._source = merge(structuredClone(this._source), changes); return this; }
+    async update(changes, options = {}) {
+        if (options.parentUuid) throw new Error(`World Item incorrectly addressed inside ${options.parentUuid}`);
+        options.updates = [changes];
+        this._source = merge(structuredClone(this._source), changes); return this;
+    }
     async delete() { documents.delete(this.uuid); game.items.delete(this.id); }
     static async create(data) { const item = new this(data); game.items.set(item.id, item); documents.set(item.uuid, item); return item; }
 }
@@ -435,6 +439,28 @@ test("a vetoed storage quantity write rolls back the recipient instead of duplic
     assert.match(result.error, /enregistré/);
     assert.equal(storage.items.get("apple").system.quantity, 3);
     assert.equal(recipient.items.size, 0);
+});
+
+test("a remote in-place ArrayField update refreshes quantities and removes stale storage rows", async () => {
+    const storage = await createStorage({ name: "Remote update" });
+    await stock(storage, "apple", 3);
+    assert.equal(storage.items.get("apple").system.quantity, 3);
+    const array = storage.system.contents;
+    array[0].system.quantity = 1;
+    assert.equal(storage.items.get("apple").system.quantity, 1);
+    array.splice(0, 1);
+    assert.equal(storage.system.contents, array);
+    assert.equal(storage.items.size, 0);
+});
+
+test("storage writes discard a caller's stale native database routing fields", async () => {
+    const storage = await createStorage({ name: "Routed write" });
+    await stock(storage, "apple", 1);
+    const options = { aaTransfer: true, parentUuid: "Actor.previous", updates: [{ _id: "unrelated" }] };
+    await storage.deleteEmbeddedDocuments("Item", ["apple"], options);
+    assert.equal(storage.items.size, 0);
+    assert.equal(options.parentUuid, "Actor.previous");
+    assert.deepEqual(options.updates, [{ _id: "unrelated" }]);
 });
 
 test("legacy storage migration moves inventories to Items and preserves token positions and images", async () => {

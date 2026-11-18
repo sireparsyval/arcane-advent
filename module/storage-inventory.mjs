@@ -14,7 +14,7 @@ export const storageInventoryOwner = item => contentOwners.get(item);
 // each equipment data model without pretending that Items embed other Items.
 export class StorageInventory {
     #queue = Promise.resolve();
-    #source;
+    #signature;
     #items = new Contents();
 
     constructor(document) { this.document = document; }
@@ -28,7 +28,10 @@ export class StorageInventory {
     get isOwner() { return this.document.isOwner; }
     get sheet() { return this.document.sheet; }
     get items() {
-        if (this.#source !== this.system.contents) {
+        // Foundry v14 preserves ArrayField array identities during updates.
+        // Other clients' writes must invalidate this view as well as our own.
+        const signature = JSON.stringify(this.system.contents);
+        if (this.#signature !== signature) {
             const next = new Contents();
             for (const source of this.system.contents) {
                 const item = this.#items.get(source._id) ?? new CONFIG.Item.documentClass(source, { strict: true });
@@ -37,7 +40,7 @@ export class StorageInventory {
                 next.set(item.id, item);
             }
             this.#items = next;
-            this.#source = this.system.contents;
+            this.#signature = signature;
         }
         return this.#items;
     }
@@ -76,9 +79,11 @@ export class StorageInventory {
             }
         }
         const contents = [...projected].map(item => item.toObject());
-        await this.document.update({ "system.contents": contents }, options);
+        // Pass only our intent, never an operation previously mutated by a
+        // native embedded-document write (notably its parentUuid).
+        await this.document.update({ "system.contents": contents }, { aaTransfer: options.aaTransfer === true });
         if (!foundry.utils.equals(this.system.contents, contents)) throw new Error("Le stockage n’a pas enregistré tous les changements.");
-        this.#source = undefined;
+        this.#signature = undefined;
     }
 
     createEmbeddedDocuments(type, sources, options = {}) {

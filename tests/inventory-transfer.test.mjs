@@ -109,3 +109,36 @@ test("source and destination may not be the same actor", async () => {
     await assert.rejects(executeTransfer(source, source, [{ id: "apple" }], randomID));
     assert.equal(source.items.size, 1);
 });
+
+test("each transfer and rollback write gets an operation free of Foundry's previous mutations", async () => {
+    for (const fail of [false, true]) {
+        const source = actor("source", [item("apple", "object", { quantity: 5 })]);
+        const destination = actor("destination");
+        const operations = new Set();
+        let rejectOnce = fail;
+        for (const owner of [source, destination]) for (const method of ["createEmbeddedDocuments", "updateEmbeddedDocuments", "deleteEmbeddedDocuments"]) {
+            const original = owner[method];
+            owner[method] = async function (type, data, operation) {
+                assert.equal(operation.parentUuid, undefined, "A previous database parent leaked into another write");
+                assert.ok(!operations.has(operation), "The same operation object was reused");
+                operations.add(operation);
+                operation.parentUuid = this.uuid;
+                operation.updates = data;
+                if (owner === source && method === "updateEmbeddedDocuments" && rejectOnce) {
+                    rejectOnce = false; throw new Error("write failed");
+                }
+                return original.call(this, type, data, operation);
+            };
+        }
+        const transfer = executeTransfer(source, destination, [{ id: "apple", quantity: 2 }], randomID);
+        if (fail) {
+            await assert.rejects(transfer, /write failed/);
+            assert.equal(source.items.get("apple").system.quantity, 5);
+            assert.equal(destination.items.size, 0);
+        } else {
+            await transfer;
+            assert.equal(source.items.get("apple").system.quantity, 3);
+            assert.equal([...destination.items][0].system.quantity, 2);
+        }
+    }
+});
