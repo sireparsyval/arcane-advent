@@ -151,6 +151,11 @@ Le bouton **Options** ouvre les sections :
 - **Jets** : formules personnalisables avec plusieurs modificateurs de caractéristiques,
   une Compétence et/ou une Expertise.
 
+Dans **Options → Jets**, **Ajouter un jet** ajoute un bouton indépendant à
+l’aptitude. Répéter pour créer, par exemple, un jet d’attaque et un jet de dégâts.
+Chaque jet conserve son nom, sa formule et ses bonus ; modifier ou supprimer
+l’un des jets conserve les autres et leurs raccourcis de barre d’actions.
+
 Une condition peut tester les PdC/PdF (en %), une caractéristique, une altération,
 un objet équipé, une Expertise applicable, une quantité d'objets ou une dénomination
 de Luqa. Le type « Formule » utilise un mini-langage **sans JavaScript** :

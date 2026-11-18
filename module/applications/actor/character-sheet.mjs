@@ -1097,13 +1097,13 @@ export class ArcaneCharacterSheet
                 if (section) section.open = true;
             }, true);
             editor.addEventListener("click", async event => {
-                const control = event.target.closest("[data-aa-condition], [data-aa-roll]");
+                const control = event.target.closest("[data-aa-condition], [data-aa-roll], [data-aa-add-roll]");
                 if (!control) return;
                 const data = control.dataset;
                 const child = Object.hasOwn(data, "aaCondition")
                     ? await this._openAptitudeConditionEditor(aptitude, data.aaCondition || null, data.kind, dialog)
                     : await ArcaneCharacterSheet._onEditAptitudeRoll.call(this, null, {
-                        dataset: { itemId: aptitude.id, rollId: data.aaRoll }
+                        dataset: { itemId: aptitude.id, rollId: Object.hasOwn(data, "aaAddRoll") ? null : data.aaRoll }
                     }, dialog);
                 child?.addEventListener("close", async () => {
                     const refreshed = editor.ownerDocument.createElement("div");
@@ -1215,12 +1215,21 @@ export class ArcaneCharacterSheet
 
     static async _onEditAptitudeRoll(event, target, parent = null) {
         if (!this.isEditable) return;
-        const { itemId, rollId } = target.dataset;
+        const { itemId } = target.dataset;
+        // An explicit add action has no roll ID. Preserve an empty ID when
+        // editing a roll saved by older versions, including its hotbar links.
+        const rollId = target.dataset.rollId ?? null;
+        const editing = rollId !== null;
         const item = this.actor.items.get(itemId);
         if (item?.type !== "aptitude") return;
-        if (rollId && !Object.hasOwn(item.system.rolls, rollId)) return;
+        if (editing && !Object.hasOwn(item.system.rolls, rollId)) return;
 
-        const current = rollId ? item.system.rolls[rollId] : { name: "Jet", formula: "1d20" };
+        let id = rollId;
+        if (!editing) {
+            do { id = foundry.utils.randomID(); } while (Object.hasOwn(item.system.rolls, id));
+        }
+
+        const current = editing ? item.system.rolls[rollId] : { name: "Jet", formula: "1d20" };
         const content = document.createElement("div");
         content.innerHTML = await foundry.applications.handlebars.renderTemplate(
             "systems/arcane-advent/templates/actor/aptitude-roll-dialog.hbs",
@@ -1238,7 +1247,7 @@ export class ArcaneCharacterSheet
 
         const buttons = [{
             action: "save",
-            label: rollId ? "Enregistrer" : "Ajouter",
+            label: editing ? "Enregistrer" : "Ajouter",
             callback: async (_event, button, app) => {
                 if (!button.form.reportValidity()) return;
                 const fields = new FormData(button.form);
@@ -1248,11 +1257,10 @@ export class ArcaneCharacterSheet
                     return;
                 }
 
-                if (!this.actor.items.has(itemId) || (rollId && !Object.hasOwn(item.system.rolls, rollId))) {
+                if (!this.actor.items.has(itemId) || (editing && !Object.hasOwn(item.system.rolls, rollId))) {
                     await app.close();
                     return;
                 }
-                const id = rollId ?? foundry.utils.randomID();
                 await item.update({
                     [`system.rolls.${id}`]: {
                         name: fields.get("name").trim(),
@@ -1267,7 +1275,7 @@ export class ArcaneCharacterSheet
             }
         }];
 
-        if (rollId) buttons.push({
+        if (editing) buttons.push({
             action: "remove",
             label: "Supprimer",
             type: "button",
@@ -1289,7 +1297,7 @@ export class ArcaneCharacterSheet
         });
 
         const dialog = new foundry.applications.api.DialogV2({
-            window: { title: rollId ? "Modifier le jet d’aptitude" : "Ajouter un jet d’aptitude" },
+            window: { title: editing ? "Modifier le jet d’aptitude" : "Ajouter un jet d’aptitude" },
             position: { width: 430 },
             content,
             modal: true,
