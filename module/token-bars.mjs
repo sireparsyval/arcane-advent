@@ -13,7 +13,9 @@ function resourceStyle(attribute) {
     return { ...resource, color: chosen?.css ?? chosen ?? resource.color };
 }
 function resourceBars(token) {
-    return ["bar1", "bar2"].map(name => token.bars?.getChildByName(name))
+    // Foundry keeps these Graphics on the container as bar1/bar2 properties;
+    // they are not named children and getChildByName therefore returns null.
+    return ["bar1", "bar2"].map(name => token.bars?.[name])
         .filter(bar => bar?.visible && bar.height > 0);
 }
 

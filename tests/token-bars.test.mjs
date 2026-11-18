@@ -21,7 +21,8 @@ class NativeToken {
         this.document = { getSize: () => ({ width: 100, height: this.height }) };
         this.nameplate = { y: 103, visible: true };
         this.bar1 = bar(); this.bar2 = bar();
-        this.bars = { visible: false, getChildByName: name => this[name] };
+        // Foundry v14 stores the graphics as properties, not named children.
+        this.bars = { visible: false, bar1: this.bar1, bar2: this.bar2, getChildByName: () => null };
     }
     _getBarColors() { return { empty: "native-empty", full: "native-full" }; }
     _refreshSize() { this.nameplate.y = this.height + 3; }
@@ -47,6 +48,8 @@ function fixture(attributes) {
 
 test("both bars are below the token without covering each other or its name", () => {
     const token = fixture();
+    assert.equal(token.bars.getChildByName("bar1"), null);
+    assert.equal(token.bars.getChildByName("bar2"), null);
     assert.ok(token.bar1.y > token.height);
     assert.ok(token.bar2.y > token.bar1.y + token.bar1.height);
     assert.ok(token.nameplate.y > token.bar2.y + token.bar2.height);

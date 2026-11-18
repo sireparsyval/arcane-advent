@@ -21,7 +21,7 @@ export async function runTokenHUDTests({ test, assert, equal }) {
     const data = { bar1: "fever", bar2: "consciousness" };
     const bars = { bar1: { visible: true, y: 102, height: 8 }, bar2: { visible: true, y: 112, height: 8 } };
     const app = { document: { getSize: () => ({ height: 100 }), getBarAttribute: name => ({ attribute: data[name] }) },
-        object: { bars: { getChildByName: name => bars[name] }, nameplate: { visible: true, y: 124, height: 20 } } };
+        object: { bars: { ...bars, getChildByName: () => null }, nameplate: { visible: true, y: 124, height: 20 } } };
 
     await test("HUD fields are below the token and use attribute colors when slots are swapped", () => {
         styleTokenHUD(app, root);
