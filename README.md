@@ -184,12 +184,14 @@ l’aptitude. Répéter pour créer, par exemple, un jet d’attaque et un jet d
 Chaque jet conserve son nom, sa formule et ses bonus ; modifier ou supprimer
 l’un des jets conserve les autres et leurs raccourcis de barre d’actions.
 
-Dans **Options → Ciblage**, le bouton **Mêlée / Distance** définit le type de
+Dans **Options → Ciblage**, le toggle **⚔️ / 🏹** définit le type de
 portée. En mêlée, renseigner l’**Allonge** ; à distance, renseigner la **Portée
 normale** et la **Portée longue** en mètres (0 pour ne pas avoir de portée longue).
 Le passage d’un mode à l’autre conserve les valeurs. Les anciennes portées
 numériques restent enregistrées et deviennent la portée normale des aptitudes
 à distance. Le mode et les portées apparaissent aussi dans le résumé de l’aptitude.
+Les deux portées partagent la première ligne avec le ciblage et le toggle.
+**Origine de l’effet** et **Propagation** occupent une deuxième ligne indépendante.
 
 Une condition peut tester les PdC/PdF (en %), une caractéristique, une altération,
 un objet équipé, une Expertise applicable, une quantité d'objets ou une dénomination

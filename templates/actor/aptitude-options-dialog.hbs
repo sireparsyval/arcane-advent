@@ -38,29 +38,24 @@
     <details class="aa-options-section">
         <summary>Ciblage</summary>
         <div class="aa-options-section-body">
-            <div class="aa-aptitude-options-grid">
+            <div class="aa-aptitude-targeting-primary">
                 <label>Ciblage<select name="target.mode">
                     {{#each targetModes}}<option value="{{key}}" {{#if (eq key ../system.targeting.mode)}}selected{{/if}}>{{label}}</option>{{/each}}
                 </select></label>
-                <label data-aa-fields="multiple">Nombre maximal de cibles<input name="target.maxTargets" type="number" min="0" step="1" required value="{{system.targeting.maxTargets}}"></label>
-                <div class="aa-aptitude-range-mode" data-aa-fields="targeted">
-                    <span>Type de portée</span>
-                    <input type="hidden" name="target.rangeMode" value="{{rangeMode}}">
-                    <button type="button" data-aa-range-toggle title="Basculer entre mêlée et distance">Mêlée</button>
+                <div class="aa-aptitude-ranges" data-aa-fields="targeted">
+                    <div class="aa-aptitude-range-mode">
+                        <input type="hidden" name="target.rangeMode" value="{{rangeMode}}">
+                        <button type="button" data-aa-range-toggle title="Mêlée — Passer à distance" aria-label="Mêlée — Passer à distance">⚔️</button>
+                    </div>
+                    <label><span data-aa-range-caption>Allonge (m)</span><input name="target.range" type="number" min="0" step="any" required value="{{system.targeting.range}}"></label>
+                    <label data-aa-fields="longRange">Portée longue (m)<input name="target.longRange" type="number" min="0" step="any" required value="{{system.targeting.longRange}}" title="0 : aucune portée longue"></label>
                 </div>
-                <label data-aa-fields="targeted"><span data-aa-range-caption>Allonge (m)</span><input name="target.range" type="number" min="0" step="any" required value="{{system.targeting.range}}"></label>
-                <label data-aa-fields="longRange">Portée longue (m)<input name="target.longRange" type="number" min="0" step="any" required value="{{system.targeting.longRange}}"><small>0 : aucune portée longue</small></label>
-                <label data-aa-fields="area">Forme de zone<select name="target.shape">
-                    {{#each shapes}}<option value="{{key}}" {{#if (eq key ../system.targeting.shape)}}selected{{/if}}>{{label}}</option>{{/each}}
-                </select></label>
-                <label data-aa-fields="circle">Rayon (m)<input name="target.radius" type="number" min="0" step="any" required value="{{system.targeting.radius}}"></label>
-                <label data-aa-fields="cone line rectangle">Longueur (m)<input name="target.length" type="number" min="0" step="any" required value="{{system.targeting.length}}"></label>
-                <label data-aa-fields="line rectangle">Largeur (m)<input name="target.width" type="number" min="0" step="any" required value="{{system.targeting.width}}"></label>
-                <label data-aa-fields="cone">Angle (°)<input name="target.angle" type="number" min="0" max="360" step="any" required value="{{system.targeting.angle}}"></label>
-                <label data-aa-fields="targeted">Origine de l’effet<select name="target.origin">
+            </div>
+            <div class="aa-aptitude-targeting-secondary" data-aa-fields="targeted">
+                <label>Origine de l’effet<select name="target.origin">
                     {{#each origins}}<option value="{{key}}" {{#if (eq key ../system.targeting.origin)}}selected{{/if}}>{{label}}</option>{{/each}}
                 </select></label>
-                <label data-aa-fields="targeted">Propagation<select name="target.propagation">
+                <label>Propagation<select name="target.propagation">
                     {{#each propagations}}<option value="{{key}}" {{#if (eq key ../system.targeting.propagation)}}selected{{/if}}>{{label}}</option>{{/each}}
                 </select></label>
             </div>
@@ -68,6 +63,16 @@
                 <input name="target.travels" type="checkbox" {{#if system.targeting.travels}}checked{{/if}}>
                 Affecte le trajet jusqu’à la cible
             </label>
+            <div class="aa-aptitude-options-grid">
+                <label data-aa-fields="multiple">Nombre maximal de cibles<input name="target.maxTargets" type="number" min="0" step="1" required value="{{system.targeting.maxTargets}}"></label>
+                <label data-aa-fields="area">Forme de zone<select name="target.shape">
+                    {{#each shapes}}<option value="{{key}}" {{#if (eq key ../system.targeting.shape)}}selected{{/if}}>{{label}}</option>{{/each}}
+                </select></label>
+                <label data-aa-fields="circle">Rayon (m)<input name="target.radius" type="number" min="0" step="any" required value="{{system.targeting.radius}}"></label>
+                <label data-aa-fields="cone line rectangle">Longueur (m)<input name="target.length" type="number" min="0" step="any" required value="{{system.targeting.length}}"></label>
+                <label data-aa-fields="line rectangle">Largeur (m)<input name="target.width" type="number" min="0" step="any" required value="{{system.targeting.width}}"></label>
+                <label data-aa-fields="cone">Angle (°)<input name="target.angle" type="number" min="0" max="360" step="any" required value="{{system.targeting.angle}}"></label>
+            </div>
         </div>
     </details>
 

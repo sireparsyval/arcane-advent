@@ -18,7 +18,9 @@ export function refreshAptitudeTargetingFields(editor) {
     const shape = editor.querySelector('[name="target.shape"]').value;
     const ranged = editor.querySelector('[name="target.rangeMode"]').value === "ranged";
     const toggle = editor.querySelector("[data-aa-range-toggle]");
-    toggle.textContent = ranged ? "Distance" : "Mêlée";
+    toggle.textContent = ranged ? "🏹" : "⚔️";
+    toggle.title = ranged ? "Distance — Passer en mêlée" : "Mêlée — Passer à distance";
+    toggle.setAttribute("aria-label", toggle.title);
     toggle.setAttribute("aria-pressed", String(ranged));
     editor.querySelector("[data-aa-range-caption]").textContent = ranged ? "Portée normale (m)" : "Allonge (m)";
     const visibleGroups = new Set();

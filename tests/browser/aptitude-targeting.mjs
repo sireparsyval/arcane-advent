@@ -2,12 +2,18 @@ import { bindAptitudeRangeToggle, refreshAptitudeTargetingFields } from "../../m
 
 export async function runAptitudeRangeTests({ test, assert, equal }) {
     const form = document.createElement("form");
+    form.className = "aa-targeting-layout-test";
+    form.style.width = "540px";
+    const hostStyle = document.createElement("style");
+    hostStyle.textContent = ".aa-targeting-layout-test * { box-sizing: border-box; }";
+    document.head.append(hostStyle);
     // Parse the production template to exercise its actual field names and
     // visibility groups. Populate values normally supplied by Handlebars.
     form.innerHTML = await (await fetch("/templates/actor/aptitude-options-dialog.hbs")).text();
     document.querySelector("main").replaceChildren(form);
     const editor = form.querySelector(".aa-aptitude-options-editor");
     const mode = form.elements["target.mode"], shape = form.elements["target.shape"];
+    mode.closest("details").open = true;
     mode.innerHTML = '<option value="self">Soi-même</option><option value="single">Cible unique</option><option value="area">Zone</option>';
     shape.innerHTML = '<option value="circle">Cercle</option><option value="cone">Cône</option>';
     mode.value = "single"; shape.value = "circle";
@@ -26,7 +32,23 @@ export async function runAptitudeRangeTests({ test, assert, equal }) {
         equal(fields.get("target.longRange"), "30");
         equal(editor.querySelector("[data-aa-range-caption]").textContent, "Portée normale (m)");
         equal(editor.querySelector("[data-aa-range-toggle]").getAttribute("aria-pressed"), "true");
+        equal(editor.querySelector("[data-aa-range-toggle]").textContent, "🏹");
+        assert(editor.querySelector("[data-aa-range-toggle]").getAttribute("aria-label").includes("Distance"), "Missing accessible range label");
         assert(!form.elements["target.longRange"].closest("[data-aa-fields]").hidden, "Long range is hidden");
+        for (const width of [540, 420]) {
+            form.style.width = `${width}px`;
+            const normal = form.elements["target.range"].getBoundingClientRect();
+            const long = form.elements["target.longRange"].getBoundingClientRect();
+            const origin = form.elements["target.origin"].getBoundingClientRect();
+            const propagation = form.elements["target.propagation"].getBoundingClientRect();
+            const toggle = editor.querySelector("[data-aa-range-toggle]").getBoundingClientRect();
+            assert(Math.abs(normal.bottom - long.bottom) < 1, `Ranges split across lines at ${width}px`);
+            assert(long.left > normal.right && toggle.right < normal.left, "Range controls overlap");
+            assert(toggle.width <= 36, "Icon toggle is too wide");
+            assert(origin.top > normal.bottom && Math.abs(origin.top - propagation.top) < 1, "Origin and propagation need a separate second line");
+            assert(long.right <= editor.getBoundingClientRect().right, "Range fields overflow the editor");
+        }
+        form.style.width = "540px";
     });
 
     await test("melee-distance round trip hides long range without discarding its value", () => {
@@ -36,6 +58,7 @@ export async function runAptitudeRangeTests({ test, assert, equal }) {
         assert(!new FormData(form).has("target.longRange"), "Hidden long range must not overwrite saved values");
         equal(editor.querySelector("[data-aa-range-caption]").textContent, "Allonge (m)");
         equal(toggle.getAttribute("aria-pressed"), "false");
+        equal(toggle.textContent, "⚔️");
         toggle.click();
         equal(new FormData(form).get("target.longRange"), "30");
         equal(new FormData(form).get("target.range"), "10");
