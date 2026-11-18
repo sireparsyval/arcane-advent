@@ -122,5 +122,8 @@ await test("storage move reads the rendered destination", async () => {
     equal(moves, [["child", null]]);
 });
 
+const { runTokenHUDTests } = await import("./token-bars.mjs");
+await runTokenHUDTests({ test, assert, equal });
+
 document.querySelector("pre").textContent = JSON.stringify(results);
 document.body.dataset.status = results.every(result => result.passed) ? "passed" : "failed";

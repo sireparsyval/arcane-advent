@@ -26,6 +26,7 @@ import { registerArcaneText } from "./module/arcane-text.mjs";
 import { GlyphData } from "./module/data/glyph-data.mjs";
 import { GlyphSheet } from "./module/applications/item/glyph-sheet.mjs";
 import { registerGlyphCatalog } from "./module/applications/glyph-catalog.mjs";
+import { registerTokenBars } from "./module/token-bars.mjs";
 
 
 Hooks.once("init", () => {
@@ -38,6 +39,7 @@ Hooks.once("init", () => {
     registerArcaneHotbar();
     registerArcaneText();
     registerGlyphCatalog();
+    registerTokenBars();
 
     CONFIG.Actor.documentClass = ArcaneActor;
     CONFIG.Item.documentClass = ArcaneItem;

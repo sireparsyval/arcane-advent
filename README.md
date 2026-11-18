@@ -1,5 +1,33 @@
 # arcane-advent
 
+## Barres des jetons et Points de Fièvre
+
+Les deux barres de ressources sont empilées sous les jetons. Le nom du jeton
+et les champs de saisie du clic droit sont décalés pour rester lisibles.
+Dans **Paramètres du système**, le MJ peut désactiver **Placer les deux barres
+sous les jetons**, ou choisir les couleurs des **Points de Conscience** et des
+**Points de Fièvre** sur les jetons. Les couleurs suivent la ressource choisie,
+même si les emplacements Barre 1 et Barre 2 sont inversés. Ces réglages se
+répercutent sur les jetons existants et conservent leurs règles de visibilité.
+
+Les couleurs par défaut sont le rouge pour les PdC et le jaune pour les PdF.
+Dans les fiches complètes, la barre de Points de Fièvre est également jaune.
+
+## Barres des jetons
+
+Les deux barres de ressources sont affichées sous le jeton, avec le nom décalé
+pour éviter les chevauchements. Les champs du clic droit suivent cette disposition.
+Les valeurs, maxima, attributs choisis et permissions d’affichage restent gérés
+par Foundry.
+
+Dans les paramètres du système, le MJ peut désactiver **Placer les deux barres
+sous les jetons** ou choisir les couleurs des **Points de Conscience** et des
+**Points de Fièvre** sur les jetons. Les couleurs par défaut sont rouge et jaune.
+Elles suivent la ressource même si les emplacements Barre 1 et Barre 2 sont inversés.
+Les changements s’appliquent aux jetons existants sur la scène.
+
+La barre de Points de Fièvre des fiches complètes utilise également un dégradé jaune.
+
 ## Objets au sol et stockages
 
 Après une mise à jour du système, redémarrer le monde pour charger le nouveau

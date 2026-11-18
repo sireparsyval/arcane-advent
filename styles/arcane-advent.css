@@ -1432,8 +1432,21 @@ body.detached > .aa-detached-sheet .window-content {
 }
 
 .aa-status-fever .aa-status-bar-fill {
-    background: linear-gradient(90deg, #226985, #36a1c8);
+    background: linear-gradient(90deg, #b18417, #f2c94c);
 }
+
+/* Les champs du HUD suivent les couleurs et la disposition des barres. */
+#token-hud.aa-token-resources .attribute.bar1 input { border-color: var(--aa-token-resource-color, #7cd000); }
+#token-hud.aa-token-resources .attribute.bar2 input { border-color: var(--aa-token-resource-color, #659db5); }
+#token-hud.aa-token-bars-below .col.middle {
+    top: calc(100% + var(--aa-token-resource-offset, 30px));
+    height: auto;
+    justify-content: flex-start;
+    gap: 4px;
+}
+#token-hud.aa-token-bars-below .attribute.bar1 { order: 0; }
+#token-hud.aa-token-bars-below .attribute.bar2 { order: 1; }
+#token-hud.aa-token-bars-below .col.middle .attribute:not(:has(input)) { display: none; }
 
 .aa-consciousness-die-formula {
     max-width: 9rem;

@@ -15,7 +15,7 @@ const browser = [process.env.BROWSER_PATH,
     "/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome"]
     .find(path => path && existsSync(path));
 
-test("inventory dialogs in a browser: selection, serialization, quantities and cancellation", {
+test("inventory dialogs and token HUD in a browser", {
     skip: browser ? false : "Set BROWSER_PATH to a Chromium browser to run the DOM regression tests",
     timeout: 45000
 }, async () => {
@@ -28,8 +28,8 @@ test("inventory dialogs in a browser: selection, serialization, quantities and c
         }
         try {
             const path = resolve(root, decodeURIComponent(request.url.slice(1)));
-            if (!path.startsWith(resolve(root) + sep) || !path.endsWith(".mjs")) throw Error("Invalid path");
-            response.setHeader("Content-Type", "text/javascript; charset=utf-8");
+            if (!path.startsWith(resolve(root) + sep) || !/\.(mjs|css)$/.test(path)) throw Error("Invalid path");
+            response.setHeader("Content-Type", path.endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8");
             response.end(await readFile(path));
         } catch { response.statusCode = 404; response.end(); }
     });
@@ -43,7 +43,7 @@ test("inventory dialogs in a browser: selection, serialization, quantities and c
         { windowsHide: true, timeout: 35000, maxBuffer: 1024 * 1024 });
         assert.match(stdout, /data-status="passed"/, stdout);
         const results = JSON.parse(stdout.match(/<pre>(.*?)<\/pre>/s)[1]);
-        assert.equal(results.length, 8);
+        assert.equal(results.length, 11);
         assert.ok(results.every(result => result.passed), JSON.stringify(results));
     } finally {
         server.closeAllConnections();
