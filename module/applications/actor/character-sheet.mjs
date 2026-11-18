@@ -1,4 +1,4 @@
-import { ARCANE_NEEDS } from "../../config.mjs";
+import { ARCANE_ALIGNMENTS, ARCANE_NEEDS } from "../../config.mjs";
 import { VOLUME_LABELS, ENCUMBRANCE_STAGES } from "../../encumbrance.mjs";
 import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedModifier } from "../../modifiers.mjs";
 import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
@@ -33,9 +33,9 @@ const AGE_ESTIMATES = Object.freeze({
     elderly: "Âgé",
     venerable: "Vénérable"
 });
-const IDENTITY_TEXT_FIELDS = new Set(["title", "ethnicity", "alignment"]);
+const IDENTITY_TEXT_FIELDS = new Set(["title", "ethnicity"]);
 const IDENTITY_NUMBER_FIELDS = new Set(["ageNumber", "heightMeters", "bodyWeightKg"]);
-const IDENTITY_SELECT_FIELDS = new Set(["gender", "volume", "ageMode", "ageEstimate"]);
+const IDENTITY_SELECT_FIELDS = new Set(["gender", "volume", "ageMode", "ageEstimate", "alignment"]);
 const BIOGRAPHY_FIELDS = new Set([
     "feature", "motivation", "habit", "family", "raisedBy", "quest",
     "personality", "ideals", "bonds", "flaws"
@@ -299,6 +299,11 @@ export class ArcaneCharacterSheet
         context.genderOptions = IDENTITY_GENDERS;
         context.volumeOptions = VOLUME_LABELS;
         context.ageEstimateOptions = AGE_ESTIMATES;
+        const alignment = this.actor.system.identity.alignment?.trim() || "Neutre";
+        context.alignmentOptions = ARCANE_ALIGNMENTS.map(value => ({ value, label: value, selected: value === alignment }));
+        if (!ARCANE_ALIGNMENTS.includes(alignment)) {
+            context.alignmentOptions.push({ value: alignment, label: alignment, selected: true });
+        }
         const abilityAbbreviations = ["FOR", "DEX", "CON", "INT", "SAG", "CHA"];
         context.compactAbilities = Object.entries(APTITUDE_ROLL_ABILITIES).map(([key, name], index) => ({
             key, name, label: abilityAbbreviations[index],
@@ -1655,6 +1660,7 @@ export class ArcaneCharacterSheet
         if (IDENTITY_SELECT_FIELDS.has(key)) {
             const choices = key === "gender" ? IDENTITY_GENDERS
                 : key === "volume" ? VOLUME_LABELS
+                : key === "alignment" ? Object.fromEntries(ARCANE_ALIGNMENTS.map(value => [value, value]))
                 : key === "ageEstimate" ? AGE_ESTIMATES : { estimated: "Estimation", number: "Numérique" };
             if (!Object.hasOwn(choices, value)) return;
         }

@@ -129,8 +129,11 @@
             </div>
             <label class="aa-header-field">
                 <span>Alignement</span>
-                <input type="text" data-identity-field="alignment" value="{{system.identity.alignment}}"
-                    placeholder="Ex. : Chaotique Bon" {{#unless canEditState}}readonly{{/unless}}>
+                <select data-identity-field="alignment" {{#unless canEditState}}disabled{{/unless}}>
+                    {{#each alignmentOptions}}
+                        <option value="{{value}}" {{#if selected}}selected{{/if}}>{{label}}</option>
+                    {{/each}}
+                </select>
             </label>
         </div>
     </header>

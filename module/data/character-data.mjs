@@ -11,8 +11,8 @@ const {
 } = foundry.data.fields;
 
 
-function descriptiveField() {
-    return new StringField({ required: true, nullable: false, blank: true, initial: "" });
+function descriptiveField(initial = "") {
+    return new StringField({ required: true, nullable: false, blank: true, initial });
 }
 
 function identityField() {
@@ -33,7 +33,7 @@ function identityField() {
         heightMeters: new NumberField({ required: true, nullable: false, min: 0, initial: 0 }),
         // Poids corporel seulement, jamais additionné à l'inventaire.
         bodyWeightKg: new NumberField({ required: true, nullable: false, min: 0, initial: 0 }),
-        alignment: descriptiveField()
+        alignment: descriptiveField("Neutre")
     });
 }
 

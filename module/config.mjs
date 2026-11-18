@@ -13,6 +13,12 @@ export const ARCANE_DAMAGE_TYPES = [
     }
 ];
 
+export const ARCANE_ALIGNMENTS = Object.freeze([
+    "Loyal Bon", "Neutre Bon", "Chaotique Bon",
+    "Loyal Neutre", "Neutre", "Chaotique Neutre",
+    "Loyal Mauvais", "Neutre Mauvais", "Chaotique Mauvais"
+]);
+
 export const ARCANE_NEEDS = {
     hunger: {
         label: "Faim",
