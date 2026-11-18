@@ -1,6 +1,6 @@
 import { glyphDisplay, isGlyphId, normalizeGlyphId } from "../glyphs.mjs";
 import {
-    getGlyphCatalog, GLYPH_PACK, GLYPH_SORT_FIELDS, importGlyphReferences,
+    getGlyphCatalog, GLYPH_PACK, GLYPH_SORT_FIELDS, importGlyphReferences, isGlyphSort, nextGlyphSort,
     requireGlyphGM, showGlyphInChat, sortGlyphReferences
 } from "../glyph-catalog.mjs";
 
@@ -11,7 +11,7 @@ export class GlyphCatalog extends HandlebarsApplicationMixin(ApplicationV2) {
     static DEFAULT_OPTIONS = {
         id: "arcane-glyph-catalog",
         classes: ["arcane-advent", "aa-glyph-catalog"],
-        position: { width: 900, height: 650 },
+        position: { width: 1000, height: 650 },
         window: { title: "Glyphes — MJ", resizable: true },
         actions: {
             createGlyph: this._create,
@@ -31,7 +31,7 @@ export class GlyphCatalog extends HandlebarsApplicationMixin(ApplicationV2) {
     };
 
     _query = "";
-    _sortField = "glyphId";
+    _sortField = "sort";
     _sortDirection = "ascending";
     _hooks = [];
     _busy = false;
@@ -50,14 +50,14 @@ export class GlyphCatalog extends HandlebarsApplicationMixin(ApplicationV2) {
             const { system } = item;
             const search = searchText([system.glyphId, system.meaning, system.pronunciation, system.category].join(" "));
             return {
-                id: item.id, ...system.toObject(), character: glyphDisplay(system.glyphId).character,
+                id: item.id, sort: item.sort ?? 0, ...system.toObject(), character: glyphDisplay(system.glyphId).character,
                 search, visible: search.includes(query)
             };
         }), this._sortField, this._sortDirection);
         const columns = Object.entries(GLYPH_SORT_FIELDS).map(([field, label]) => {
             const active = field === this._sortField;
             return {
-                field, label, active,
+                field, label, active, isOrder: field === "sort",
                 sort: active ? this._sortDirection : "none",
                 descending: active && this._sortDirection === "descending"
             };
@@ -85,10 +85,22 @@ export class GlyphCatalog extends HandlebarsApplicationMixin(ApplicationV2) {
             const file = event.target.files[0];
             if (!file) return;
             this._perform(async () => {
-                const count = await importGlyphReferences(JSON.parse(await file.text()));
-                ui.notifications.info(count + " références importées.");
+                const data = JSON.parse(await file.text());
+                const count = await importGlyphReferences(data);
+                ui.notifications.info(count + (data.format === "arcane-advent.glyph-order" ? " positions importées." : " références importées."));
             });
         });
+        for (const input of this.element.querySelectorAll("[data-glyph-order]")) {
+            input.addEventListener("change", () => this._perform(async () => {
+                const sort = input.valueAsNumber;
+                if (!isGlyphSort(sort)) throw new Error("Saisissez un numéro d’ordre entier positif ou nul.");
+                const item = await this._entry(input);
+                if (item.sort !== sort) await item.update({ sort });
+            }));
+            input.addEventListener("keydown", event => {
+                if (event.key === "Enter") { event.preventDefault(); input.blur(); }
+            });
+        }
         if (!this._hooks.length) {
             for (const hook of ["createItem", "updateItem", "deleteItem"]) {
                 const id = Hooks.on(hook, item => {
@@ -109,7 +121,7 @@ export class GlyphCatalog extends HandlebarsApplicationMixin(ApplicationV2) {
         if (this._busy) return;
         requireGlyphGM();
         this._busy = true;
-        for (const button of this.element.querySelectorAll("button")) button.disabled = true;
+        for (const control of this.element.querySelectorAll("button, [data-glyph-order]")) control.disabled = true;
         try {
             await operation();
         } catch (error) {
@@ -153,7 +165,7 @@ export class GlyphCatalog extends HandlebarsApplicationMixin(ApplicationV2) {
             const documents = await pack.getDocuments({ type: "glyph" });
             if (documents.some(item => item.system.glyphId === id)) throw new Error("Cet ID est déjà présent dans le répertoire.");
             const [item] = await foundry.documents.Item.implementation.createDocuments(
-                [{ type: "glyph", name: id, system: { glyphId: id }, ownership: { default: 0 } }],
+                [{ type: "glyph", name: id, sort: nextGlyphSort(documents), system: { glyphId: id }, ownership: { default: 0 } }],
                 { pack: pack.collection }
             );
             await item.sheet.render({ force: true });

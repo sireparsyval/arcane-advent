@@ -51,7 +51,8 @@ function environment() {
                 if (failUpdate) { failUpdate = false; throw Error("Connexion interrompue"); }
                 for (const update of updates) {
                     const item = documents.get(update._id);
-                    item.name = update.name;
+                    if (Object.hasOwn(update, "name")) item.name = update.name;
+                    if (Object.hasOwn(update, "sort")) item.sort = update.sort;
                     for (const [key, value] of Object.entries(update)) {
                         if (key.startsWith("system.")) item.system[key.slice(7)] = value;
                     }
@@ -89,6 +90,59 @@ test("l’import valide les références et ignore les propriétés étrangères
         [{ glyphId: "G019", meaning: "Hypothèse" }]);
     assert.throws(() => parseGlyphReferences(file([{ glyphId: "G019" }, { glyphId: "g019" }])));
     assert.throws(() => parseGlyphReferences(file([{ glyphId: "G019", meaning: {} }])));
+});
+
+test("l’ordre personnalisé est numérique, stable et sélectionné par défaut", () => {
+    const entries = [
+        { glyphId: "G094", sort: 10 }, { glyphId: "G304", sort: 2 },
+        { glyphId: "G019", sort: 2 }, { glyphId: "G742", sort: 1 }
+    ];
+    assert.deepEqual(sortGlyphReferences(entries).map(row => row.glyphId), ["G742", "G019", "G304", "G094"]);
+    assert.deepEqual(sortGlyphReferences(entries, "sort", "descending").map(row => row.glyphId), ["G094", "G019", "G304", "G742"]);
+    assert.deepEqual(entries.map(row => row.sort), [10, 2, 2, 1]);
+});
+
+test("les numéros importés doivent être des entiers positifs ou nuls", () => {
+    assert.deepEqual(parseGlyphReferences(file([{ glyphId: "G019", sort: 0 }])), [{ glyphId: "G019", sort: 0 }]);
+    for (const sort of [-1, 1.5, "2", null, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+        assert.throws(() => parseGlyphReferences(file([{ glyphId: "G019", sort }])));
+    }
+    assert.throws(() => parseGlyphReferences({ format: "arcane-advent.glyph-order", version: 1, glyphs: [{ glyphId: "G019" }] }));
+});
+
+test("un import de classement préserve les noms et toutes les informations des glyphes", async () => {
+    const state = environment();
+    await getGlyphCatalog();
+    await importGlyphReferences(file([{ glyphId: "G019", meaning: "Hypothèse privée", pronunciation: "PRIVÉ", description: "Notes privées" }]));
+    const original = [...state.documents.values()].find(item => item.system.glyphId === "G019");
+    const originalSystem = original.system.toObject();
+    const originalName = original.name;
+    const count = state.documents.size;
+    await importGlyphReferences({ format: "arcane-advent.glyph-order", version: 1, glyphs: [
+        { glyphId: "G019", sort: 42, meaning: "Ce texte doit être ignoré" }
+    ] });
+    assert.equal(original.sort, 42);
+    assert.equal(original.name, originalName);
+    assert.deepEqual(original.system.toObject(), originalSystem);
+    assert.equal(state.documents.size, count);
+    await assert.rejects(importGlyphReferences({ format: "arcane-advent.glyph-order", version: 1, glyphs: [
+        { glyphId: "G019", sort: 99 }, { glyphId: "G999", sort: 100 }
+    ] }));
+    assert.equal(original.sort, 42);
+    assert.equal(state.documents.size, count);
+});
+
+test("l’import de références conserve un ordre existant et place les nouvelles entrées à la fin", async () => {
+    const state = environment();
+    await getGlyphCatalog();
+    await importGlyphReferences(file([{ glyphId: "G019", sort: 42 }, { glyphId: "G777" }, { glyphId: "G778" }]));
+    const find = id => [...state.documents.values()].find(item => item.system.glyphId === id);
+    assert.equal(find("G019").sort, 42);
+    assert.equal(find("G777").sort, 43);
+    assert.equal(find("G778").sort, 44);
+    assert.equal(Object.hasOwn(find("G019").system, "sort"), false);
+    await importGlyphReferences(file([{ glyphId: "G019", meaning: "Texte modifié" }]));
+    assert.equal(find("G019").sort, 42);
 });
 
 test("le catalogue et le partage exigent un compte MJ", async () => {

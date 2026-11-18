@@ -11,15 +11,15 @@
         <table>
             <thead>
                 <tr>
-                    <th scope="col">Glyphe</th>
                     {{#each columns}}
-                        <th scope="col" aria-sort="{{sort}}">
+                        <th scope="col" class="aa-glyph-column-{{field}}" aria-sort="{{sort}}">
                             <button type="button" class="aa-glyph-sort" data-action="sortGlyphs" data-glyph-sort="{{field}}"
                                 aria-label="Trier par {{label}}" {{#if ../busy}}disabled{{/if}}>
                                 <span>{{label}}</span>
                                 {{#if active}}<span aria-hidden="true">{{#if descending}}▼{{else}}▲{{/if}}</span>{{/if}}
                             </button>
                         </th>
+                        {{#if isOrder}}<th scope="col" class="aa-glyph-symbol-cell">Glyphe</th>{{/if}}
                     {{/each}}
                     <th scope="col">Actions</th>
                 </tr>
@@ -27,9 +27,14 @@
             <tbody>
                 {{#each rows}}
                     <tr data-glyph-search="{{search}}" {{#unless visible}}hidden{{/unless}}>
+                        <td class="aa-glyph-order-cell">
+                            <input type="number" min="0" step="1" required value="{{sort}}" data-glyph-order data-glyph-entry="{{id}}"
+                                id="aa-glyph-order-{{id}}" aria-label="Ordre de {{glyphId}}" title="Modifier l’ordre, puis appuyer sur Entrée ou quitter le champ"
+                                {{#if ../busy}}disabled{{/if}}>
+                        </td>
                         <td>{{#if character}}<span class="aa-arc-character" aria-label="{{glyphId}}">{{character}}</span>
                             {{else}}<span class="aa-arc-pending" title="Symbole à venir">—</span>{{/if}}</td>
-                        <td>{{glyphId}}</td>
+                        <td class="aa-glyph-id-cell">{{glyphId}}</td>
                         <td>{{meaning}}</td><td>{{pronunciation}}</td><td>{{category}}</td>
                         <td>
                             <div class="aa-glyph-catalog-actions">

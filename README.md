@@ -39,6 +39,14 @@ Les champs facultatifs sont `somatic`, `category` et `description`. Les champs
 renseignés mettent à jour l’entrée du même ID. Les champs vides sont ignorés.
 Le fichier d’import contenant les références réelles se conserve côté MJ.
 
+La première colonne **Ordre** permet de définir un numéro pour chaque référence.
+Modifier le numéro puis quitter le champ ou appuyer sur Entrée pour l’enregistrer.
+Le répertoire s’ouvre sur cet ordre personnalisé ; cliquer sur un en-tête change
+le tri et un second clic inverse son sens. Les nouveaux glyphes sont ajoutés à la fin.
+Un numéro `sort` facultatif peut être inclus dans chaque entrée du JSON de références.
+Un import privé au format `arcane-advent.glyph-order`, version `1`, avec des entrées
+`{"glyphId":"G019","sort":1}`, met uniquement à jour l’ordre des références existantes.
+
 ## Carnet d’Arcanologie
 
 L’onglet **Arcanologie** conserve les glyphes et Versets personnels de chaque

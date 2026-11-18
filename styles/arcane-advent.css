@@ -2328,6 +2328,7 @@ body.detached > .aa-detached-sheet .window-content {
 }
 .aa-glyph-catalog-table table {
     width: 100%;
+    min-width: 900px;
     margin: 0;
 }
 .aa-glyph-catalog-table :is(th, td) {
@@ -2363,6 +2364,22 @@ body.detached > .aa-detached-sheet .window-content {
     display: flex;
     gap: 4px;
     align-items: center;
+}
+.aa-glyph-catalog .aa-glyph-catalog-actions button,
+.aa-glyph-catalog-table :is(.aa-glyph-column-sort, .aa-glyph-symbol-cell, .aa-glyph-column-glyphId, .aa-glyph-id-cell, .aa-glyph-column-pronunciation) {
+    white-space: nowrap;
+}
+.aa-glyph-symbol-cell { width: 56px; }
+.aa-glyph-id-cell { width: 64px; }
+.aa-glyph-column-pronunciation { min-width: 128px; }
+.aa-glyph-catalog .aa-glyph-column-pronunciation .aa-glyph-sort { white-space: nowrap; }
+.aa-glyph-order-cell {
+    width: 76px;
+}
+.aa-glyph-catalog .aa-glyph-order-cell input {
+    width: 64px;
+    min-width: 48px;
+    text-align: center;
 }
 .aa-glyph-catalog-count {
     margin: 0;
