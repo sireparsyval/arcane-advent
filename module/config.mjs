@@ -14,9 +14,9 @@ export const ARCANE_DAMAGE_TYPES = [
 ];
 
 export const ARCANE_ALIGNMENTS = Object.freeze([
-    "Loyal Bon", "Neutre Bon", "Chaotique Bon",
-    "Loyal Neutre", "Neutre", "Chaotique Neutre",
-    "Loyal Mauvais", "Neutre Mauvais", "Chaotique Mauvais"
+    "Loyal Bon", "Loyal Neutre", "Loyal Mauvais",
+    "Neutre Bon", "Neutre", "Neutre Mauvais",
+    "Chaotique Bon", "Chaotique Neutre", "Chaotique Mauvais"
 ]);
 
 export const ARCANE_NEEDS = {
