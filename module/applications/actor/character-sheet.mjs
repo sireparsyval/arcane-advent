@@ -184,6 +184,7 @@ export class ArcaneCharacterSheet
         actions: {
             setRollMode: this._onSetRollMode,
             editManualModifiers: this._onEditManualModifiers,
+            toggleAgeMode: this._onToggleAgeMode,
             setDefenseMode: this._onSetDefenseMode,
             rollConsciousnessDie: this._onRollConsciousnessDie,
             rollDeathSave: this._onRollDeathSave,
@@ -1623,6 +1624,17 @@ export class ArcaneCharacterSheet
         }
     }
 
+
+    static async _onToggleAgeMode(_event, target) {
+        if (!this.isEditable || target.disabled) return;
+        target.disabled = true;
+        try {
+            const mode = this.actor.system.identity.ageMode === "estimated" ? "number" : "estimated";
+            await this.actor.update({ "system.identity.ageMode": mode });
+        } finally {
+            target.disabled = !this.isEditable;
+        }
+    }
 
     async _onIdentityEdit(event) {
         event.stopPropagation();

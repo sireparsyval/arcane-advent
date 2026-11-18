@@ -1,3 +1,23 @@
+{{#*inline "ageControls"}}
+    <div class="aa-age-controls {{#if (eq system.identity.ageMode "estimated")}}is-estimated{{else}}is-exact{{/if}}">
+        {{#if (eq system.identity.ageMode "estimated")}}
+            <select class="aa-age-estimate" data-identity-field="ageEstimate" aria-label="Âge estimé" {{#unless canEditState}}disabled{{/unless}}>
+                {{#each ageEstimateOptions}}
+                    <option value="{{@key}}" {{#if (eq @key ../system.identity.ageEstimate)}}selected{{/if}}>{{this}}</option>
+                {{/each}}
+            </select>
+        {{else}}
+            <input class="aa-age-number" type="number" min="0" step="1" data-identity-field="ageNumber"
+                value="{{system.identity.ageNumber}}" aria-label="Âge exact en années" {{#unless canEditState}}readonly{{/unless}}>
+            <span class="aa-age-unit">ans</span>
+        {{/if}}
+        <button type="button" class="aa-age-mode-toggle" data-action="toggleAgeMode" data-age-location="{{location}}"
+            id="aa-age-mode-{{actor.id}}-{{location}}" aria-label="Âge estimé"
+            aria-pressed="{{#if (eq system.identity.ageMode "estimated")}}true{{else}}false{{/if}}"
+            title="{{#if (eq system.identity.ageMode "estimated")}}Âge estimé activé · Passer à l’âge exact{{else}}Âge exact · Activer l’âge estimé{{/if}}"
+            {{#unless canEditState}}disabled{{/unless}}><span aria-hidden="true">♻️</span></button>
+    </div>
+{{/inline}}
 {{#*inline "damageReductionControls"}}
     <div class="aa-equipment-detail">
         <strong class="aa-equipment-label">Réductions</strong>
@@ -91,23 +111,7 @@
             </label>
             <div class="aa-header-field">
                 <span>Âge</span>
-                <div class="aa-age-controls">
-                    <select data-identity-field="ageMode" aria-label="Mode d'âge" {{#unless canEditState}}disabled{{/unless}}>
-                        <option value="estimated" {{#if (eq system.identity.ageMode "estimated")}}selected{{/if}}>Estimation</option>
-                        <option value="number" {{#if (eq system.identity.ageMode "number")}}selected{{/if}}>Exact</option>
-                    </select>
-                    {{#if (eq system.identity.ageMode "number")}}
-                        <input type="number" min="0" step="1" data-identity-field="ageNumber"
-                            value="{{system.identity.ageNumber}}" aria-label="Âge exact en années"
-                            {{#unless canEditState}}readonly{{/unless}}>
-                    {{else}}
-                        <select data-identity-field="ageEstimate" aria-label="Âge estimé" {{#unless canEditState}}disabled{{/unless}}>
-                            {{#each ageEstimateOptions}}
-                                <option value="{{@key}}" {{#if (eq @key ../system.identity.ageEstimate)}}selected{{/if}}>{{this}}</option>
-                            {{/each}}
-                        </select>
-                    {{/if}}
-                </div>
+                {{> ageControls location="header"}}
             </div>
             <div class="aa-header-physical">
                 <label class="aa-header-field">
@@ -1526,23 +1530,7 @@
                     <div class="aa-info-details-list">
                         <div class="aa-info-row">
                             <span>Âge</span>
-                            <div class="aa-age-controls">
-                                <select data-identity-field="ageMode" aria-label="Âge : mode" {{#unless canEditState}}disabled{{/unless}}>
-                                    <option value="estimated" {{#if (eq system.identity.ageMode "estimated")}}selected{{/if}}>Estimation</option>
-                                    <option value="number" {{#if (eq system.identity.ageMode "number")}}selected{{/if}}>Exact</option>
-                                </select>
-                                {{#if (eq system.identity.ageMode "number")}}
-                                    <input type="number" min="0" step="1" data-identity-field="ageNumber"
-                                        value="{{system.identity.ageNumber}}" aria-label="Âge en années"
-                                        {{#unless canEditState}}readonly{{/unless}}>
-                                {{else}}
-                                    <select data-identity-field="ageEstimate" aria-label="Âge approximatif" {{#unless canEditState}}disabled{{/unless}}>
-                                        {{#each ageEstimateOptions}}
-                                            <option value="{{@key}}" {{#if (eq @key ../system.identity.ageEstimate)}}selected{{/if}}>{{this}}</option>
-                                        {{/each}}
-                                    </select>
-                                {{/if}}
-                            </div>
+                            {{> ageControls location="information"}}
                         </div>
                         <label class="aa-info-row">
                             <span>Volume</span>

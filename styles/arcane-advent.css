@@ -1786,10 +1786,40 @@ body.detached > .aa-detached-sheet .window-content {
     height: 29px;
 }
 .aa-age-controls {
-    display: grid;
-    grid-template-columns: minmax(86px, 1fr) minmax(86px, 1fr);
+    display: flex;
+    align-items: center;
     gap: 5px;
     min-width: 0;
+}
+.aa-age-controls.is-estimated > .aa-age-estimate {
+    flex: 1 1 0;
+    width: 100%;
+}
+.aa-age-controls.is-exact > .aa-age-number {
+    flex: 0 0 calc(5ch + 20px);
+    width: calc(5ch + 20px);
+}
+.aa-age-unit {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+.aa-character .aa-age-controls > .aa-age-mode-toggle {
+    flex: 0 0 29px;
+    width: 29px;
+    height: 29px;
+    min-height: 29px;
+    padding: 0;
+    line-height: 1;
+    border: 1px solid var(--aa-border);
+    background: var(--aa-surface);
+}
+.aa-character .aa-age-controls > .aa-age-mode-toggle[aria-pressed="true"] {
+    border-color: var(--aa-accent);
+    background: rgba(217, 188, 145, .15);
+}
+.aa-age-mode-toggle[aria-pressed="false"] > span {
+    filter: grayscale(1);
+    opacity: .6;
 }
 .aa-header-physical {
     display: grid;
@@ -1891,7 +1921,6 @@ body.detached > .aa-detached-sheet .window-content {
     .aa-character-header { grid-template-columns: minmax(130px, 170px) minmax(0, 1fr); }
     .aa-header-fields { gap: 7px; }
     .aa-header-physical { grid-template-columns: minmax(0, 1fr); }
-    .aa-age-controls { grid-template-columns: minmax(0, 1fr); }
     .aa-information-layout { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 580px) {
