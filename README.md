@@ -80,7 +80,7 @@ masqué dans le répertoire Acteurs, fournit les jetons natifs ciblables avec **
 Le MJ peut ajouter des objets depuis cette fiche ou y glisser des Items du
 répertoire/compendium. Utiliser **Transférer…** pour les objets d’un personnage.
 
-L’image par défaut est `assets/Arcane Advent/Entités/Objets/item.png`, réglable
+L’image par défaut est `assets/arcane-advent/entities/objects/item-stash.png`, réglable
 dans **Image des dépôts au sol**. Chaque stockage peut ensuite recevoir sa propre
 image ; sa modification se répercute sur ses jetons. Les options de chaque objet,
 contenant ou équipement proposent aussi **Image du jeton au sol** : elle est utilisée

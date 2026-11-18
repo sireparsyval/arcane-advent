@@ -8,7 +8,7 @@ import { INVENTORY_TYPES } from "./module/inventory.mjs";
 import { StorageData, StorageItemData } from "./module/data/storage-data.mjs";
 import { ArcaneStorageSheet, ArcaneStorageItemSheet } from "./module/applications/actor/storage-sheet.mjs";
 import { registerStorageService } from "./module/storage.mjs";
-import { migrateStorageActors } from "./module/storage-migration.mjs";
+import { migrateStorageActors, migrateStorageImages } from "./module/storage-migration.mjs";
 import { registerStorageDirectory, StorageDirectory } from "./module/applications/storage-directory.mjs";
 
 import { SkillData } from "./module/data/skill-data.mjs";
@@ -122,4 +122,5 @@ Hooks.once("init", () => {
 Hooks.once("ready", async () => {
     console.log("Arcane Advent | Ready");
     await migrateStorageActors();
+    await migrateStorageImages();
 });

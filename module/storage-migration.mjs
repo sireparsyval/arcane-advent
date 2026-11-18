@@ -1,8 +1,74 @@
-import { isGroundTemplate, storageTokenModel } from "./storage.mjs";
+import { isGroundTemplate, storageTokenModel, STORAGE_IMAGE } from "./storage.mjs";
 import { inventorySource } from "./inventory-source.mjs";
 
 const SCOPE = "arcane-advent";
 const MIGRATION = "storage-migration";
+const OLD_STORAGE_IMAGE = "assets/Arcane Advent/Entités/Objets/item.png";
+
+function usesOldStorageImage(path) {
+    if (typeof path !== "string") return false;
+    try { path = decodeURIComponent(path); } catch { /* Keep malformed paths unchanged. */ }
+    return path === OLD_STORAGE_IMAGE;
+}
+
+function storageImageChanges(document) {
+    const changes = {};
+    if (usesOldStorageImage(document.img)) changes.img = STORAGE_IMAGE;
+    if (usesOldStorageImage(document.prototypeToken?.texture?.src)) changes["prototypeToken.texture.src"] = STORAGE_IMAGE;
+    if (usesOldStorageImage(document.system?.groundTokenImage)) changes["system.groundTokenImage"] = STORAGE_IMAGE;
+    if (document.type === "storage" && Array.isArray(document.system.contents)) {
+        const contents = inventorySource(document.system.contents);
+        let changed = false;
+        for (const source of contents) {
+            if (usesOldStorageImage(source.img)) { source.img = STORAGE_IMAGE; changed = true; }
+            if (usesOldStorageImage(source.system?.groundTokenImage)) {
+                source.system.groundTokenImage = STORAGE_IMAGE;
+                changed = true;
+            }
+        }
+        if (changed) changes["system.contents"] = contents;
+    }
+    return changes;
+}
+
+// Old world settings and saved documents do not follow a changed default.
+// Rewrite only references to the renamed asset, keeping custom artwork intact.
+export async function migrateStorageImages() {
+    if (!game.users.activeGM?.isSelf) return;
+    if (usesOldStorageImage(game.settings.get(SCOPE, "storageImage"))) {
+        await game.settings.set(SCOPE, "storageImage", STORAGE_IMAGE);
+    }
+    const migrateContents = async actor => {
+        if (actor.getFlag(SCOPE, "inventoryBusy")) return;
+        const updates = [...actor.items].flatMap(item => {
+            const changes = storageImageChanges(item);
+            return Object.keys(changes).length ? [{ _id: item.id, ...changes }] : [];
+        });
+        if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
+    };
+    for (const actor of game.actors) {
+        if (actor.getFlag(SCOPE, "inventoryBusy")) continue;
+        const changes = storageImageChanges(actor);
+        if (Object.keys(changes).length) await actor.update(changes);
+        await migrateContents(actor);
+    }
+    for (const item of game.items) {
+        if (item.getFlag(SCOPE, "inventoryBusy")) continue;
+        const changes = storageImageChanges(item);
+        if (Object.keys(changes).length) await item.update(changes);
+    }
+    for (const scene of game.scenes) {
+        const updates = [];
+        for (const token of scene.tokens) {
+            const changes = {};
+            if (usesOldStorageImage(token.texture.src)) changes["texture.src"] = STORAGE_IMAGE;
+            if (usesOldStorageImage(token.delta?.img)) changes["delta.img"] = STORAGE_IMAGE;
+            if (Object.keys(changes).length) updates.push({ _id: token.id, ...changes });
+            if (!token.actorLink && token.actor) await migrateContents(token.actor);
+        }
+        if (updates.length) await scene.updateEmbeddedDocuments("Token", updates);
+    }
+}
 
 // Copy first, repoint every token, then remove the old Actor. Origin markers
 // allow a failed conversion to resume without creating duplicate inventories.

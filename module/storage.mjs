@@ -1,7 +1,7 @@
 import { executeTransfer, transferPlan } from "./inventory-transfer.mjs";
 import { inventoryForDocument, inventoryForToken, StorageInventory } from "./storage-inventory.mjs";
 
-export const STORAGE_IMAGE = "assets/Arcane Advent/Entités/Objets/item.png";
+export const STORAGE_IMAGE = "assets/arcane-advent/entities/objects/item-stash.png";
 export const STORAGE_QUERY = "arcane-advent.inventory";
 export const inventoryActor = actor => ["character", "npc", "storage"].includes(actor?.type);
 export const isGroundTemplate = actor => actor?.type === "storage" && !actor.isToken
