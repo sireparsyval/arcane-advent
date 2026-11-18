@@ -5,6 +5,10 @@ import { ProtectionData } from "./module/data/protection-data.mjs";
 import { AccessoryData } from "./module/data/accessory-data.mjs";
 import { ObjectData, ContainerData, PurseData } from "./module/data/inventory-data.mjs";
 import { INVENTORY_TYPES } from "./module/inventory.mjs";
+import { StorageData } from "./module/data/storage-data.mjs";
+import { ArcaneStorageSheet } from "./module/applications/actor/storage-sheet.mjs";
+import { registerStorageService } from "./module/storage.mjs";
+import { registerStorageDirectory, StorageDirectory } from "./module/applications/storage-directory.mjs";
 
 import { SkillData } from "./module/data/skill-data.mjs";
 import { ExpertiseData } from "./module/data/expertise-data.mjs";
@@ -28,6 +32,9 @@ Hooks.once("init", () => {
     console.log("Arcane Advent | Initialisation");
 
     game.arcaneAdvent = { runShortcut: runArcaneShortcut };
+    game.arcaneAdvent.openStorages = () => new StorageDirectory().render({ force: true });
+    registerStorageService();
+    registerStorageDirectory();
     registerArcaneHotbar();
     registerArcaneText();
     registerGlyphCatalog();
@@ -37,6 +44,7 @@ Hooks.once("init", () => {
 
     CONFIG.Actor.dataModels.character = PlayerCharacterData;
     CONFIG.Actor.dataModels.npc = CharacterData;
+    CONFIG.Actor.dataModels.storage = StorageData;
 
     CONFIG.Item.dataModels.weapon = WeaponData;
     CONFIG.Item.dataModels.shield = ShieldData;
@@ -95,6 +103,9 @@ Hooks.once("init", () => {
             label: "Arcane Advent — Inventaire"
         }
     );
+    DocumentSheetConfig.registerSheet(foundry.documents.Actor, "arcane-advent", ArcaneStorageSheet, {
+        types: ["storage"], makeDefault: true, label: "Arcane Advent — Stockage"
+    });
     DocumentSheetConfig.registerSheet(foundry.documents.Item, "arcane-advent", GlyphSheet, {
         types: ["glyph"], makeDefault: true, label: "Arcane Advent — Référence de glyphe"
     });

@@ -1,5 +1,53 @@
 # arcane-advent
 
+## Objets au sol et stockages
+
+Après une mise à jour du système, redémarrer le monde pour charger le nouveau
+type d’acteur **Stockage**.
+
+Dans l’onglet **Équipement**, les boutons **Transférer…** et **Déposer au sol…**
+ouvrent la sélection des objets, équipements et quantités à déplacer.
+Sélectionner un contenant emporte tout son contenu, y compris ses sous-contenants.
+Les équipements transférés arrivent non équipés. Les bourses gardent leurs Luqa.
+
+Pour donner ou récupérer des objets, cibler **un seul jeton destinataire** sur la
+scène, ouvrir l’inventaire source et cliquer sur **Transférer…**. Le destinataire
+peut être un personnage, un PNJ ou un stockage. Un MJ doit être connecté pour
+traiter les échanges ; les joueurs n’ont pas besoin de modifier les permissions
+du personnage destinataire. Ils ne peuvent donner que les objets de leurs propres
+personnages, ou prendre ceux d’un stockage ouvert accessible sur leur scène.
+
+**Déposer au sol…** crée un sac à côté du jeton de l’inventaire source. Les objets
+quittent cet inventaire et restent disponibles dans le sac. Double-cliquer sur
+le sac ouvre son inventaire. Pour récupérer son contenu, cibler son personnage
+puis transférer depuis le sac. Un sac vide reste en place jusqu’à sa suppression
+par le MJ. Supprimer un jeton ne supprime pas l’inventaire conservé dans le monde.
+
+Le bouton **Stockages** du répertoire des acteurs et le menu **Stockages** dans
+les paramètres du système regroupent les stockages accessibles. Le MJ peut en
+créer, les placer sur la scène, les renommer, changer leur image et verrouiller
+les échanges des joueurs. Les stockages reposent sur des acteurs dédiés et
+leurs jetons sont liés : placer plusieurs jetons du même stockage donne plusieurs
+accès au même contenu. Créer un nouveau stockage pour un coffre indépendant.
+Le MJ peut ajouter des objets depuis cette fiche ou y glisser des Items du
+répertoire/compendium. Utiliser **Transférer…** pour les objets d’un personnage.
+
+L’image par défaut est `assets/Arcane Advent/Entités/Objets/item.png`, réglable
+dans **Image des dépôts au sol**. Chaque stockage peut ensuite recevoir sa propre
+image ; sa modification se répercute sur ses jetons liés.
+
+Les transferts sont traités un à un par le MJ, avec remappage des identifiants
+de contenants, verrouillage temporaire et compensation des écritures échouées.
+Une coupure complète du MJ pendant l’écriture nécessite une vérification des
+deux inventaires avant de recommencer. Le menu Stockages permet au MJ de
+débloquer une opération interrompue après cette vérification.
+
+Validation automatisée : `node --test tests/*.test.mjs`.
+Pour vérifier dans Foundry : essayer un don entre deux comptes joueurs, une pile
+partielle, un contenant imbriqué avec une bourse, sa dépose puis sa récupération,
+un stockage verrouillé, un jeton non lié et deux récupérations simultanées du
+dernier objet. Vérifier les quantités et la charge des deux côtés.
+
 ## Mode PNJ compact
 
 Les nouveaux acteurs de type **PNJ** sont créés directement en mode compact.

@@ -37,7 +37,8 @@
     "documentTypes": {
         "Actor": {
             "character": {},
-            "npc": {}
+            "npc": {},
+            "storage": {}
         },
 
         "Item": {

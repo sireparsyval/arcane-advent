@@ -2,6 +2,7 @@ import { buildInventory, canPlaceInContainer, EQUIPMENT_TYPES, isInventoryContai
 import { getEquipmentConflictType } from "./item.mjs";
 import { guardValues } from "../guard.mjs";
 import { expertiseMatches, matchingExpertiseBonus } from "../expertise.mjs";
+import { STORAGE_IMAGE } from "../storage.mjs";
 
 const SORT_SPACING = 100000;
 
@@ -27,6 +28,13 @@ export class ArcaneActor extends Actor {
         if (await super._preCreate(data, options, user) === false) return false;
         if (this.type === "npc" && this.getFlag("arcane-advent", "compactNPC") == null) {
             this.updateSource({ "flags.arcane-advent.compactNPC": true });
+        }
+        if (this.type === "storage") {
+            const img = data.img || game.settings.get("arcane-advent", "storageImage") || STORAGE_IMAGE;
+            this.updateSource({ img,
+                "ownership.default": data.ownership?.default ?? CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER,
+                "prototypeToken.actorLink": true, "prototypeToken.texture.src": img,
+                "prototypeToken.bar1.attribute": null, "prototypeToken.bar2.attribute": null });
         }
     }
 

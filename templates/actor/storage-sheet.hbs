@@ -1,0 +1,43 @@
+<div class="aa-storage-body">
+    <header class="aa-storage-header">
+        <img src="{{actor.img}}" alt="{{actor.name}}">
+        <div>
+            {{#if isGM}}
+                <label>Nom <input data-storage-field="name" value="{{actor.name}}"></label>
+                <label>Image <input data-storage-field="img" value="{{actor.img}}"></label>
+                <label><input type="checkbox" data-storage-field="system.locked" {{checked locked}}> Verrouiller les échanges des joueurs</label>
+            {{else}}
+                <h2>{{actor.name}}</h2>
+                {{#if locked}}<p>Stockage verrouillé.</p>{{/if}}
+            {{/if}}
+        </div>
+    </header>
+    <div class="aa-storage-toolbar">
+        {{#if canTransfer}}
+            <button type="button" data-action="transfer"><i class="fa-solid fa-right-left"></i> Transférer…</button>
+            <button type="button" data-action="dropGround"><i class="fa-solid fa-sack"></i> Déposer au sol…</button>
+        {{/if}}
+        {{#if isGM}}<button type="button" data-action="place">Placer sur la scène</button>{{/if}}
+    </div>
+    <p>Ciblez un personnage ou un stockage sur la scène, puis cliquez sur « Transférer ».</p>
+    <div class="aa-storage-items">
+        {{#each rows}}
+            <div class="aa-storage-row" style="--aa-inventory-depth: {{depth}}">
+                <span>{{#if container}}📦 {{/if}}{{name}}</span>
+                <span>× {{quantity}}</span><span>{{weight}} kg</span>
+                {{#if @root.isGM}}
+                    <button type="button" data-action="moveItem" data-item-id="{{id}}" title="Déplacer vers un contenant" aria-label="Déplacer {{name}}">↪</button>
+                    <button type="button" data-action="editItem" data-item-id="{{id}}" title="Modifier {{name}}" aria-label="Modifier {{name}}">⚙</button>
+                {{/if}}
+            </div>
+        {{else}}<p>Ce stockage est vide.</p>{{/each}}
+    </div>
+    <footer class="aa-storage-toolbar">
+        <strong>Total · {{totalWeight}} kg</strong>
+        {{#if isGM}}
+            <button type="button" data-action="addItem" data-type="object">+ Objet</button>
+            <button type="button" data-action="addItem" data-type="container">+ Contenant</button>
+            <button type="button" data-action="addItem" data-type="purse">+ Bourse</button>
+        {{/if}}
+    </footer>
+</div>

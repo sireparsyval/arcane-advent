@@ -995,6 +995,29 @@ body.detached > .aa-detached-sheet .window-content {
     border-bottom: 1px solid var(--aa-border);
 }
 
+.aa-storage-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-block: 8px; }
+.aa-storage-toolbar > button { width: auto; flex: 0 1 auto; }
+.aa-storage-toolbar > strong { margin-inline-end: auto; }
+.aa-storage-body { --aa-border: rgba(220, 200, 175, 0.22); --aa-accent: #d9bc91;
+    display: flex; flex-direction: column; gap: 10px; min-height: 0; height: 100%; }
+.aa-storage-header { display: flex; align-items: center; gap: 14px; }
+.aa-storage-header > img { width: 100px; height: 100px; object-fit: contain; border: 0; }
+.aa-storage-header > div { flex: 1; min-width: 0; display: grid; gap: 8px; }
+.aa-storage-header label { display: flex; align-items: center; gap: 8px; }
+.aa-storage-header input:not([type="checkbox"]) { flex: 1; min-width: 0; }
+.aa-storage-items, .aa-storage-list { flex: 1; min-height: 80px; overflow-y: auto; }
+.aa-storage-row { display: flex; align-items: center; gap: 10px; padding: 6px;
+    margin-inline-start: min(calc(var(--aa-inventory-depth) * 16px), 30%); border-bottom: 1px solid var(--aa-border); }
+.aa-storage-row > span:first-child { flex: 1; overflow-wrap: anywhere; }
+.aa-storage-row > button, .aa-storage-directory-row > button { width: auto; flex: 0 0 auto; }
+.aa-storage-directory-row { display: flex; align-items: center; gap: 8px; padding: 8px; border-bottom: 1px solid var(--aa-border); }
+.aa-storage-directory-row > img { width: 42px; height: 42px; object-fit: contain; border: 0; }
+.aa-storage-directory-row > span { flex: 1; overflow-wrap: anywhere; }
+.aa-transfer-choices { max-height: 45vh; overflow-y: auto; margin-top: 8px; }
+.aa-transfer-choice { display: flex; align-items: center; gap: 8px; padding: 6px; border-bottom: 1px solid var(--color-border-light-primary); }
+.aa-transfer-choice > label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.aa-transfer-choice > input[type="number"] { width: 75px; flex: 0 0 75px; }
+
 .aa-inventory-heading h3 {
     flex: 1 0 auto;
     margin: 0;

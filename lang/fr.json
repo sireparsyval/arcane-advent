@@ -2,7 +2,8 @@
     "TYPES": {
         "Actor": {
             "character": "Personnage",
-            "npc": "PNJ"
+            "npc": "PNJ",
+            "storage": "Stockage"
         },
         "Item": {
             "alteration": "Altération d’état",

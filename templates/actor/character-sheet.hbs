@@ -1446,6 +1446,12 @@
                         {{/if}}
                     </header>
 
+                    {{#if canEditState}}
+                        <div class="aa-storage-toolbar">
+                            <button type="button" data-action="transferInventory" title="Cibler le destinataire sur la scène avant de transférer">⇄ Transférer…</button>
+                            <button type="button" data-action="dropInventoryGround">↓ Déposer au sol…</button>
+                        </div>
+                    {{/if}}
                     {{#if inventory.rows.length}}
                         <ul class="aa-inventory-tree" aria-label="Objets et contenants">
                             {{#each inventory.rows}}

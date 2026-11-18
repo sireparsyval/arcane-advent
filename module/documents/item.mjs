@@ -3,6 +3,17 @@ import { canPlaceInContainer, EQUIPMENT_TYPES, isInventoryContainer, isInventory
 // Autorisation locale et temporaire pour une suppression initiée depuis les options du Trait.
 const authorizedLinkedDeletes = new WeakMap();
 
+const inventoryOwner = actor => ["character", "npc", "storage"].includes(actor?.type);
+function inventoryUnlocked(documents, operation, user) {
+    const actor = operation.parent ?? documents[0]?.actor;
+    if (documents.some(isInventoryItem) && actor?.getFlag("arcane-advent", "inventoryBusy")
+        && !(operation.aaTransfer && user?.isGM)) {
+        ui.notifications.warn("Un transfert est en cours sur cet inventaire.");
+        return false;
+    }
+    return true;
+}
+
 export async function removeLinkedAptitudeFromTrait(actor, traitId, aptitudeId) {
     const trait = actor?.items.get(traitId);
     const aptitude = actor?.items.get(aptitudeId);
@@ -49,6 +60,8 @@ export class ArcaneItem extends Item {
         if (!EQUIPMENT_TYPES.includes(this.type) || !changes.system) return;
         const system = changes.system;
 
+        if (this.actor?.type === "storage") system.equipped = false;
+
         if (system.containerId) system.equipped = false;
         else if (system.equipped === true) system.containerId = null;
 
@@ -59,11 +72,12 @@ export class ArcaneItem extends Item {
     }
 
     static async _preUpdateOperation(documents, operation, user) {
+        if (!inventoryUnlocked(documents, operation, user)) return false;
         if (await super._preUpdateOperation(documents, operation, user) === false) return false;
         if (!documents.some(isInventoryItem)) return;
         const changes = new Map(operation.updates.map(update => [update._id, update]));
         const actor = operation.parent ?? documents[0]?.actor;
-        const inventory = actor?.type === "character" ? actor.items : documents;
+        const inventory = inventoryOwner(actor) ? actor.items : documents;
         const projected = new Map();
 
         for (const item of inventory) {
@@ -74,14 +88,14 @@ export class ArcaneItem extends Item {
             const item = projected.get(id);
             if (!item || !Object.hasOwn(update.system ?? {}, "containerId")) continue;
             const destination = item.system.containerId;
-            if (destination && (actor?.type !== "character"
+            if (destination && (!inventoryOwner(actor)
                 || !canPlaceInContainer(projected, id, destination))) {
                 ui.notifications.warn("Ce déplacement créerait un cycle ou viserait un contenant invalide.");
                 return false;
             }
         }
 
-        if (actor?.type !== "character") return;
+        if (!inventoryOwner(actor)) return;
         const changedLoadout = [...changes].some(([id, update]) => {
             const item = projected.get(id);
             return item?.system.equipped && getEquipmentConflictType(item.type, item.system.properties)
@@ -98,11 +112,12 @@ export class ArcaneItem extends Item {
     }
 
     static async _preCreateOperation(documents, operation, user) {
+        if (!inventoryUnlocked(documents, operation, user)) return false;
         if (await super._preCreateOperation(documents, operation, user) === false) return false;
         const pending = documents.filter(isInventoryItem);
         if (!pending.length) return;
         const actor = operation.parent ?? documents[0]?.actor;
-        const embedded = actor?.type === "character" ? [...actor.items] : [];
+        const embedded = inventoryOwner(actor) ? [...actor.items] : [];
         const existing = new Set(embedded.map(item => item.id));
         const inventory = operation.keepId
             ? [...embedded, ...pending.filter(item => item.id && !existing.has(item.id))]
@@ -115,7 +130,8 @@ export class ArcaneItem extends Item {
         for (const item of pending) {
             const { containerId, properties } = item.system;
             const changes = {};
-            if (containerId && (actor?.type !== "character"
+            if (actor?.type === "storage" && EQUIPMENT_TYPES.includes(item.type)) changes["system.equipped"] = false;
+            if (containerId && (!inventoryOwner(actor)
                 || !canPlaceInContainer(inventory, item.id, containerId))) {
                 // Copies may still reference a container in their source Actor.
                 changes["system.containerId"] = null;
@@ -123,7 +139,7 @@ export class ArcaneItem extends Item {
             if (EQUIPMENT_TYPES.includes(item.type) && item.system.equipped) {
                 const conflictType = getEquipmentConflictType(item.type, properties);
                 if ((containerId && !Object.hasOwn(changes, "system.containerId"))
-                    || (actor?.type === "character" && conflictType && blockedTypes.has(item.type))) {
+                    || (inventoryOwner(actor) && conflictType && blockedTypes.has(item.type))) {
                     changes["system.equipped"] = false;
                 } else if (conflictType) {
                     blockedTypes.add(conflictType);
@@ -134,6 +150,7 @@ export class ArcaneItem extends Item {
     }
 
     static async _preDeleteOperation(documents, operation, user) {
+        if (!inventoryUnlocked(documents, operation, user)) return false;
         if (await super._preDeleteOperation(documents, operation, user) === false) return false;
         const actor = operation.parent ?? documents[0]?.actor;
         if (actor?.type === "character") {
@@ -161,7 +178,7 @@ export class ArcaneItem extends Item {
                 }
             }
         }
-        if (actor?.type !== "character" || !documents.some(item => isInventoryContainer(item) || item.type === "purse")) return;
+        if (!inventoryOwner(actor) || !documents.some(item => isInventoryContainer(item) || item.type === "purse")) return;
 
         const deleted = new Set(documents.map(item => item.id));
         const remaining = new Map();

@@ -1,4 +1,5 @@
 import { ARCANE_ALIGNMENTS, ARCANE_NEEDS } from "../../config.mjs";
+import { inventoryActionDialog } from "../inventory-transfer.mjs";
 import { VOLUME_LABELS, ENCUMBRANCE_STAGES } from "../../encumbrance.mjs";
 import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedModifier } from "../../modifiers.mjs";
 import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
@@ -218,6 +219,8 @@ export class ArcaneCharacterSheet
             addEquipment: this._onAddEquipment,
             toggleEquipment: this._onToggleEquipment,
             addInventoryItem: this._onAddInventoryItem,
+            transferInventory: function () { if (this.isEditable) return inventoryActionDialog(this.actor, "transfer"); },
+            dropInventoryGround: function () { if (this.isEditable) return inventoryActionDialog(this.actor, "drop"); },
             editInventoryItem: this._onEditInventoryItem,
             moveInventoryItem: this._onMoveInventoryItem,
             moveInventoryItemToRoot: this._onMoveInventoryItemToRoot,

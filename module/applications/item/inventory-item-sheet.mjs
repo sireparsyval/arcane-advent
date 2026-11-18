@@ -111,7 +111,7 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
 
     async _processSubmitData(event, form, data, options) {
         const { actor, id } = this.document;
-        if (actor?.type !== "character") return super._processSubmitData(event, form, data, options);
+        if (!["character", "npc", "storage"].includes(actor?.type)) return super._processSubmitData(event, form, data, options);
         const updated = await actor.updateInventoryItem(id, data);
         return updated ? { updated } : {};
     }
@@ -132,7 +132,7 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
     static async #onDelete() {
         if (!this.isEditable) return;
         const item = this.document;
-        const onCharacter = item.actor?.type === "character";
+        const onCharacter = ["character", "npc", "storage"].includes(item.actor?.type);
         const name = foundry.utils.escapeHTML(item.name);
         const contents = isInventoryContainer(item) && onCharacter
             ? "<p>Les objets contenus seront déplacés vers le contenant parent ou à la racine de l’inventaire.</p>"
