@@ -30,3 +30,20 @@ test("the storage directory refreshes on scene changes, cleans hooks on close an
     assert.equal(callbacks.size, count);
     await app._onClose({});
 });
+
+test("the directory separates storage Items and legacy deposits without listing the technical Actor", async () => {
+    const stored = (uuid, ground, flags = {}, isToken = false) => ({
+        uuid, type: "storage", name: uuid, system: { ground }, isToken,
+        getFlag: (_scope, key) => flags[key]
+    });
+    const permanent = stored("Actor.chest", false), legacy = stored("Actor.old-ground", true);
+    const template = stored("Actor.model", true, { groundTemplate: true });
+    const copy = { ...stored("Item.ground", true, { inventoryBusy: "interrupted" }), documentName: "Item" };
+    const chest = { ...stored("Item.chest", false), documentName: "Item" };
+    globalThis.game = { user: { isGM: true, viewedScene: "current" }, actors: [permanent, legacy, template],
+        items: [chest, copy], scenes: new Map() };
+    const context = await new StorageDirectory()._prepareContext({});
+    assert.deepEqual(context.actors.map(entry => entry.uuid), [chest.uuid, permanent.uuid]);
+    assert.deepEqual(context.groundDeposits.map(entry => entry.uuid), [copy.uuid, legacy.uuid]);
+    assert.deepEqual(context.interrupted.map(entry => entry.uuid), [copy.uuid]);
+});

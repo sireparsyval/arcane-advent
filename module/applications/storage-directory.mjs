@@ -1,4 +1,5 @@
-import { createStorage, placeStorage, storageAccess } from "../storage.mjs";
+import { createStorage, placeStorage, storageAccess, isGroundTemplate, isGroundDeposit } from "../storage.mjs";
+import { inventoryForDocument } from "../storage-inventory.mjs";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 export class StorageDirectory extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -11,9 +12,12 @@ export class StorageDirectory extends HandlebarsApplicationMixin(ApplicationV2) 
                 try { const actor = await createStorage({ name: "Nouveau stockage" }); actor.sheet.render({ force: true }); }
                 catch (error) { ui.notifications.error(error.message); }
             },
-            open: function (_event, target) { game.actors.get(target.dataset.actorId)?.sheet.render({ force: true }); },
+            open: async function (_event, target) {
+                const actor = await fromUuid(target.dataset.actorUuid);
+                actor?.sheet.render({ force: true });
+            },
             place: async function (_event, target) {
-                try { await placeStorage(game.actors.get(target.dataset.actorId)); }
+                try { await placeStorage(await fromUuid(target.dataset.actorUuid)); }
                 catch (error) { ui.notifications.error(error.message); }
             },
             unlockOperation: async function (_event, target) {
@@ -21,7 +25,7 @@ export class StorageDirectory extends HandlebarsApplicationMixin(ApplicationV2) 
                 const confirmed = await foundry.applications.api.DialogV2.confirm({
                     window: { title: "Débloquer un inventaire" },
                     content: "<p>À utiliser uniquement après une interruption de connexion, après avoir vérifié les deux inventaires concernés. Débloquer ?</p>", rejectClose: false });
-                if (confirmed) await game.actors.get(target.dataset.actorId)?.unsetFlag("arcane-advent", "inventoryBusy");
+                if (confirmed) await (await fromUuid(target.dataset.actorUuid))?.unsetFlag("arcane-advent", "inventoryBusy");
             }
         }
     };
@@ -30,15 +34,20 @@ export class StorageDirectory extends HandlebarsApplicationMixin(ApplicationV2) 
     async _onRender(context, options) {
         await super._onRender(context, options);
         if (this._hooks.length) return;
-        for (const name of ["createActor", "updateActor", "deleteActor", "createToken", "deleteToken", "updateToken", "canvasReady"]) {
+        for (const name of ["createActor", "updateActor", "deleteActor", "createItem", "updateItem", "deleteItem", "createToken", "deleteToken", "updateToken", "canvasReady"]) {
             this._hooks.push([name, Hooks.on(name, () => this.render({ force: false }))]);
         }
     }
     async _prepareContext(options) {
+        const actors = game.items.filter(item => item.type === "storage").map(inventoryForDocument)
+            .concat(game.actors.filter(actor => actor.type === "storage" && !isGroundTemplate(actor)));
+        const visible = actors.filter(actor => storageAccess(actor) || game.user.isGM);
+        const entry = actor => ({ uuid: actor.uuid, name: actor.name, img: actor.img, locked: actor.system.locked });
         return { ...await super._prepareContext(options), isGM: game.user.isGM,
-            actors: game.actors.filter(actor => actor.type === "storage" && (storageAccess(actor) || game.user.isGM))
-                .map(actor => ({ id: actor.id, name: actor.name, img: actor.img, locked: actor.system.locked })),
-            interrupted: game.user.isGM ? game.actors.filter(actor => actor.getFlag("arcane-advent", "inventoryBusy")) : [] };
+            actors: visible.filter(actor => !isGroundDeposit(actor)).map(entry),
+            groundDeposits: visible.filter(isGroundDeposit).map(entry),
+            interrupted: game.user.isGM ? [...actors, ...game.actors.filter(actor => actor.type !== "storage")]
+                .filter(actor => actor.getFlag("arcane-advent", "inventoryBusy")).map(entry) : [] };
     }
     async _onClose(options) {
         for (const [name, id] of this._hooks ?? []) Hooks.off(name, id);
@@ -50,7 +59,7 @@ export class StorageDirectory extends HandlebarsApplicationMixin(ApplicationV2) 
 export function registerStorageDirectory() {
     game.settings.registerMenu("arcane-advent", "storages", { name: "Stockages", label: "Ouvrir les stockages",
         hint: "Sacs au sol, coffres et inventaires partagés.", icon: "fa-solid fa-box-open", type: StorageDirectory, restricted: false });
-    Hooks.on("renderActorDirectory", (_app, html) => {
+    Hooks.on("renderItemDirectory", (_app, html) => {
         const root = html instanceof HTMLElement ? html : html[0];
         const footer = root?.querySelector(".directory-footer");
         if (!footer || footer.querySelector(".aa-open-storages")) return;
@@ -60,5 +69,25 @@ export function registerStorageDirectory() {
         button.textContent = "Stockages";
         button.addEventListener("click", () => new StorageDirectory().render({ force: true }));
         footer.append(button);
+    });
+    Hooks.on("renderActorDirectory", (_app, html) => {
+        const root = html instanceof HTMLElement ? html : html[0];
+        for (const row of root?.querySelectorAll("[data-document-id]") ?? []) {
+            if (isGroundTemplate(game.actors.get(row.dataset.documentId))) row.remove();
+        }
+    });
+    Hooks.on("dropCanvasData", (_canvas, data) => {
+        if (data.type !== "Item" || !game.user.isGM) return;
+        const item = fromUuidSync(data.uuid);
+        if (item?.type !== "storage" || item.pack || item.actor) return;
+        placeStorage(item, canvas.scene, { x: data.x, y: data.y }).catch(error => ui.notifications.error(error.message));
+        return false;
+    });
+    Hooks.on("deleteItem", item => {
+        if (item.type !== "storage" || !game.users.activeGM?.isSelf) return;
+        for (const scene of game.scenes) {
+            const ids = scene.tokens.filter(token => token.getFlag("arcane-advent", "storageItemId") === item.id).map(token => token.id);
+            if (ids.length) scene.deleteEmbeddedDocuments("Token", ids).catch(error => ui.notifications.error(error.message));
+        }
     });
 }

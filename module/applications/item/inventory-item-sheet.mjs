@@ -1,5 +1,6 @@
 import { isInventoryContainer, luqaCounters } from "../../inventory.mjs";
 import { WEAPON_PROPERTIES } from "../../expertise.mjs";
+import { storageInventoryOwner } from "../../storage-inventory.mjs";
 
 const { DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -66,6 +67,18 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
         }
     };
 
+    _initializeApplicationOptions(options) {
+        const prepared = super._initializeApplicationOptions(options);
+        const storage = storageInventoryOwner(prepared.document);
+        if (storage) prepared.uniqueId = `${this.constructor.name}-${storage.id}-${prepared.document.id}`;
+        return prepared;
+    }
+
+    _getFrameButtons(options) {
+        const buttons = super._getFrameButtons(options);
+        return storageInventoryOwner(this.document) ? buttons.filter(button => button.action !== "copyUuid") : buttons;
+    }
+
     async _prepareContext(options) {
         const context = await super._prepareContext(options);
         const { type, system } = this.document;
@@ -110,7 +123,8 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
     }
 
     async _processSubmitData(event, form, data, options) {
-        const { actor, id } = this.document;
+        const { id } = this.document;
+        const actor = this.document.actor ?? storageInventoryOwner(this.document);
         if (!["character", "npc", "storage"].includes(actor?.type)) return super._processSubmitData(event, form, data, options);
         const updated = await actor.updateInventoryItem(id, data);
         return updated ? { updated } : {};
@@ -132,7 +146,8 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
     static async #onDelete() {
         if (!this.isEditable) return;
         const item = this.document;
-        const onCharacter = ["character", "npc", "storage"].includes(item.actor?.type);
+        const owner = item.actor ?? storageInventoryOwner(item);
+        const onCharacter = ["character", "npc", "storage"].includes(owner?.type);
         const name = foundry.utils.escapeHTML(item.name);
         const contents = isInventoryContainer(item) && onCharacter
             ? "<p>Les objets contenus seront déplacés vers le contenant parent ou à la racine de l’inventaire.</p>"
@@ -152,7 +167,7 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
 
         try {
             const deleted = onCharacter
-                ? await item.actor.deleteInventoryItem(item.id)
+                ? await owner.deleteInventoryItem(item.id)
                 : await item.delete();
             if (deleted && this.rendered) await this.close();
         } catch (error) {

@@ -5,9 +5,10 @@ import { ProtectionData } from "./module/data/protection-data.mjs";
 import { AccessoryData } from "./module/data/accessory-data.mjs";
 import { ObjectData, ContainerData, PurseData } from "./module/data/inventory-data.mjs";
 import { INVENTORY_TYPES } from "./module/inventory.mjs";
-import { StorageData } from "./module/data/storage-data.mjs";
-import { ArcaneStorageSheet } from "./module/applications/actor/storage-sheet.mjs";
+import { StorageData, StorageItemData } from "./module/data/storage-data.mjs";
+import { ArcaneStorageSheet, ArcaneStorageItemSheet } from "./module/applications/actor/storage-sheet.mjs";
 import { registerStorageService } from "./module/storage.mjs";
+import { migrateStorageActors } from "./module/storage-migration.mjs";
 import { registerStorageDirectory, StorageDirectory } from "./module/applications/storage-directory.mjs";
 
 import { SkillData } from "./module/data/skill-data.mjs";
@@ -55,6 +56,7 @@ Hooks.once("init", () => {
     CONFIG.Item.dataModels.object = ObjectData;
     CONFIG.Item.dataModels.container = ContainerData;
     CONFIG.Item.dataModels.purse = PurseData;
+    CONFIG.Item.dataModels.storage = StorageItemData;
 
     CONFIG.Item.dataModels.skill = SkillData;
     CONFIG.Item.dataModels.expertise = ExpertiseData;
@@ -108,12 +110,16 @@ Hooks.once("init", () => {
     DocumentSheetConfig.registerSheet(foundry.documents.Actor, "arcane-advent", ArcaneStorageSheet, {
         types: ["storage"], makeDefault: true, label: "Arcane Advent — Stockage"
     });
+    DocumentSheetConfig.registerSheet(foundry.documents.Item, "arcane-advent", ArcaneStorageItemSheet, {
+        types: ["storage"], makeDefault: true, label: "Arcane Advent — Stockage"
+    });
     DocumentSheetConfig.registerSheet(foundry.documents.Item, "arcane-advent", GlyphSheet, {
         types: ["glyph"], makeDefault: true, label: "Arcane Advent — Référence de glyphe"
     });
 });
 
 
-Hooks.once("ready", () => {
+Hooks.once("ready", async () => {
     console.log("Arcane Advent | Ready");
+    await migrateStorageActors();
 });

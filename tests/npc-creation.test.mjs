@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 globalThis.Item = class {};
 globalThis.Actor = class {
+    static createDialog(...args) { return args; }
     constructor(data) { this._source = structuredClone(data); }
     get type() { return this._source.type; }
     getFlag(scope, key) { return this._source.flags?.[scope]?.[key]; }
@@ -17,6 +18,13 @@ globalThis.Actor = class {
     async _preCreate(...args) { this.parentArguments = args; return this.cancel ? false : undefined; }
 };
 const { ArcaneActor } = await import("../module/documents/actor.mjs");
+
+test("la création d’un acteur propose personnages et PNJ, les stockages sont créés dans Objets", () => {
+    const [data, createOptions, options] = ArcaneActor.createDialog({ name: "Test" }, { renderSheet: true }, { position: { width: 400 } });
+    assert.deepEqual(data, { name: "Test" });
+    assert.deepEqual(createOptions, { renderSheet: true });
+    assert.deepEqual(options, { position: { width: 400 }, types: ["character", "npc"] });
+});
 
 test("un nouveau PNJ reçoit le mode compact avant son premier enregistrement", async () => {
     const source = {

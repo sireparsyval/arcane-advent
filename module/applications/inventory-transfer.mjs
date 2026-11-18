@@ -1,5 +1,6 @@
 import { isInventoryItem, isInventoryContainer } from "../inventory.mjs";
-import { requestInventoryAction, storageAccess } from "../storage.mjs";
+import { requestInventoryAction, storageAccess, isGroundDeposit } from "../storage.mjs";
+import { inventoryForToken } from "../storage-inventory.mjs";
 
 // Shared by character inventories and storage sheets. DOM construction keeps
 // player-authored item names out of HTML strings.
@@ -10,11 +11,11 @@ export async function inventoryActionDialog(actor, action, initialId = null) {
         let targetToken, sourceToken;
         if (action === "transfer") {
             const targets = [...game.user.targets];
-            if (targets.length !== 1 || !targets[0].actor) throw new Error("Ciblez exactement un personnage ou un stockage sur la scène.");
+            if (targets.length !== 1 || !inventoryForToken(targets[0].document)) throw new Error("Ciblez exactement un personnage ou un stockage sur la scène.");
             targetToken = targets[0].document;
-            if (targetToken.actor.uuid === actor.uuid) throw new Error("Ciblez un autre inventaire.");
+            if (inventoryForToken(targetToken).uuid === actor.uuid) throw new Error("Ciblez un autre inventaire.");
         } else {
-            const tokens = canvas.tokens?.placeables.filter(token => token.actor?.uuid === actor.uuid) ?? [];
+            const tokens = canvas.tokens?.placeables.filter(token => inventoryForToken(token.document)?.uuid === actor.uuid) ?? [];
             sourceToken = actor.token?.parent?.id === canvas.scene?.id ? actor.token
                 : tokens.find(token => token.controlled)?.document ?? tokens[0]?.document;
             if (!sourceToken) throw new Error("Placez d’abord le personnage ou le stockage sur la scène active.");
@@ -30,6 +31,15 @@ export async function inventoryActionDialog(actor, action, initialId = null) {
         const note = document.createElement("p");
         note.textContent = "Un contenant sélectionné emporte tout son contenu. Les équipements reçus sont rangés dans l’inventaire.";
         picker.append(intro, note);
+        if (action === "transfer" && isGroundDeposit(actor)) {
+            const label = document.createElement("label");
+            label.className = "aa-transfer-cleanup";
+            const check = document.createElement("input");
+            check.type = "checkbox";
+            check.dataset.deleteEmptyGround = "";
+            label.append(check, " Supprimer le dépôt s’il est vide après le transfert");
+            picker.append(label);
+        }
         const items = [...actor.items].filter(isInventoryItem).sort((a,b) => (a.sort ?? 0) - (b.sort ?? 0));
         if (!items.length) throw new Error("Cet inventaire est vide.");
         const selectAll = document.createElement("button");
@@ -62,7 +72,7 @@ export async function inventoryActionDialog(actor, action, initialId = null) {
             }
             list.append(row);
         }
-        const selections = await foundry.applications.api.DialogV2.prompt({
+        const choice = await foundry.applications.api.DialogV2.prompt({
             window: { title: action === "transfer" ? "Transférer des objets" : "Déposer au sol" },
             position: { width: 600 }, content, rejectClose: false,
             render: (_event, dialog) => {
@@ -77,7 +87,7 @@ export async function inventoryActionDialog(actor, action, initialId = null) {
             ok: { label: action === "transfer" ? "Transférer" : "Déposer", callback: (_event, button) => {
                 const selected = [...button.form.querySelectorAll("[data-transfer-item]:checked")];
                 if (!selected.length) throw new Error("Sélectionnez au moins un objet.");
-                return selected.map(check => {
+                const selections = selected.map(check => {
                     const item = actor.items.get(check.dataset.transferItem);
                     if (!item) throw new Error("Un objet sélectionné n’est plus disponible.");
                     const amount = check.closest(".aa-transfer-choice").querySelector("[data-transfer-quantity]");
@@ -87,12 +97,14 @@ export async function inventoryActionDialog(actor, action, initialId = null) {
                     }
                     return { id: item.id, quantity };
                 });
+                return { selections, deleteEmptyGround: button.form.querySelector("[data-delete-empty-ground]")?.checked === true };
             } }
         });
-        if (!selections) return;
-        const result = await requestInventoryAction(actor, selections, { action,
+        if (!choice) return;
+        const result = await requestInventoryAction(actor, choice.selections, { action, deleteEmptyGround: choice.deleteEmptyGround,
             targetToken: targetToken?.uuid, sourceToken: sourceToken?.uuid });
         ui.notifications.info(`${result.count} objet(s) ${action === "transfer" ? "transféré(s)" : "déposé(s) au sol"}.`);
+        if (result.warning) ui.notifications.warn(result.warning);
     } catch (error) {
         ui.notifications.error(error.message);
     }

@@ -55,8 +55,26 @@ function projectInventoryItem(item, changes = {}) {
 
 export class ArcaneItem extends Item {
 
+    async _preCreate(data, operation, user) {
+        if (await super._preCreate(data, operation, user) === false) return false;
+        if (this.type !== "storage") return;
+        if (this.actor) {
+            ui.notifications.warn("Placez le stockage sur la scène depuis le répertoire Objets.");
+            return false;
+        }
+        this.updateSource({
+            img: data.img || game.settings.get("arcane-advent", "storageImage"),
+            "ownership.default": data.ownership?.default ?? CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER
+        });
+    }
+
     async _preUpdate(changes, operation, user) {
         if (await super._preUpdate(changes, operation, user) === false) return false;
+        if (this.type === "storage" && changes.system && Object.hasOwn(changes.system, "contents")
+            && this.getFlag("arcane-advent", "inventoryBusy") && !(operation.aaTransfer && user.isGM)) {
+            ui.notifications.warn("Un transfert est en cours sur cet inventaire.");
+            return false;
+        }
         if (!EQUIPMENT_TYPES.includes(this.type) || !changes.system) return;
         const system = changes.system;
 

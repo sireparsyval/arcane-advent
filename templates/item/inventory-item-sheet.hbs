@@ -29,6 +29,13 @@
     <fieldset {{#unless editable}}disabled{{/unless}}>
         <legend>Propriétés</legend>
         {{> aaInventoryItemField label="Nom" type="text" name="name" value=document.name required=true}}
+        <label class="form-group">
+            <span class="label">Image du jeton au sol</span>
+            <span class="form-fields">
+                <file-picker name="system.groundTokenImage" type="image" value="{{system.groundTokenImage}}"></file-picker>
+            </span>
+        </label>
+        <p class="hint">Utilisée si cet objet est déposé seul, avec son contenu éventuel. Laissez vide pour utiliser le sac par défaut.</p>
         {{#if isContainer}}
             <p class="hint">Poids propre du contenant&nbsp;: 0 kg. Le poids affiché dans l’inventaire correspond à son contenu.</p>
         {{else if isPurse}}

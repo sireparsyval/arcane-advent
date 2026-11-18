@@ -13,14 +13,14 @@ const source = { uuid: "Actor.pantin", type: "character", isOwner: true,
         ["bag", { id: "bag", name: "Sac", type: "container", system: {} }]
     ]) };
 const target = { uuid: "Actor.ziggy" };
-const token = { uuid: "Scene.scene.Token.pantin", parent: { id: "scene" } };
+const token = { uuid: "Scene.scene.Token.pantin", parent: { id: "scene" }, actor: source };
 globalThis.game = { user: { isGM: true, targets: new Set([{ actor: target,
     document: { name: "Ziggy", uuid: "Scene.scene.Token.ziggy", actor: target } }]) },
     users: { activeGM: { async query(_name, data) { requests.push(data); return { count: data.selections.length }; } } } };
 globalThis.canvas = { scene: { id: "scene" }, tokens: { placeables: [{ actor: source, document: token }] } };
 globalThis.ui = { notifications: { info() {}, error: error => errors.push(error) } };
 globalThis.foundry = { utils: { randomID: () => `request${++serial}` }, applications: {
-    sheets: { ActorSheetV2: class {} }, api: { HandlebarsApplicationMixin: base => base,
+    sheets: { ActorSheetV2: class {}, ItemSheetV2: class {} }, api: { HandlebarsApplicationMixin: base => base,
         DialogV2: { async prompt(config) {
             assert(config.content instanceof HTMLDivElement, "config.content must be a div");
             assert(config.content.attributes.length === 0, "config.content element must have no attributes");
@@ -108,6 +108,34 @@ await test("cancelling does not transfer objects", async () => {
     equal(requests.length, 0); equal(errors, []);
 });
 
+await test("ground pickup reads the rendered cleanup option without selecting extra items", async () => {
+    const ground = { ...source, type: "storage", system: { ground: true }, getFlag: () => false };
+    scenario = form => {
+        const cleanup = form.querySelector("[data-delete-empty-ground]");
+        assert(cleanup, "Ground transfer must offer empty-deposit cleanup");
+        equal(cleanup.checked, false);
+        cleanup.checked = true;
+        form.querySelector("[data-transfer-select-all]").click();
+    };
+    await inventoryActionDialog(ground, "transfer");
+    equal(errors, []);
+    equal(requests[0].deleteEmptyGround, true);
+    equal(requests[0].selections.length, 2);
+});
+
+await test("ground cleanup is opt-in and permanent storage does not offer it", async () => {
+    for (const ground of [true, false]) {
+        const storage = { ...source, type: "storage", system: { ground }, getFlag: () => false };
+        scenario = form => {
+            equal(Boolean(form.querySelector("[data-delete-empty-ground]")), ground);
+            form.querySelector('[data-transfer-item="object"]').checked = true;
+        };
+        await inventoryActionDialog(storage, "transfer");
+        equal(errors, []);
+        equal(requests.at(-1).deleteEmptyGround, false);
+    }
+});
+
 await test("storage move reads the rendered destination", async () => {
     const parent = { id: "parent", type: "container", name: "Sac", system: { containerId: null } };
     const child = { id: "child", type: "object", system: { containerId: "parent" } };
@@ -118,7 +146,7 @@ await test("storage move reads the rendered destination", async () => {
         equal(form.elements.destination.value, "parent");
         form.elements.destination.value = "";
     };
-    await ArcaneStorageSheet.DEFAULT_OPTIONS.actions.moveItem.call({ actor: storage }, null, { dataset: { itemId: "child" } });
+    await ArcaneStorageSheet.DEFAULT_OPTIONS.actions.moveItem.call({ inventoryHost: storage }, null, { dataset: { itemId: "child" } });
     equal(moves, [["child", null]]);
 });
 

@@ -24,6 +24,12 @@ export class ArcaneActor extends Actor {
 
     #inventoryOperation = Promise.resolve();
 
+    static createDialog(data = {}, createOptions = {}, options = {}) {
+        return super.createDialog(data, createOptions, {
+            ...options, types: (options.types ?? ["character", "npc"]).filter(type => type !== "storage")
+        });
+    }
+
     async _preCreate(data, options, user) {
         if (await super._preCreate(data, options, user) === false) return false;
         if (this.type === "npc" && this.getFlag("arcane-advent", "compactNPC") == null) {
@@ -33,7 +39,7 @@ export class ArcaneActor extends Actor {
             const img = data.img || game.settings.get("arcane-advent", "storageImage") || STORAGE_IMAGE;
             this.updateSource({ img,
                 "ownership.default": data.ownership?.default ?? CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER,
-                "prototypeToken.actorLink": true, "prototypeToken.texture.src": img,
+                "prototypeToken.actorLink": !this.getFlag("arcane-advent", "groundTemplate"), "prototypeToken.texture.src": img,
                 "prototypeToken.bar1.attribute": null, "prototypeToken.bar2.attribute": null });
         }
     }

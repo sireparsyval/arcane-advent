@@ -8,6 +8,7 @@ class InventoryItemData extends BaseItemData {
         return {
             ...super.defineSchema(),
             containerId: new StringField({ required: true, nullable: true, blank: false, initial: null }),
+            groundTokenImage: new StringField({ required: true, nullable: false, blank: true, initial: "" }),
             objectClass: new StringField({ required: true, nullable: false, blank: true, initial: "" })
         };
     }

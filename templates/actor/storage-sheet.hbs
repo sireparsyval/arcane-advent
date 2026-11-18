@@ -2,6 +2,7 @@
     <header class="aa-storage-header">
         <img src="{{actor.img}}" alt="{{actor.name}}">
         <div>
+            <strong>{{#if ground}}Dépôt au sol{{else}}Stockage permanent{{/if}}</strong>
             {{#if isGM}}
                 <label>Nom <input data-storage-field="name" value="{{actor.name}}"></label>
                 <label>Image <input data-storage-field="img" value="{{actor.img}}"></label>
@@ -17,7 +18,7 @@
             <button type="button" data-action="transfer"><i class="fa-solid fa-right-left"></i> Transférer…</button>
             <button type="button" data-action="dropGround"><i class="fa-solid fa-sack"></i> Déposer au sol…</button>
         {{/if}}
-        {{#if isGM}}<button type="button" data-action="place">Placer sur la scène</button>{{/if}}
+        {{#if canPlace}}<button type="button" data-action="place">Placer sur la scène</button>{{/if}}
     </div>
     <p>Ciblez un personnage ou un stockage sur la scène, puis cliquez sur « Transférer ».</p>
     <div class="aa-storage-items">
@@ -30,7 +31,7 @@
                     <button type="button" data-action="editItem" data-item-id="{{id}}" title="Modifier {{name}}" aria-label="Modifier {{name}}">⚙</button>
                 {{/if}}
             </div>
-        {{else}}<p>Ce stockage est vide.</p>{{/each}}
+        {{else}}<p>{{#if ground}}Ce dépôt est vide.{{else}}Ce stockage est vide.{{/if}}</p>{{/each}}
     </div>
     <footer class="aa-storage-toolbar">
         <strong>Total · {{totalWeight}} kg</strong>

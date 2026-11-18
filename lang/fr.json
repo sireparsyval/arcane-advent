@@ -6,6 +6,7 @@
             "storage": "Stockage"
         },
         "Item": {
+            "storage": "Stockage / dépôt au sol",
             "alteration": "Altération d’état",
             "injury": "Blessure ou maladie",
             "aptitude": "Aptitude",

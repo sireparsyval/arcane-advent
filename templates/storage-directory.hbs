@@ -1,17 +1,29 @@
 <div class="aa-storage-body">
     {{#if isGM}}<button type="button" data-action="create">+ Créer un stockage</button>{{/if}}
     <p>Ouvrez un stockage pour gérer son contenu. « Placer » pose son jeton au centre de la scène active.</p>
+    <h3>Stockages permanents</h3>
     <div class="aa-storage-list">
         {{#each actors}}
             <div class="aa-storage-directory-row">
                 <img src="{{img}}" alt="">
                 <span>{{name}}{{#if locked}} · verrouillé{{/if}}</span>
-                <button type="button" data-action="open" data-actor-id="{{id}}">Ouvrir</button>
-                {{#if @root.isGM}}<button type="button" data-action="place" data-actor-id="{{id}}">Placer</button>{{/if}}
+                <button type="button" data-action="open" data-actor-uuid="{{uuid}}">Ouvrir</button>
+                {{#if @root.isGM}}<button type="button" data-action="place" data-actor-uuid="{{uuid}}">Placer</button>{{/if}}
             </div>
         {{else}}<p>Aucun stockage accessible.</p>{{/each}}
     </div>
+    <h3>Dépôts au sol</h3>
+    <p>Ouvrez un dépôt pour récupérer ou transférer son contenu.</p>
+    <div class="aa-storage-list">
+        {{#each groundDeposits}}
+            <div class="aa-storage-directory-row">
+                <img src="{{img}}" alt="">
+                <span>{{name}}{{#if locked}} · verrouillé{{/if}}</span>
+                <button type="button" data-action="open" data-actor-uuid="{{uuid}}">Ouvrir</button>
+            </div>
+        {{else}}<p>Aucun dépôt au sol accessible.</p>{{/each}}
+    </div>
     {{#each interrupted}}
-        <button type="button" data-action="unlockOperation" data-actor-id="{{id}}">Débloquer l’inventaire de {{name}}</button>
+        <button type="button" data-action="unlockOperation" data-actor-uuid="{{uuid}}">Débloquer l’inventaire de {{name}}</button>
     {{/each}}
 </div>

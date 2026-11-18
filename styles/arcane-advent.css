@@ -1014,6 +1014,7 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-storage-directory-row > img { width: 42px; height: 42px; object-fit: contain; border: 0; }
 .aa-storage-directory-row > span { flex: 1; overflow-wrap: anywhere; }
 .aa-transfer-choices { max-height: 45vh; overflow-y: auto; margin-top: 8px; }
+.aa-transfer-cleanup { display: flex; align-items: center; gap: 6px; margin-block: 10px; }
 .aa-transfer-choice { display: flex; align-items: center; gap: 8px; padding: 6px; border-bottom: 1px solid var(--color-border-light-primary); }
 .aa-transfer-choice > label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
 .aa-transfer-choice > input[type="number"] { width: 75px; flex: 0 0 75px; }

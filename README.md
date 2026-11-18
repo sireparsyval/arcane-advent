@@ -31,7 +31,9 @@ La barre de Points de Fièvre des fiches complètes utilise également un dégra
 ## Objets au sol et stockages
 
 Après une mise à jour du système, redémarrer le monde pour charger le nouveau
-type d’acteur **Stockage**.
+type d’objet **Stockage / dépôt au sol** dans le répertoire **Objets**.
+Les anciens acteurs de stockage sont convertis au chargement par le MJ : leur
+contenu, leurs permissions et leurs jetons sont conservés.
 
 Dans l’onglet **Équipement**, les boutons **Transférer…** et **Déposer au sol…**
 ouvrent la sélection des objets, équipements et quantités à déplacer.
@@ -48,21 +50,29 @@ personnages, ou prendre ceux d’un stockage ouvert accessible sur leur scène.
 **Déposer au sol…** crée un sac à côté du jeton de l’inventaire source. Les objets
 quittent cet inventaire et restent disponibles dans le sac. Double-cliquer sur
 le sac ouvre son inventaire. Pour récupérer son contenu, cibler son personnage
-puis transférer depuis le sac. Un sac vide reste en place jusqu’à sa suppression
-par le MJ. Supprimer un jeton ne supprime pas l’inventaire conservé dans le monde.
+puis transférer depuis le sac. L’option **Supprimer le dépôt s’il est vide après
+le transfert**, décochée par défaut, supprime aussi l’Objet correspondant lorsque
+le transfert a réussi et qu’il ne reste rien. Elle ne s’applique pas aux stockages
+permanents. Supprimer seulement un jeton conserve son Objet dans le répertoire.
 
-Le bouton **Stockages** du répertoire des acteurs et le menu **Stockages** dans
+Le bouton **Stockages** du répertoire **Objets** et le menu **Stockages** dans
 les paramètres du système regroupent les stockages accessibles. Le MJ peut en
 créer, les placer sur la scène, les renommer, changer leur image et verrouiller
-les échanges des joueurs. Les stockages reposent sur des acteurs dédiés et
-leurs jetons sont liés : placer plusieurs jetons du même stockage donne plusieurs
-accès au même contenu. Créer un nouveau stockage pour un coffre indépendant.
+les échanges des joueurs. Le répertoire distingue les **Stockages permanents**
+et les **Dépôts au sol**. Chacun est un Objet qui possède ses propres copies des
+items contenus. Glisser un stockage du répertoire Objets sur la scène, ou utiliser
+**Placer**. Plusieurs jetons du même Objet donnent accès au même contenu ; dupliquer
+l’Objet crée un inventaire indépendant, contenant compris. Un unique Actor technique,
+masqué dans le répertoire Acteurs, fournit les jetons natifs ciblables avec **T**.
 Le MJ peut ajouter des objets depuis cette fiche ou y glisser des Items du
 répertoire/compendium. Utiliser **Transférer…** pour les objets d’un personnage.
 
 L’image par défaut est `assets/Arcane Advent/Entités/Objets/item.png`, réglable
 dans **Image des dépôts au sol**. Chaque stockage peut ensuite recevoir sa propre
-image ; sa modification se répercute sur ses jetons liés.
+image ; sa modification se répercute sur ses jetons. Les options de chaque objet,
+contenant ou équipement proposent aussi **Image du jeton au sol** : elle est utilisée
+si l’objet est déposé seul, avec son contenu éventuel. Un lot de plusieurs objets
+ou un objet sans image personnalisée utilise le sac par défaut.
 
 Les transferts sont traités un à un par le MJ, avec remappage des identifiants
 de contenants, verrouillage temporaire et compensation des écritures échouées.
