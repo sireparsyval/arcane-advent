@@ -72,8 +72,8 @@ export function registerStorageDirectory() {
     });
     Hooks.on("renderActorDirectory", (_app, html) => {
         const root = html instanceof HTMLElement ? html : html[0];
-        for (const row of root?.querySelectorAll("[data-document-id]") ?? []) {
-            if (isGroundTemplate(game.actors.get(row.dataset.documentId))) row.remove();
+        for (const row of root?.querySelectorAll(".directory-item[data-entry-id]") ?? []) {
+            if (isGroundTemplate(game.actors.get(row.dataset.entryId))) row.remove();
         }
     });
     Hooks.on("dropCanvasData", (_canvas, data) => {
