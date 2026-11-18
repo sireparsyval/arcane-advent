@@ -167,6 +167,14 @@ Les objets de l'inventaire peuvent désormais recevoir une **Classe d'objet** de
 leur fiche d'édition. Les propriétés d'armes utilisées par l'éditeur d'Expertise
 sont partagées avec celles de l'éditeur d'équipement.
 
+### Réductions par zone
+
+Survoler une Défense partielle (**Tête, Torse, Bras ou Jambes**) affiche les
+réductions cumulées par type de dégâts des protections équipées couvrant cette
+zone. Seuls les types ayant une réduction positive apparaissent, avec les noms,
+montants et unités alignés en colonnes. L’infobulle est aussi accessible au clavier
+et disponible sur les fiches PNJ compactes.
+
 ### Aptitudes
 Les Passifs n'affichent pas de niveau ; les autres Aptitudes conservent leur
 niveau comme coût en PdF (aucun coût ou effet critique n'est automatiquement appliqué).

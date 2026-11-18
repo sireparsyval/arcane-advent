@@ -1,4 +1,5 @@
 import { ARCANE_ALIGNMENTS, ARCANE_NEEDS } from "../../config.mjs";
+import { bindDefenseReductionTooltips } from "../../defense-reductions.mjs";
 import { APTITUDE_RANGE_MODES, aptitudeRangeMode, aptitudeRangeSummary,
     bindAptitudeRangeToggle, refreshAptitudeTargetingFields } from "../../aptitude-targeting.mjs";
 import { inventoryActionDialog } from "../inventory-transfer.mjs";
@@ -1496,6 +1497,7 @@ export class ArcaneCharacterSheet
 
     async _onRender(context, options) {
         await super._onRender(context, options);
+        bindDefenseReductionTooltips(this.element, this.actor.items);
         this._arcanology.bind(this.element.querySelector(".aa-arcanology"));
         const isDetached = this.window.windowId === this.id;
         this.element.classList.toggle("aa-detached-sheet", isDetached);

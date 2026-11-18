@@ -126,6 +126,8 @@ const { runTokenHUDTests } = await import("./token-bars.mjs");
 await runTokenHUDTests({ test, assert, equal });
 const { runAptitudeRangeTests } = await import("./aptitude-targeting.mjs");
 await runAptitudeRangeTests({ test, assert, equal });
+const { runDefenseReductionTests } = await import("./defense-reductions.mjs");
+await runDefenseReductionTests({ test, assert, equal });
 
 document.querySelector("pre").textContent = JSON.stringify(results);
 document.body.dataset.status = results.every(result => result.passed) ? "passed" : "failed";

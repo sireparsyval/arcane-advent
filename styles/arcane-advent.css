@@ -1270,6 +1270,16 @@ body.detached > .aa-detached-sheet .window-content {
     font-size: 1.35rem;
 }
 
+[data-defense-zone][data-tooltip-html] { cursor: help; }
+[data-defense-zone][data-tooltip-html]:focus-visible { outline: 2px solid var(--aa-accent, #d9bc91); outline-offset: 2px; }
+.aa-defense-tooltip { text-align: left; }
+.aa-defense-reductions { margin: 0; width: 100%; min-width: 10rem; border: 0; border-collapse: collapse; background: transparent; }
+.aa-defense-reductions tr { border: 0; background: transparent; }
+.aa-defense-reductions th { padding: 3px 12px 3px 0; text-align: left; font-weight: normal; overflow-wrap: anywhere; max-width: 18rem; }
+.aa-defense-reductions td { padding: 3px 0; white-space: nowrap; }
+.aa-defense-reductions .aa-defense-reduction-amount { text-align: right; font-variant-numeric: tabular-nums; }
+.aa-defense-reductions .aa-defense-reduction-unit { padding-inline-start: 6px; text-align: left; }
+
 .aa-tracker-roll {
     width: 100%;
     height: auto;

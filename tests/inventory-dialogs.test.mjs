@@ -15,7 +15,7 @@ const browser = [process.env.BROWSER_PATH,
     "/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome"]
     .find(path => path && existsSync(path));
 
-test("dialogs, token HUD and aptitude targeting in a browser", {
+test("inventory dialogs, token HUD, aptitude targeting and defense tooltips in a browser", {
     skip: browser ? false : "Set BROWSER_PATH to a Chromium browser to run the DOM regression tests",
     timeout: 45000
 }, async () => {
@@ -44,7 +44,7 @@ test("dialogs, token HUD and aptitude targeting in a browser", {
         { windowsHide: true, timeout: 35000, maxBuffer: 1024 * 1024 });
         assert.match(stdout, /data-status="passed"/, stdout);
         const results = JSON.parse(stdout.match(/<pre>(.*?)<\/pre>/s)[1]);
-        assert.equal(results.length, 15);
+        assert.equal(results.length, 17);
         assert.ok(results.every(result => result.passed), JSON.stringify(results));
     } finally {
         server.closeAllConnections();

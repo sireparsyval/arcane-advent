@@ -93,7 +93,7 @@
         </div>
         <div class="aa-npc-defense">
             <strong>Défense {{system.defense.base}}</strong>
-            {{#each compactDefenseZones}}<span>{{label}} <strong>{{value}}</strong></span>{{/each}}
+            {{#each compactDefenseZones}}<span data-defense-zone="{{key}}">{{label}} <strong>{{value}}</strong></span>{{/each}}
         </div>
         <div class="aa-npc-modes">
             <div class="aa-defense-mode" role="group" aria-label="Caractéristique de Défense">
