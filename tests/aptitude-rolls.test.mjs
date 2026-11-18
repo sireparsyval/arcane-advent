@@ -12,7 +12,8 @@ function editor() {
         querySelector(selector) {
             if (selector === '[name="target.mode"]') return { value: "self" };
             if (selector === '[name="target.shape"]') return { value: "circle" };
-            return { innerHTML: "" };
+            if (selector === '[name="target.rangeMode"]') return { value: "melee" };
+            return { innerHTML: "", addEventListener() {}, setAttribute() {} };
         },
         querySelectorAll: () => [],
         addEventListener(name, callback) { listeners.set(name, callback); }
@@ -44,6 +45,7 @@ globalThis.FormData = class {
     constructor(form) { this.fields = form.fields; }
     get(key) { return this.fields[key] ?? null; }
     getAll(key) { return this.fields[key] ?? []; }
+    has(key) { return Object.hasOwn(this.fields, key); }
 };
 globalThis.ui = { notifications: { warn() {} } };
 const { ArcaneCharacterSheet } = await import("../module/applications/actor/character-sheet.mjs");
@@ -73,6 +75,11 @@ function fixture(rolls = {}, editable = true) {
                     assert.ok(operation instanceof ForcedDeletion);
                     delete this.system.rolls[id];
                 }
+            } else if (path.startsWith("system.")) {
+                const keys = path.split(".").slice(1);
+                const last = keys.pop();
+                const destination = keys.reduce((target, key) => target[key] ??= {}, this.system);
+                destination[last] = value;
             } else assert.fail(`Unexpected write: ${path}`);
         }
     } };
@@ -184,4 +191,36 @@ test("read-only sheets and nonexistent roll IDs cannot open an editor", async ()
     const editable = fixture();
     assert.equal(await openRoll(editable.sheet, "missing"), undefined);
     assert.equal(dialogs.length, 0);
+});
+
+test("aptitude options save both distance ranges and retain long range when switching to melee", async () => {
+    const { sheet, item } = fixture();
+    item.system.targeting = { mode: "single", rangeMode: "melee", range: 1.5, longRange: 0 };
+    const submit = async fields => {
+        await ArcaneCharacterSheet._onEditAptitudeOptions.call(sheet, null, { dataset: { itemId: "aptitude" } });
+        const dialog = dialogs.at(-1);
+        await dialog.options.buttons.find(button => button.action === "save")
+            .callback(null, { form: { reportValidity: () => true, fields } }, dialog);
+    };
+    await submit({ "target.mode": "single", "target.rangeMode": "ranged", "target.range": "12.5", "target.longRange": "25" });
+    assert.deepEqual(item.system.targeting, { mode: "single", rangeMode: "ranged", range: 12.5, longRange: 25, travels: false });
+    await submit({ "target.mode": "single", "target.rangeMode": "melee", "target.range": "1.5" });
+    assert.equal(item.system.targeting.rangeMode, "melee");
+    assert.equal(item.system.targeting.range, 1.5);
+    assert.equal(item.system.targeting.longRange, 25);
+});
+
+test("aptitude options reject invalid range modes and long ranges before writing", async () => {
+    for (const values of [
+        { "target.rangeMode": "invalid", "target.range": "10" },
+        { "target.rangeMode": "ranged", "target.range": "10", "target.longRange": "5" },
+        { "target.rangeMode": "ranged", "target.range": "10", "target.longRange": "-1" }
+    ]) {
+        const { sheet, writes } = fixture();
+        await ArcaneCharacterSheet._onEditAptitudeOptions.call(sheet, null, { dataset: { itemId: "aptitude" } });
+        const dialog = dialogs.at(-1);
+        await dialog.options.buttons.find(button => button.action === "save").callback(null,
+            { form: { reportValidity: () => true, fields: { "target.mode": "single", ...values } } }, dialog);
+        assert.deepEqual(writes, []);
+    }
 });

@@ -15,7 +15,7 @@ const browser = [process.env.BROWSER_PATH,
     "/usr/bin/chromium", "/usr/bin/chromium-browser", "/usr/bin/google-chrome"]
     .find(path => path && existsSync(path));
 
-test("inventory dialogs and token HUD in a browser", {
+test("dialogs, token HUD and aptitude targeting in a browser", {
     skip: browser ? false : "Set BROWSER_PATH to a Chromium browser to run the DOM regression tests",
     timeout: 45000
 }, async () => {
@@ -28,8 +28,9 @@ test("inventory dialogs and token HUD in a browser", {
         }
         try {
             const path = resolve(root, decodeURIComponent(request.url.slice(1)));
-            if (!path.startsWith(resolve(root) + sep) || !/\.(mjs|css)$/.test(path)) throw Error("Invalid path");
-            response.setHeader("Content-Type", path.endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8");
+            if (!path.startsWith(resolve(root) + sep) || !/\.(mjs|css|hbs)$/.test(path)) throw Error("Invalid path");
+            response.setHeader("Content-Type", path.endsWith(".css") ? "text/css; charset=utf-8"
+                : path.endsWith(".hbs") ? "text/plain; charset=utf-8" : "text/javascript; charset=utf-8");
             response.end(await readFile(path));
         } catch { response.statusCode = 404; response.end(); }
     });
@@ -43,7 +44,7 @@ test("inventory dialogs and token HUD in a browser", {
         { windowsHide: true, timeout: 35000, maxBuffer: 1024 * 1024 });
         assert.match(stdout, /data-status="passed"/, stdout);
         const results = JSON.parse(stdout.match(/<pre>(.*?)<\/pre>/s)[1]);
-        assert.equal(results.length, 11);
+        assert.equal(results.length, 15);
         assert.ok(results.every(result => result.passed), JSON.stringify(results));
     } finally {
         server.closeAllConnections();

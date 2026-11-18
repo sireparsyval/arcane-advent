@@ -1435,6 +1435,10 @@ body.detached > .aa-detached-sheet .window-content {
     background: linear-gradient(90deg, #b18417, #f2c94c);
 }
 
+.aa-aptitude-range-mode { display: grid; gap: 4px; align-content: start; }
+.aa-aptitude-range-mode button { width: 100%; }
+.aa-aptitude-range-mode button[aria-pressed="true"] { border-color: var(--aa-accent, #d9bc91); color: var(--aa-accent, #d9bc91); }
+
 /* Les champs du HUD suivent les couleurs et la disposition des barres. */
 #token-hud.aa-token-resources .attribute.bar1 input { border-color: var(--aa-token-resource-color, #7cd000); }
 #token-hud.aa-token-resources .attribute.bar2 input { border-color: var(--aa-token-resource-color, #659db5); }

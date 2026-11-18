@@ -1,4 +1,5 @@
 import { BaseItemData } from "./base-item-data.mjs";
+import { APTITUDE_RANGE_MODES, aptitudeRangeMode } from "../aptitude-targeting.mjs";
 
 const { BooleanField, NumberField, SchemaField, SetField, StringField, TypedObjectField } = foundry.data.fields;
 
@@ -127,6 +128,8 @@ export class AptitudeData extends BaseItemData {
                 maxTargets: countField(1),
                 shape: new StringField({ choices: ["circle", "cone", "line", "rectangle", "free"], initial: "circle" }),
                 range: new NumberField({ min: 0, initial: 0 }),
+                rangeMode: new StringField({ choices: Object.keys(APTITUDE_RANGE_MODES), initial: "melee" }),
+                longRange: new NumberField({ min: 0, initial: 0 }),
                 radius: new NumberField({ min: 0, initial: 0 }),
                 length: new NumberField({ min: 0, initial: 0 }),
                 width: new NumberField({ min: 0, initial: 0 }),
@@ -165,6 +168,9 @@ export class AptitudeData extends BaseItemData {
     }
 
     static migrateData(source, options) {
+        // Keep the old numeric range as the normal range. Existing nonzero
+        // ranges remain visible as distance ranges after the update.
+        if (source.targeting) source.targeting.rangeMode ??= aptitudeRangeMode(source.targeting);
         for (const key of ["duration", "recovery", "charge"]) {
             if (typeof source[key] !== "string") continue;
             const value = parseLegacyAptitudeOption(key, source[key]);

@@ -1,4 +1,6 @@
 import { ARCANE_ALIGNMENTS, ARCANE_NEEDS } from "../../config.mjs";
+import { APTITUDE_RANGE_MODES, aptitudeRangeMode, aptitudeRangeSummary,
+    bindAptitudeRangeToggle, refreshAptitudeTargetingFields } from "../../aptitude-targeting.mjs";
 import { inventoryActionDialog } from "../inventory-transfer.mjs";
 import { VOLUME_LABELS, ENCUMBRANCE_STAGES } from "../../encumbrance.mjs";
 import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedModifier } from "../../modifiers.mjs";
@@ -385,11 +387,11 @@ export class ArcaneCharacterSheet
                 remaining: item.system.effectDuration.enabled ? item.system.effectDuration.remaining : item.system.durationTurns,
                 label: APTITUDE_RECOVERY_UNITS[item.system.effectDuration.enabled ? item.system.effectDuration.unit : item.system.durationUnit]
             },
-            targetingSummary: item.system.targeting?.mode === "multiple"
+            targetingSummary: [item.system.targeting?.mode === "multiple"
                 ? `Cibles : ${item.system.targeting.maxTargets}`
                 : item.system.targeting?.mode === "area"
                     ? `Zone · ${APTITUDE_AREA_SHAPES[item.system.targeting.shape]}`
-                    : "",
+                    : "", aptitudeRangeSummary(item.system.targeting)].filter(Boolean).join(" · "),
             durationUnitLabel: APTITUDE_DURATION_UNITS[item.system.durationUnit],
             recoveryUnitLabel: APTITUDE_RECOVERY_UNITS[item.system.recoveryCounter.unit],
             descriptionOpen: openDescriptions.has(item.id),
@@ -975,6 +977,7 @@ export class ArcaneCharacterSheet
                 effectUnit: hasEffectDuration ? system.effectDuration.unit : system.durationUnit,
                 units: list(unitLabels),
                 targetModes: list(APTITUDE_TARGET_MODES),
+                rangeMode: aptitudeRangeMode(system.targeting),
                 shapes: list(APTITUDE_AREA_SHAPES),
                 origins: list({ caster: "Lanceur", target: "Point ciblé" }),
                 propagations: list({ projectile: "Projectile", beam: "Rayon", instant: "Instantané", wave: "Onde" }),
@@ -1035,6 +1038,7 @@ export class ArcaneCharacterSheet
                             }
                             const validChoices = {
                                 mode: Object.keys(APTITUDE_TARGET_MODES),
+                                rangeMode: Object.keys(APTITUDE_RANGE_MODES),
                                 shape: Object.keys(APTITUDE_AREA_SHAPES),
                                 origin: ["caster", "target"],
                                 propagation: ["projectile", "beam", "instant", "wave"]
@@ -1045,7 +1049,7 @@ export class ArcaneCharacterSheet
                                 if (!choices.includes(value)) throw Error("Paramètre de ciblage invalide : " + key);
                                 updates["system.targeting." + key] = value;
                             }
-                            for (const key of ["maxTargets", "range", "radius", "length", "width", "angle"]) {
+                            for (const key of ["maxTargets", "range", "longRange", "radius", "length", "width", "angle"]) {
                                 if (!values.has("target." + key)) continue;
                                 const value = Number(values.get("target." + key));
                                 if (!Number.isFinite(value) || value < 0 || (key === "angle" && value > 360)
@@ -1053,6 +1057,11 @@ export class ArcaneCharacterSheet
                                     throw Error("Valeur de ciblage invalide : " + key);
                                 }
                                 updates["system.targeting." + key] = value;
+                            }
+                            if (values.get("target.rangeMode") === "ranged" && values.has("target.longRange")) {
+                                const normal = Number(values.get("target.range"));
+                                const long = Number(values.get("target.longRange"));
+                                if (long > 0 && long < normal) throw Error("La portée longue doit être au moins égale à la portée normale (ou 0 si absente).");
                             }
                             if (values.get("target.mode") !== "self") {
                                 updates["system.targeting.travels"] = values.has("target.travels");
@@ -1071,25 +1080,8 @@ export class ArcaneCharacterSheet
         });
         dialog.addEventListener("render", () => {
             const editor = dialog.element.querySelector(".aa-aptitude-options-editor");
-            const updateFields = () => {
-                const mode = editor.querySelector('[name="target.mode"]').value;
-                const shape = editor.querySelector('[name="target.shape"]').value;
-                const visibleGroups = new Set();
-                if (mode !== "self") visibleGroups.add("ranged");
-                if (mode === "multiple") visibleGroups.add("multiple");
-                if (mode === "area") {
-                    visibleGroups.add("area");
-                    visibleGroups.add(shape);
-                }
-                for (const toggle of editor.querySelectorAll('input[type="checkbox"]:checked')) {
-                    visibleGroups.add(toggle.name);
-                }
-                for (const group of editor.querySelectorAll("[data-aa-fields]")) {
-                    const visible = group.dataset.aaFields.split(" ").some(key => visibleGroups.has(key));
-                    group.hidden = !visible;
-                    for (const field of group.querySelectorAll("input, select")) field.disabled = !visible;
-                }
-            };
+            const updateFields = () => refreshAptitudeTargetingFields(editor);
+            bindAptitudeRangeToggle(editor);
             updateFields();
             editor.addEventListener("change", updateFields);
             editor.addEventListener("invalid", event => {
