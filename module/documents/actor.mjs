@@ -30,6 +30,22 @@ export class ArcaneActor extends Actor {
         });
     }
 
+    static createDocuments(data = [], operation = {}) {
+        // Apply defaults before Foundry cleans the input: v14 materializes a
+        // default prototypeToken before _preCreate, even for the empty dialog.
+        const sources = data.map(source => {
+            if (!["character", "npc"].includes(source.type) || source.prototypeToken != null
+                || source.name === "[TEMPLATE]") return source;
+            const template = globalThis.game?.actors?.find(actor => actor.name === "[TEMPLATE]"
+                && ["character", "npc"].includes(actor.type));
+            if (!template?.prototypeToken) return source;
+            const prototypeToken = JSON.parse(JSON.stringify(template.prototypeToken.toObject()));
+            prototypeToken.name = source.name || "";
+            return { ...source, prototypeToken };
+        });
+        return super.createDocuments(sources, operation);
+    }
+
     async _preCreate(data, options, user) {
         if (await super._preCreate(data, options, user) === false) return false;
         if (this.type === "npc" && this.getFlag("arcane-advent", "compactNPC") == null) {

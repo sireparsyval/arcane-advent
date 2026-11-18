@@ -1,5 +1,18 @@
 # arcane-advent
 
+## Paramètres des nouveaux jetons
+
+Un Actor Personnage ou PNJ nommé exactement **[TEMPLATE]** sert de modèle pour
+les paramètres du prototype de jeton des nouveaux Actors créés avec **Créer un
+acteur**. Régler son prototype depuis sa fiche : visibilité du nom et des barres,
+liaison à l’Actor, image, dimensions, vision, lumière et autres options du jeton.
+Le nouveau jeton porte le nom de son nouvel Actor. Seuls les paramètres du jeton
+sont copiés, pas les caractéristiques, les objets ou les permissions du modèle.
+
+Les modifications du modèle sont reprises à chaque nouvelle création. Les Actors
+existants, les duplications et les imports conservant leur propre prototype ne
+sont pas modifiés. Sans **[TEMPLATE]**, la création utilise les réglages habituels.
+
 ## Barres des jetons et Points de Fièvre
 
 Les deux barres de ressources sont empilées sous les jetons. Le nom du jeton
