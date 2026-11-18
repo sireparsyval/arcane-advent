@@ -7,6 +7,9 @@ sur une seule vue : PdC/PdF, Barrière, Dés de Conscience, Défense, mobilité,
 caractéristiques et sauvegardes, attaques, Aptitudes, Traits, Compétences,
 Expertises et conditions. Les jets et leurs raccourcis restent utilisables.
 Les armes équipées peuvent être utilisées et modifiées directement dans cette vue.
+Les boutons **Bonus/malus** près des caractéristiques et des Trackers ouvrent
+directement les ajustements manuels correspondants. Saisir une valeur négative
+pour un malus, positive pour un bonus.
 
 Les onglets Équipement, Informations et Arcanologie ainsi que les détails d'identité,
 les besoins, les jets contre la mort et la Miséricorde sont masqués.

@@ -6,7 +6,7 @@
         les Trackers reçoivent leur bonus/malus directement sur leur résultat.
     </p>
     {{#each manualModifierGroups}}
-        <div class="aa-manual-modifier-group">
+        <div class="aa-manual-modifier-group" data-manual-modifier-group="{{key}}">
             <h3>{{title}}</h3>
             <div class="aa-manual-modifier-head">
                 <span>Valeur</span>
@@ -39,5 +39,5 @@
             Charge maximale actuelle : <strong>{{encumbrance.maxLabel}}</strong>.
         </p>
     </div>
-    <p class="aa-options-explanation">Les bonus/malus des conditions se modifient dans leur propre fenêtre d'édition, dans l'onglet Cœur.</p>
+    <p class="aa-options-explanation">Les bonus/malus des conditions se modifient dans leur propre fenêtre d'édition, depuis la section État du personnage.</p>
 </section>

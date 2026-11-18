@@ -88,6 +88,8 @@
             <label>Vitesse <input type="number" min="0" step="any" name="system.trackers.speed" value="{{system.trackers.speed}}"
                 aria-label="Vitesse de base en mètres" {{#unless canEditState}}readonly{{/unless}}> m</label>
             <small title="Vitesse effective après bonus, malus et encombrement">Effective : {{system.trackers.effectiveSpeed}} m</small>
+            <button type="button" data-action="editManualModifiers" data-modifier-group="trackers"
+                title="Ajuster les bonus et malus des Trackers">Bonus/malus</button>
         </div>
         <div class="aa-npc-defense">
             <strong>Défense {{system.defense.base}}</strong>
@@ -118,6 +120,11 @@
     </section>
 
     <section class="aa-npc-abilities" aria-label="Caractéristiques et jets de sauvegarde">
+        <div class="aa-npc-section-heading">
+            <h2>Caractéristiques et sauvegardes</h2>
+            <button type="button" data-action="editManualModifiers" data-modifier-group="abilities"
+                title="Ajuster les bonus et malus des caractéristiques">Bonus/malus</button>
+        </div>
         {{#each compactAbilities}}
             <div class="aa-panel aa-npc-ability">
                 <strong title="{{name}}">{{label}}</strong>

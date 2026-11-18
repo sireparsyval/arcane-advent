@@ -2578,6 +2578,32 @@ body.detached > .aa-detached-sheet .window-content {
     gap: 5px;
     margin-bottom: 10px;
 }
+.aa-npc-section-heading {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+.aa-npc-section-heading h2 {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-size: 0.9rem;
+}
+.aa-npc .aa-manual-modifier-head,
+.aa-npc .aa-manual-modifier-row {
+    grid-template-columns: minmax(0, 1fr) 54px 65px 54px;
+    gap: 4px;
+    padding-inline: 2px;
+    overflow-wrap: anywhere;
+}
+.aa-npc .aa-manual-modifier-group:focus-within {
+    outline: 1px solid var(--aa-accent);
+    outline-offset: 3px;
+    border-radius: 4px;
+}
 .aa-npc-ability {
     display: grid;
     gap: 5px;

@@ -183,6 +183,7 @@ export class ArcaneCharacterSheet
 
         actions: {
             setRollMode: this._onSetRollMode,
+            editManualModifiers: this._onEditManualModifiers,
             setDefenseMode: this._onSetDefenseMode,
             rollConsciousnessDie: this._onRollConsciousnessDie,
             rollDeathSave: this._onRollDeathSave,
@@ -403,8 +404,8 @@ export class ArcaneCharacterSheet
         }));
         const totalModifiers = this.actor.system.modifierTotals;
         const manualModifiers = this.actor.system.manualModifiers;
-        const modifierGroup = (title, keys) => ({
-            title,
+        const modifierGroup = (key, title, keys) => ({
+            key, title,
             entries: keys.map(key => ({
                 key,
                 label: MODIFIER_TARGETS[key],
@@ -414,8 +415,8 @@ export class ArcaneCharacterSheet
             }))
         });
         context.manualModifierGroups = [
-            modifierGroup("Caractéristiques principales", ABILITY_MODIFIER_KEYS),
-            modifierGroup("Trackers", TRACKER_MODIFIER_KEYS)
+            modifierGroup("abilities", "Caractéristiques principales", ABILITY_MODIFIER_KEYS),
+            modifierGroup("trackers", "Trackers", TRACKER_MODIFIER_KEYS)
         ];
         context.conditionSections = Object.entries(CONDITION_SECTIONS).map(([type, section]) => ({
             type,
@@ -1591,6 +1592,17 @@ export class ArcaneCharacterSheet
         }
 
 
+    }
+
+    static _onEditManualModifiers(event, target) {
+        const key = target.dataset.modifierGroup;
+        if (!["abilities", "trackers"].includes(key)) return;
+        const options = this.element.querySelector("[data-npc-options]");
+        const group = options?.querySelector(`[data-manual-modifier-group="${key}"]`);
+        if (!group) return;
+        options.open = true;
+        group.scrollIntoView({ block: "start" });
+        group.querySelector("input")?.focus({ preventScroll: true });
     }
 
     async _onCompactNPCChange(event) {
