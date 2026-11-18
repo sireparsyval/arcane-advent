@@ -81,7 +81,7 @@ Hooks.once("init", () => {
         "arcane-advent",
         ArcaneCharacterSheet,
         {
-            types: ["character"],
+            types: ["character", "npc"],
             makeDefault: true
         }
     );

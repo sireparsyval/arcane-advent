@@ -1,5 +1,21 @@
 # arcane-advent
 
+## Mode PNJ compact
+
+Dans **Options**, activer **Mode PNJ compact** pour réunir les informations de jeu
+sur une seule vue : PdC/PdF, Barrière, Dés de Conscience, Défense, mobilité,
+caractéristiques et sauvegardes, attaques, Aptitudes, Traits, Compétences,
+Expertises et conditions. Les jets et leurs raccourcis restent utilisables.
+Les armes équipées peuvent être utilisées et modifiées directement dans cette vue.
+
+Les onglets Équipement, Informations et Arcanologie ainsi que les détails d'identité,
+les besoins, les jets contre la mort et la Miséricorde sont masqués.
+**Options de la fiche**, en haut de la vue compacte, permet de désactiver le mode
+et conserve l'accès aux bonus/malus manuels et aux réglages des sauvegardes.
+Le choix est enregistré sur chaque acteur, sans modifier son type ou ses données.
+L'inventaire, les biographies et les carnets sont conservés lors du changement de mode.
+Cette fiche est disponible pour les acteurs **Personnage** et **PNJ**.
+
 ## Répertoire des glyphes du MJ
 
 Dans l’onglet **Compendiums**, le bouton **Glyphes — MJ** ouvre les références

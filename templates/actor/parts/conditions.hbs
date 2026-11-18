@@ -1,0 +1,70 @@
+<section class="aa-panel">
+    <h2 class="aa-status-title">
+        État du personnage
+    </h2>
+
+    {{#each conditionSections}}
+        <div class="aa-condition-group">
+            <div class="aa-condition-heading">
+                <h3>{{title}}</h3>
+                {{#if @root.canEditState}}
+                    <button type="button" data-action="editCondition" data-condition-type="{{type}}"
+                        aria-label="{{addLabel}}" title="{{addLabel}}">
+                        <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                    </button>
+                {{/if}}
+            </div>
+
+            {{#each entries}}
+                <div class="aa-condition-row">
+                    <details>
+                        <summary>{{name}}</summary>
+                        <p>{{#if description}}{{description}}{{else}}Aucune description.{{/if}}</p>
+                    </details>
+                    {{#if zone}}<span class="aa-condition-level">{{zone}}</span>{{/if}}
+                    {{#if durationLabel}}<span class="aa-condition-level">⏳ {{durationLabel}}</span>{{/if}}
+                    {{#if modifierLabel}}
+                        <span class="aa-condition-modifier-label" title="{{modifierLabel}}">{{modifierLabel}}</span>
+                    {{/if}}
+                    {{#if @root.canEditState}}
+                        <button type="button" data-action="editCondition" data-item-id="{{id}}"
+                            aria-label="Modifier {{name}}" title="Modifier">
+                            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" data-action="deleteCondition" data-item-id="{{id}}"
+                            aria-label="Retirer {{name}}" title="Retirer">
+                            <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                        </button>
+                    {{/if}}
+                </div>
+            {{else}}
+                <p class="aa-condition-empty">{{empty}}</p>
+            {{/each}}
+        </div>
+    {{/each}}
+
+    {{#unless compactNPC}}
+    {{#if needs.length}}
+    <div class="aa-condition-group">
+        <div class="aa-needs">
+            {{#each needs}}
+                <div class="aa-need-column" role="group" aria-label="{{label}}">
+                    <strong>{{label}}</strong>
+                    <div class="aa-need-meter" aria-hidden="true">
+                        {{#each steps}}
+                            <span {{#if filled}}class="is-filled"{{/if}}></span>
+                        {{/each}}
+                    </div>
+                    {{#each levels}}
+                        <button type="button" class="aa-need-level" data-action="stepTrack" data-track="needs"
+                            data-key="{{../key}}" data-index="{{index}}" aria-pressed="{{selected}}"
+                            aria-label="{{../label}} — {{name}} ({{index}} sur {{../max}})"
+                            {{#unless @root.canEditState}}disabled{{/unless}}>{{name}}</button>
+                    {{/each}}
+                </div>
+            {{/each}}
+        </div>
+    </div>
+    {{/if}}
+    {{/unless}}
+</section>

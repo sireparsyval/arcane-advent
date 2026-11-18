@@ -257,14 +257,26 @@ export class ArcaneCharacterSheet
         return this.actor.name || this.actor.id;
     }
 
+    get compactNPC() {
+        return this.actor.getFlag("arcane-advent", "compactNPC") === true;
+    }
+
 
     static PARTS = {
         body: {
             template:
                 "systems/arcane-advent/templates/actor/character-sheet.hbs",
+            templates: ["aptitudes", "conditions", "traits", "manual-modifiers", "sheet-mode"]
+                .map(name => `systems/arcane-advent/templates/actor/parts/${name}.hbs`),
             scrollable: [""]
         }
     };
+
+    _configureRenderParts(options) {
+        const parts = super._configureRenderParts(options);
+        if (this.compactNPC) parts.body.template = "systems/arcane-advent/templates/actor/npc-sheet.hbs";
+        return parts;
+    }
 
 
     async _prepareContext(options) {
@@ -272,17 +284,29 @@ export class ArcaneCharacterSheet
 
         context.actor = this.actor;
         context.system = this.actor.system;
+        context.compactNPC = this.compactNPC;
+        context.npcOptionsOpen = Boolean(this.element?.querySelector("[data-npc-options][open]"));
         // L’onglet doit être visible avant que Foundry restaure le défilement.
         context.activeSheetTab = this._activeTab ?? "core";
 
         context.canEditState = this.isEditable;
-        context.arcanologyHTML = await foundry.applications.handlebars.renderTemplate(
+        context.arcanologyHTML = context.compactNPC ? "" : await foundry.applications.handlebars.renderTemplate(
             "systems/arcane-advent/templates/actor/arcanology-notebook.hbs",
             this._arcanology.prepare()
         );
         context.genderOptions = IDENTITY_GENDERS;
         context.volumeOptions = VOLUME_LABELS;
         context.ageEstimateOptions = AGE_ESTIMATES;
+        const abilityAbbreviations = ["FOR", "DEX", "CON", "INT", "SAG", "CHA"];
+        context.compactAbilities = Object.entries(APTITUDE_ROLL_ABILITIES).map(([key, name], index) => ({
+            key, name, label: abilityAbbreviations[index],
+            ...this.actor.system.abilities[key],
+            modifierLabel: signedModifier(this.actor.system.abilities[key].modifier),
+            mastery: this.actor.system.savingThrows[key].mastery,
+            saveLabel: signedModifier(this.actor.system.savingThrows[key].total)
+        }));
+        context.compactDefenseZones = Object.entries({ head: "Tête", torso: "Torse", arms: "Bras", legs: "Jambes" })
+            .map(([key, label]) => ({ key, label, value: this.actor.system.defense.zones[key] }));
         context.defenseModes = Object.entries(DEFENSE_MODE_LABELS).map(([key, label]) => ({
             key,
             label,
@@ -297,6 +321,10 @@ export class ArcaneCharacterSheet
         const openDescriptions = new Set(Array.from(
             this.element?.querySelectorAll("details[data-aptitude-description][open]") ?? [],
             panel => panel.dataset.aptitudeDescription
+        ));
+        const openAptitudeSettings = new Set(Array.from(
+            this.element?.querySelectorAll("details[data-aptitude-settings][open]") ?? [],
+            panel => panel.dataset.aptitudeSettings
         ));
         const openTraitConfigs = new Set(Array.from(
             this.element?.querySelectorAll("[data-trait-config]:not([hidden])") ?? [],
@@ -355,6 +383,7 @@ export class ArcaneCharacterSheet
             durationUnitLabel: APTITUDE_DURATION_UNITS[item.system.durationUnit],
             recoveryUnitLabel: APTITUDE_RECOVERY_UNITS[item.system.recoveryCounter.unit],
             descriptionOpen: openDescriptions.has(item.id),
+            settingsOpen: openAptitudeSettings.has(item.id),
             rolls: Object.entries(item.system.rolls).map(([id, roll]) => ({
                 id,
                 name: roll.name.replace(/^(?:🎲\uFE0F?\s*)+/u, "")
@@ -407,7 +436,7 @@ export class ArcaneCharacterSheet
             }))
         }));
 
-        context.needs = Object.entries(ARCANE_NEEDS).map(([key, { label, stages }]) => {
+        context.needs = this.actor.system.needs ? Object.entries(ARCANE_NEEDS).map(([key, { label, stages }]) => {
             const value = this.actor.system.needs[key];
             return {
                 key,
@@ -420,7 +449,7 @@ export class ArcaneCharacterSheet
                     selected: index === value
                 })).reverse()
             };
-        });
+        }) : [];
 
         context.skills = sortableItems(this.actor.items
             .filter(item => item.type === "skill"))
@@ -526,6 +555,7 @@ export class ArcaneCharacterSheet
                         attackTotal:
                             ability.modifier
                             + expertiseBonus,
+                        attackModifierLabel: signedModifier(ability.modifier + expertiseBonus),
 
                         damageTypes: [...item.system.damageTypes].map(type => ({
                             type,
@@ -1460,16 +1490,32 @@ export class ArcaneCharacterSheet
         const isDetached = this.window.windowId === this.id;
         this.element.classList.toggle("aa-detached-sheet", isDetached);
         if (isDetached) this.element.ownerDocument.title = this.title;
+        this.element.classList.toggle("aa-npc-sheet", context.compactNPC);
+        if (context.compactNPC !== this._renderedCompactNPC) {
+            if (!isDetached) {
+                if (context.compactNPC) {
+                    this._fullSheetWidth = this.position.width;
+                    this.setPosition({ width: Math.min(this.position.width, 800) });
+                } else if (this._renderedCompactNPC && this._fullSheetWidth) {
+                    this.setPosition({ width: this._fullSheetWidth });
+                }
+            }
+            this.element.querySelector(".aa-character").scrollTop = 0;
+            this._renderedCompactNPC = context.compactNPC;
+        }
+        this.element.querySelector("[data-compact-npc]")?.addEventListener("change", this._onCompactNPCChange.bind(this));
 
         // Onglets
-        const tabs = new foundry.applications.ux.Tabs({
-            navSelector: ".aa-tabs",
-            contentSelector: ".aa-tab-content",
-            initial: context.activeSheetTab,
-            group: "sheet"
-        });
+        if (!context.compactNPC) {
+            const tabs = new foundry.applications.ux.Tabs({
+                navSelector: ".aa-tabs",
+                contentSelector: ".aa-tab-content",
+                initial: context.activeSheetTab,
+                group: "sheet"
+            });
 
-        tabs.bind(this.element);
+            tabs.bind(this.element);
+        }
 
         // Les boutons de jets peuvent être glissés sur la barre native de Foundry.
         // Les raccourcis appelleront les jets d'origine, avec leurs modificateurs actuels.
@@ -1545,6 +1591,24 @@ export class ArcaneCharacterSheet
         }
 
 
+    }
+
+    async _onCompactNPCChange(event) {
+        event.stopPropagation();
+        if (!this.isEditable) return;
+        const control = event.currentTarget;
+        const enabled = control.checked;
+        control.disabled = true;
+        try {
+            // Uniquement une préférence d'affichage, aucune donnée de jeu modifiée.
+            await this.actor.setFlag("arcane-advent", "compactNPC", enabled);
+        } catch (error) {
+            control.checked = this.compactNPC;
+            ui.notifications.error("Impossible de modifier le mode de fiche.");
+            console.error("Arcane Advent | Mode PNJ compact", error);
+        } finally {
+            control.disabled = !this.isEditable;
+        }
     }
 
 

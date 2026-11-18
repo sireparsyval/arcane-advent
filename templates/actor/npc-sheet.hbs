@@ -1,0 +1,194 @@
+<div class="aa-character aa-npc">
+    <header class="aa-npc-header">
+        <img class="aa-portrait" src="{{actor.img}}" alt="Portrait de {{actor.name}}">
+        <div class="aa-npc-identity">
+            <div class="aa-npc-name-line">
+                <input class="aa-name" type="text" name="name" value="{{actor.name}}" aria-label="Nom du PNJ"
+                    {{#unless canEditState}}readonly{{/unless}}>
+                <span class="aa-npc-badge">PNJ</span>
+            </div>
+            <input type="text" data-identity-field="title" value="{{system.identity.title}}"
+                placeholder="Titre ou appellation" aria-label="Titre ou appellation"
+                {{#unless canEditState}}readonly{{/unless}}>
+        </div>
+    </header>
+
+    <details class="aa-npc-options" data-npc-options {{#if npcOptionsOpen}}open{{/if}}>
+        <summary><i class="fa-solid fa-gear" aria-hidden="true"></i> Options de la fiche</summary>
+        <div class="aa-npc-settings">
+            {{> "systems/arcane-advent/templates/actor/parts/sheet-mode.hbs"}}
+            <section class="aa-panel">
+                <h2>Réglages de jeu</h2>
+                <div class="aa-npc-settings-grid">
+                    <label>Volume
+                        <select data-identity-field="volume" {{#unless canEditState}}disabled{{/unless}}>
+                            {{#each volumeOptions}}
+                                <option value="{{@key}}" {{#if (eq @key ../system.identity.volume)}}selected{{/if}}>{{this}}</option>
+                            {{/each}}
+                        </select>
+                    </label>
+                    <label>Dé de Conscience
+                        <input type="text" name="system.consciousnessDice.formula" value="{{system.consciousnessDice.formula}}"
+                            {{#unless canEditState}}readonly{{/unless}}>
+                    </label>
+                    {{#each compactAbilities}}
+                        <label>Maîtrise JS {{label}}
+                            <input type="number" name="system.savingThrows.{{key}}.mastery" value="{{mastery}}"
+                                aria-label="Maîtrise JS {{name}}" {{#unless @root.canEditState}}readonly{{/unless}}>
+                        </label>
+                    {{/each}}
+                </div>
+            </section>
+            {{> "systems/arcane-advent/templates/actor/parts/manual-modifiers.hbs"}}
+        </div>
+    </details>
+
+    <section class="aa-panel aa-npc-vitals" aria-label="Ressources du PNJ">
+        <div class="aa-npc-resource">
+            <strong>PdC</strong>
+            <div class="aa-npc-counter">
+                <input type="number" name="system.consciousness.value" value="{{system.consciousness.value}}"
+                    aria-label="PdC actuels" {{#unless canEditState}}readonly{{/unless}}>
+                <span>/</span>
+                <input type="number" min="0" name="system.consciousness.max" value="{{system.consciousness.max}}"
+                    aria-label="PdC maximum" {{#unless canEditState}}readonly{{/unless}}>
+            </div>
+        </div>
+        <div class="aa-npc-resource">
+            <strong>PdF</strong>
+            <div class="aa-npc-counter">
+                <input type="number" min="0" name="system.fever.value" value="{{system.fever.value}}"
+                    aria-label="PdF actuels" {{#unless canEditState}}readonly{{/unless}}>
+                <span>/</span>
+                <input type="number" min="0" name="system.fever.max" value="{{system.fever.max}}"
+                    aria-label="PdF maximum" {{#unless canEditState}}readonly{{/unless}}>
+            </div>
+        </div>
+        <div class="aa-npc-resource">
+            <strong>Barrière</strong>
+            <input type="number" min="0" name="system.barrier" value="{{system.barrier}}"
+                aria-label="Barrière" {{#unless canEditState}}readonly{{/unless}}>
+        </div>
+        <div class="aa-npc-resource">
+            <button type="button" data-action="rollConsciousnessDie" title="Lancer un dé de Conscience">🎲 Dés PdC</button>
+            <div class="aa-npc-counter">
+                <input type="number" min="0" name="system.consciousnessDice.value" value="{{system.consciousnessDice.value}}"
+                    aria-label="Dés de Conscience restants" {{#unless canEditState}}readonly{{/unless}}>
+                <span>/</span>
+                <input type="number" min="0" name="system.consciousnessDice.max" value="{{system.consciousnessDice.max}}"
+                    aria-label="Dés de Conscience maximum" {{#unless canEditState}}readonly{{/unless}}>
+            </div>
+        </div>
+    </section>
+
+    <section class="aa-panel aa-npc-combat" aria-label="Défense et mobilité">
+        <div class="aa-npc-metrics">
+            <button type="button" data-action="rollInitiativeCheck" title="Lancer l’initiative">🎲 Initiative <strong>{{system.trackers.initiative}}</strong></button>
+            <span>Perception <strong>{{system.trackers.passivePerception}}</strong></span>
+            <label>Vitesse <input type="number" min="0" step="any" name="system.trackers.speed" value="{{system.trackers.speed}}"
+                aria-label="Vitesse de base en mètres" {{#unless canEditState}}readonly{{/unless}}> m</label>
+            <small title="Vitesse effective après bonus, malus et encombrement">Effective : {{system.trackers.effectiveSpeed}} m</small>
+        </div>
+        <div class="aa-npc-defense">
+            <strong>Défense {{system.defense.base}}</strong>
+            {{#each compactDefenseZones}}<span>{{label}} <strong>{{value}}</strong></span>{{/each}}
+        </div>
+        <div class="aa-npc-modes">
+            <div class="aa-defense-mode" role="group" aria-label="Caractéristique de Défense">
+                {{#each defenseModes}}
+                    <button type="button" data-action="setDefenseMode" data-defense-mode="{{key}}" aria-pressed="{{selected}}"
+                        {{#unless @root.canEditState}}disabled{{/unless}}>{{label}}</button>
+                {{/each}}
+            </div>
+            <div class="aa-roll-mode" role="group" aria-label="Mode de jet">
+                {{#each rollModes}}
+                    <button type="button" data-action="setRollMode" data-roll-mode="{{key}}" aria-pressed="{{selected}}"
+                        {{#unless @root.canEditState}}disabled{{/unless}}>{{label}}</button>
+                {{/each}}
+            </div>
+        </div>
+        {{#if guardSources.length}}
+            <div class="aa-npc-guards">
+                {{#each guardSources}}
+                    <button type="button" data-action="rollGuard" data-item-id="{{id}}"
+                        title="Défense de Garde {{defense}} · JS {{saveModifierLabel}}">🛡️ {{name}} · {{defense}} / {{saveModifierLabel}}</button>
+                {{/each}}
+            </div>
+        {{/if}}
+    </section>
+
+    <section class="aa-npc-abilities" aria-label="Caractéristiques et jets de sauvegarde">
+        {{#each compactAbilities}}
+            <div class="aa-panel aa-npc-ability">
+                <strong title="{{name}}">{{label}}</strong>
+                <div>
+                    <input type="number" name="system.abilities.{{key}}.value" value="{{value}}" aria-label="Score de {{name}}"
+                        title="Score effectif : {{effective}}" {{#unless @root.canEditState}}readonly{{/unless}}>
+                    <button type="button" data-action="rollAbility" data-ability="{{key}}" title="Jet de {{name}}">🎲 {{modifierLabel}}</button>
+                </div>
+                <button type="button" data-action="rollSavingThrow" data-ability="{{key}}" title="Jet de sauvegarde de {{name}}">JS {{saveLabel}}</button>
+            </div>
+        {{/each}}
+    </section>
+
+    <main class="aa-npc-layout">
+        <div class="aa-npc-column">
+            <section class="aa-panel aa-npc-attacks">
+                <div class="aa-condition-heading">
+                    <h2>Attaques</h2>
+                    {{#if canEditState}}<button type="button" data-action="addEquipment" data-equipment-type="weapon" title="Ajouter une arme" aria-label="Ajouter une arme">+</button>{{/if}}
+                </div>
+                {{#each equipment.weapons}}
+                    <div class="aa-npc-attack">
+                        <strong>{{name}}</strong>
+                        {{#if @root.canEditState}}<button type="button" data-action="editInventoryItem" data-item-id="{{id}}" aria-label="Modifier {{name}}" title="Modifier l’arme">⚙</button>{{/if}}
+                        <div class="aa-npc-attack-rolls">
+                            <button type="button" data-action="rollWeaponAttack" data-item-id="{{id}}">🎲 Attaque {{attackModifierLabel}}</button>
+                            <button type="button" data-action="rollWeaponDamage" data-item-id="{{id}}">Dégâts {{system.damageFormula}}</button>
+                            {{#if properties.light}}<button type="button" data-action="rollWeaponBonusDamage" data-item-id="{{id}}">Dégâts bonus</button>{{/if}}
+                            {{#if properties.versatile}}<button type="button" data-action="rollWeaponVersatileDamage" data-item-id="{{id}}">À deux mains {{system.versatile.damageFormula}}</button>{{/if}}
+                        </div>
+                        {{#if damageTypes.length}}<small>{{#each damageTypes}}{{#unless @first}} · {{/unless}}{{label}}{{/each}}</small>{{/if}}
+                    </div>
+                {{else}}<p class="aa-condition-empty">Aucune arme équipée.</p>{{/each}}
+            </section>
+            {{> "systems/arcane-advent/templates/actor/parts/aptitudes.hbs"}}
+            {{> "systems/arcane-advent/templates/actor/parts/traits.hbs"}}
+        </div>
+        <div class="aa-npc-column">
+            {{> "systems/arcane-advent/templates/actor/parts/conditions.hbs"}}
+            <section class="aa-panel">
+                <div class="aa-condition-heading">
+                    <h2>Compétences</h2>
+                    {{#if canEditState}}<button type="button" data-action="addSkill" aria-label="Ajouter une compétence" title="Ajouter une compétence">+</button>{{/if}}
+                </div>
+                {{#each skills}}
+                    <div class="aa-npc-skill" data-sheet-sort-drop="{{id}}">
+                        <button type="button" data-action="rollSkill" data-skill-id="{{id}}" title="Lancer {{name}}">🎲 {{total}}</button>
+                        <input type="text" value="{{name}}" data-skill-edit data-skill-id="{{id}}" data-skill-field="name"
+                            aria-label="Nom de la compétence" {{#unless @root.canEditState}}readonly{{/unless}}>
+                        <select data-skill-edit data-skill-id="{{id}}" data-skill-field="system.ability" aria-label="Caractéristique de {{name}}"
+                            {{#unless @root.canEditState}}disabled{{/unless}}>
+                            {{#each @root.compactAbilities}}<option value="{{key}}" {{#if (eq key ../ability)}}selected{{/if}}>{{label}}</option>{{/each}}
+                        </select>
+                        <input type="number" value="{{mastery}}" data-skill-edit data-skill-id="{{id}}" data-skill-field="system.mastery"
+                            aria-label="Maîtrise de {{name}}" {{#unless @root.canEditState}}readonly{{/unless}}>
+                        {{#if @root.canEditState}}<button type="button" data-action="deleteSkill" data-skill-id="{{id}}" aria-label="Supprimer {{name}}" title="Supprimer la compétence">×</button>{{/if}}
+                    </div>
+                {{else}}<p class="aa-condition-empty">Aucune compétence.</p>{{/each}}
+            </section>
+            <section class="aa-panel">
+                <div class="aa-condition-heading">
+                    <h2>Expertises</h2>
+                    {{#if canEditState}}<button type="button" data-action="addExpertise" aria-label="Ajouter une expertise" title="Ajouter une expertise">+</button>{{/if}}
+                </div>
+                {{#each expertises}}
+                    <div class="aa-npc-expertise">
+                        <span>{{name}}</span><strong>{{bonusLabel}}</strong>
+                        {{#if @root.canEditState}}<button type="button" data-action="editExpertise" data-expertise-id="{{id}}" aria-label="Options de {{name}}" title="Modifier l’expertise">⚙</button>{{/if}}
+                    </div>
+                {{else}}<p class="aa-condition-empty">Aucune expertise.</p>{{/each}}
+            </section>
+        </div>
+    </main>
+</div>

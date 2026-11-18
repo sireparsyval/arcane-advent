@@ -1,0 +1,153 @@
+<section class="aa-panel">
+    <div class="aa-condition-heading aa-aptitude-heading">
+        <h2 class="aa-status-title">Aptitudes</h2>
+        {{#if canEditState}}
+            <button type="button" data-action="addAptitude"
+                aria-label="Ajouter une aptitude" title="Ajouter une aptitude">
+                <i class="fa-solid fa-plus" aria-hidden="true"></i>
+            </button>
+        {{/if}}
+    </div>
+    {{#each aptitudes}}
+        <div class="aa-condition-row aa-aptitude-row" data-sheet-sort-drop="{{id}}">
+            {{#if @root.canEditState}}
+                <div class="aa-aptitude-identity">
+                    <span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}" aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>
+                    <label class="aa-aptitude-name">
+                        <span>Nom</span>
+                        <input type="text" required pattern=".*\S.*" value="{{name}}"
+                            data-aptitude-field="name" data-item-id="{{id}}" aria-label="Nom de l’aptitude">
+                    </label>
+                    {{#unless @root.compactNPC}}
+                    <label class="aa-aptitude-type">
+                        <span>Type</span>
+                        <select data-aptitude-field="category" data-item-id="{{id}}">
+                            {{#each @root.aptitudeCategories}}
+                                <option value="{{@key}}" {{#if (eq @key ../system.category)}}selected{{/if}}>{{this}}</option>
+                            {{/each}}
+                        </select>
+                    </label>
+                    {{#unless isPassive}}
+                    <label class="aa-aptitude-level">
+                        <span>Niv.</span>
+                        <input type="number" min="0" step="1" required value="{{system.level}}"
+                            data-aptitude-field="level" data-item-id="{{id}}">
+                    </label>
+                    {{/unless}}
+                    {{/unless}}
+                    <div class="aa-aptitude-actions">
+                        <button type="button" data-action="editAptitudeOptions" data-item-id="{{id}}"
+                            aria-label="Options de {{name}}" title="Configurer l’aptitude">
+                            <i class="fa-solid fa-gear" aria-hidden="true"></i> Options
+                        </button>
+                        {{#if linkedTraitId}}
+                            <button type="button" data-action="goToLinkedTrait" data-trait-id="{{linkedTraitId}}"
+                                class="aa-aptitude-origin" title="Gérer depuis le Trait {{linkedTraitName}}"
+                                aria-label="Voir le Trait {{linkedTraitName}}">↳ Trait</button>
+                        {{else}}
+                            <button type="button" data-action="deleteAptitude" data-item-id="{{id}}"
+                                aria-label="Retirer {{name}}" title="Retirer l’aptitude">
+                                <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                            </button>
+                        {{/if}}
+                    </div>
+                </div>
+            {{else}}
+                <div class="aa-aptitude-identity">
+                    <strong>{{name}}</strong>
+                    <span class="aa-condition-level">{{categoryLabel}}{{#unless isPassive}} · Niv. {{system.level}} ({{system.level}} PdF){{/unless}}</span>
+                </div>
+            {{/if}}
+            {{#if @root.compactNPC}}
+                {{#if @root.canEditState}}
+                    <details class="aa-npc-aptitude-settings" data-aptitude-settings="{{id}}" {{#if settingsOpen}}open{{/if}}>
+                        <summary>{{categoryLabel}}{{#unless isPassive}} · Niv. {{system.level}} · {{system.level}} PdF{{/unless}}</summary>
+                        <div class="aa-npc-settings-grid">
+                            <label>Type
+                                <select data-aptitude-field="category" data-item-id="{{id}}">
+                                    {{#each @root.aptitudeCategories}}<option value="{{@key}}" {{#if (eq @key ../system.category)}}selected{{/if}}>{{this}}</option>{{/each}}
+                                </select>
+                            </label>
+                            {{#unless isPassive}}
+                                <label>Niveau / coût en PdF
+                                    <input type="number" min="0" step="1" required value="{{system.level}}" data-aptitude-field="level" data-item-id="{{id}}">
+                                </label>
+                            {{/unless}}
+                        </div>
+                    </details>
+                {{/if}}
+            {{/if}}
+            {{#if linkedTraitName}}
+                <div class="aa-aptitude-origin-label">↳ Trait : {{linkedTraitName}}</div>
+            {{/if}}
+            {{#if system.requirements}}
+                <div class="aa-requirements-note"><strong>Conditions requises :</strong> {{system.requirements}}</div>
+            {{/if}}
+            {{#if conditions.length}}
+                <div class="aa-condition-chips aa-aptitude-condition-indicators" aria-label="Conditions de l'aptitude">
+                    {{#each conditions}}
+                        {{#if automatic}}
+                            <button type="button" class="aa-condition-chip {{#if satisfied}}is-satisfied{{else}}is-unmet{{/if}}"
+                                data-action="editAptitudeCondition" data-item-id="{{../id}}" data-condition-id="{{id}}"
+                                title="{{label}} · {{#if satisfied}}Remplie{{else}}Non remplie{{/if}} · Cliquer pour configurer"
+                                {{#unless @root.canEditState}}disabled{{/unless}}>
+                                {{#if satisfied}}✓{{else}}✕{{/if}} {{label}}{{#if consumes}} · consommable{{/if}}
+                            </button>
+                        {{else}}
+                            <button type="button" class="aa-condition-chip {{#if satisfied}}is-satisfied{{else}}is-manual{{/if}}"
+                                data-action="toggleManualAptitudeCondition" data-item-id="{{../id}}" data-condition-id="{{id}}"
+                                aria-pressed="{{satisfied}}" title="{{label}} · condition manuelle"
+                                {{#unless @root.canEditState}}disabled{{/unless}}>
+                                {{#if satisfied}}☑{{else}}☐{{/if}} {{label}}
+                            </button>
+                        {{/if}}
+                    {{/each}}
+                </div>
+            {{/if}}
+            <div class="aa-aptitude-facts">
+                {{#if effectDuration.active}}
+                    <div class="aa-aptitude-option"><strong>Durée d’effet</strong>
+                        <span>{{effectDuration.remaining}} {{effectDuration.label}}</span>
+                    </div>
+                {{/if}}
+                {{#each options}}
+                    {{#if active}}
+                        <div class="aa-aptitude-option">
+                            <strong>{{label}}</strong>
+                            <span>{{value.remaining}} / {{value.max}}{{#if unitLabel}} {{unitLabel}}{{/if}}</span>
+                        </div>
+                    {{/if}}
+                {{/each}}
+                {{#if targetingSummary}}<small>{{targetingSummary}}</small>{{/if}}
+            </div>
+            {{#if rolls}}
+                <div class="aa-aptitude-rolls">
+                    {{#each rolls}}
+                        <div class="aa-aptitude-roll">
+                            <button type="button" data-action="rollAptitude" data-item-id="{{../id}}" data-roll-id="{{id}}">
+                                <i class="fa-solid fa-dice-d20" aria-hidden="true"></i> {{name}}
+                            </button>
+                            {{#if @root.canEditState}}
+                                <button type="button" class="aa-aptitude-edit-roll" data-action="editAptitudeRoll"
+                                    data-item-id="{{../id}}" data-roll-id="{{id}}" aria-label="Modifier {{name}}" title="Modifier {{name}}">
+                                    <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                                </button>
+                            {{/if}}
+                        </div>
+                    {{/each}}
+                </div>
+            {{/if}}
+            <details data-aptitude-description="{{id}}" {{#if descriptionOpen}}open{{/if}}>
+                <summary>Description et effets conditionnels</summary>
+                {{#if @root.canEditState}}
+                    <textarea rows="4" data-aptitude-field="description" data-item-id="{{id}}"
+                        aria-label="Effets et utilisation de {{name}}">{{system.description}}</textarea>
+                {{else}}
+                    <p>{{#if system.description}}{{system.description}}{{else}}Aucune description.{{/if}}</p>
+                {{/if}}
+            </details>
+        </div>
+    {{else}}
+        <p class="aa-condition-empty">Aucune aptitude.</p>
+    {{/each}}
+</section>
