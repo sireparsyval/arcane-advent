@@ -1,4 +1,5 @@
 import { EQUIPMENT_TYPES, isInventoryContainer, isInventoryItem } from "./inventory.mjs";
+import { inventorySource } from "./inventory-source.mjs";
 
 // Build a fresh identity map for the whole subtree before creating any document.
 export function transferPlan(items, selections, randomID) {
@@ -32,14 +33,14 @@ export function transferPlan(items, selections, randomID) {
     const creates = [], deletes = [], updates = [], originals = [];
     for (const id of included) {
         const item = byId.get(id);
-        const data = item.toObject();
+        const data = inventorySource(item.toObject());
         originals.push(data);
         const parentIncluded = included.has(item.system.containerId)
             && isInventoryContainer(byId.get(item.system.containerId));
         // Selecting a parent always moves all of its contents, even if a child
         // was also individually checked with a smaller quantity.
         const quantity = parentIncluded ? item.system.quantity : selected.get(id) ?? item.system.quantity;
-        const copy = structuredClone(data);
+        const copy = inventorySource(data);
         copy._id = ids.get(id);
         copy.system.containerId = parentIncluded ? ids.get(item.system.containerId) : null;
         if (EQUIPMENT_TYPES.includes(item.type)) copy.system.equipped = false;

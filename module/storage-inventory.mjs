@@ -1,4 +1,5 @@
 import { canPlaceInContainer, EQUIPMENT_TYPES, isInventoryItem } from "./inventory.mjs";
+import { inventorySource } from "./inventory-source.mjs";
 
 const inventories = new WeakMap();
 const contentOwners = new WeakMap();
@@ -33,7 +34,7 @@ export class StorageInventory {
         const signature = JSON.stringify(this.system.contents);
         if (this.#signature !== signature) {
             const next = new Contents();
-            for (const source of this.system.contents) {
+            for (const source of inventorySource(this.system.contents)) {
                 const item = this.#items.get(source._id) ?? new CONFIG.Item.documentClass(source, { strict: true });
                 if (this.#items.has(source._id)) item.updateSource(source, { diff: false, recursive: false });
                 contentOwners.set(item, this);
@@ -65,7 +66,7 @@ export class StorageInventory {
 
     async #save(sources, options) {
         const projected = new Contents();
-        for (const source of sources) {
+        for (const source of inventorySource(sources)) {
             if (!isInventoryItem(source) || projected.has(source._id)) throw new Error("Contenu de stockage invalide.");
             source.system ??= {};
             if (EQUIPMENT_TYPES.includes(source.type)) source.system.equipped = false;
@@ -78,18 +79,19 @@ export class StorageInventory {
                 throw new Error("Le contenant est invalide ou contient une référence circulaire.");
             }
         }
-        const contents = [...projected].map(item => item.toObject());
+        const contents = inventorySource([...projected].map(item => item.toObject()));
         // Pass only our intent, never an operation previously mutated by a
         // native embedded-document write (notably its parentUuid).
-        await this.document.update({ "system.contents": contents }, { aaTransfer: options.aaTransfer === true });
-        if (!foundry.utils.equals(this.system.contents, contents)) throw new Error("Le stockage n’a pas enregistré tous les changements.");
+        await this.document.update({ "system.contents": inventorySource(contents) }, { aaTransfer: options.aaTransfer === true });
+        const stored = inventorySource(this.document.toObject().system.contents);
+        if (!foundry.utils.equals(stored, contents)) throw new Error("Le stockage n’a pas enregistré tous les changements.");
         this.#signature = undefined;
     }
 
     createEmbeddedDocuments(type, sources, options = {}) {
         return this.#write(async () => {
             if (type !== "Item") throw new Error("Type de contenu invalide.");
-            const created = sources.map(source => ({ ...structuredClone(source),
+            const created = sources.map(source => ({ ...inventorySource(source),
                 _id: options.keepId && source._id ? source._id : foundry.utils.randomID() }));
             await this.#save([...this.items].map(item => item.toObject()).concat(created), options);
             return created.map(source => this.items.get(source._id));
@@ -102,7 +104,7 @@ export class StorageInventory {
             const updates = new Map(changes.map(change => [change._id, change]));
             if ([...updates.keys()].some(id => !this.items.has(id))) throw new Error("Un objet n’est plus disponible.");
             const sources = [...this.items].map(item => {
-                const copy = new CONFIG.Item.documentClass(item.toObject(), { strict: true });
+                const copy = new CONFIG.Item.documentClass(inventorySource(item.toObject()), { strict: true });
                 if (updates.has(item.id)) copy.updateSource(updates.get(item.id));
                 return copy.toObject();
             });
@@ -118,7 +120,7 @@ export class StorageInventory {
             const before = this.items;
             const deleted = ids.map(id => before.get(id)).filter(Boolean);
             const sources = [...before].filter(item => !removed.has(item.id)).map(item => {
-                const source = item.toObject();
+                const source = inventorySource(item.toObject());
                 let parent = source.system.containerId;
                 const visited = new Set();
                 while (removed.has(parent) && !visited.has(parent)) {

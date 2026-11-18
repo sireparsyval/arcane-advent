@@ -430,6 +430,37 @@ test("storage copies own their contents, support editing and rehome children aft
     assert.equal(storage.items.get("apple").name, "Pommes");
 });
 
+test("storage creation accepts serializable proxies and the default add-button data", async () => {
+    const storage = await createStorage({ name: "Proxy content" });
+    const source = { name: "Objet", type: "object", system: new Proxy({ quantity: 3, containerId: null }, {}) };
+    assert.throws(() => structuredClone(source), /clone/i);
+    const [created] = await storage.createEmbeddedDocuments("Item", [source]);
+    assert.equal(created.system.quantity, 3);
+    for (const type of ["object", "container", "purse"]) {
+        const [added] = await storage.createEmbeddedDocuments("Item", [{ type, name: type }]);
+        assert.equal(added.type, type);
+    }
+    assert.equal(storage.items.size, 4);
+});
+
+test("storage verification compares persisted sources instead of transformed model values", async () => {
+    const storage = await createStorage({ name: "Model values" });
+    await stock(storage, "apple", 3);
+    class RuntimeSystem {
+        constructor(source) { Object.assign(this, source); }
+        toJSON() { return { ...this }; }
+    }
+    Object.defineProperty(storage.document, "system", { get() {
+        return { ...this._source.system, contents: this._source.system.contents.map(source => ({
+            ...source, system: new RuntimeSystem(source.system)
+        })) };
+    } });
+    await storage.updateInventoryItem("apple", { "system.quantity": 2 });
+    assert.equal(storage.items.get("apple").system.quantity, 2);
+    await storage.deleteInventoryItem("apple");
+    assert.equal(storage.items.size, 0);
+});
+
 test("a vetoed storage quantity write rolls back the recipient instead of duplicating objects", async () => {
     const storage = await createStorage({ name: "Coffre", scene });
     await stock(storage, "apple", 3);

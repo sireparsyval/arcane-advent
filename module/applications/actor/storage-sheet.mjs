@@ -43,9 +43,11 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
             },
             addItem: async function (_event, target) {
                 if (!game.user.isGM || !["object", "container", "purse"].includes(target.dataset.type)) return;
-                const [item] = await this.inventoryHost.createEmbeddedDocuments("Item", [{ type: target.dataset.type,
-                    name: target.dataset.type === "container" ? "Nouveau contenant" : target.dataset.type === "purse" ? "Bourse" : "Nouvel objet" }]);
-                item?.sheet.render({ force: true });
+                try {
+                    const [item] = await this.inventoryHost.createEmbeddedDocuments("Item", [{ type: target.dataset.type,
+                        name: target.dataset.type === "container" ? "Nouveau contenant" : target.dataset.type === "purse" ? "Bourse" : "Nouvel objet" }]);
+                    item?.sheet.render({ force: true });
+                } catch (error) { ui.notifications.error(error.message); }
             }
         }
     };

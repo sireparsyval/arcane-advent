@@ -1,4 +1,5 @@
 import { isGroundTemplate, storageTokenModel } from "./storage.mjs";
+import { inventorySource } from "./inventory-source.mjs";
 
 const SCOPE = "arcane-advent";
 const MIGRATION = "storage-migration";
@@ -15,10 +16,10 @@ export async function migrateStorageActors() {
             const copy = async source => {
                 let item = game.items.find(item => item.type === "storage" && item.getFlag(SCOPE, "storageOrigin") === source.uuid);
                 if (!item) item = await Item.create({ name: source.name, type: "storage", img: source.img,
-                    ownership: structuredClone(source.ownership),
+                    ownership: inventorySource(source.ownership ?? {}),
                     flags: { [SCOPE]: { storageOrigin: source.uuid, legacyStorageActorId: actor.id, inventoryBusy: MIGRATION } },
                     system: { ground: source.system.ground, locked: source.system.locked,
-                        contents: [...source.items].map(item => item.toObject()) } });
+                        contents: [...source.items].map(item => inventorySource(item.toObject())) } });
                 await item.setFlag(SCOPE, "inventoryBusy", MIGRATION);
                 return item;
             };

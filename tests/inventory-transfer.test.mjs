@@ -110,6 +110,22 @@ test("source and destination may not be the same actor", async () => {
     assert.equal(source.items.size, 1);
 });
 
+test("transfers serialize proxy-backed flags before copying and preserve their data", async () => {
+    const source = actor("source", [item("apple", "object", { quantity: 2 })]);
+    const original = source.items.get("apple").toObject;
+    source.items.get("apple").toObject = function () {
+        const data = original.call(this);
+        data.flags = new Proxy({ custom: { note: "conservée" } }, {});
+        return data;
+    };
+    const destination = actor("destination");
+    const plan = transferPlan(source.items, [{ id: "apple", quantity: 1 }], randomID);
+    assert.deepEqual(plan.creates[0].flags, { custom: { note: "conservée" } });
+    await executeTransfer(source, destination, [{ id: "apple", quantity: 1 }], randomID);
+    assert.equal(source.items.get("apple").system.quantity, 1);
+    assert.equal([...destination.items][0].system.quantity, 1);
+});
+
 test("each transfer and rollback write gets an operation free of Foundry's previous mutations", async () => {
     for (const fail of [false, true]) {
         const source = actor("source", [item("apple", "object", { quantity: 5 })]);
