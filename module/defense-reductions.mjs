@@ -6,6 +6,21 @@ const PHYSICAL_TYPES = new Map([
     ["bludgeoning", "Contondants"], ["contondant", "Contondants"], ["contondants", "Contondants"]
 ]);
 
+function addDamageReductions(totals, damageReductions) {
+    for (const [type, value] of Object.entries(damageReductions ?? {})) {
+        const amount = Number(value);
+        if (!Number.isFinite(amount) || amount <= 0) continue;
+        const name = type.trim().replace(/\s+/g, " ").normalize("NFC");
+        if (!name) continue;
+        const label = PHYSICAL_TYPES.get(name.toLocaleLowerCase("fr")) ?? name;
+        const key = label.toLocaleLowerCase("fr");
+        for (const rows of totals) {
+            const previous = rows.get(key);
+            rows.set(key, { label: previous?.label ?? label, amount: (previous?.amount ?? 0) + amount });
+        }
+    }
+}
+
 export function defenseReductionsByZone(items) {
     const totals = Object.fromEntries(Object.keys(DEFENSE_ZONE_LABELS).map(zone => [zone, new Map()]));
     for (const item of items) {
@@ -13,30 +28,30 @@ export function defenseReductionsByZone(items) {
         const zones = item.system.zones;
         if (!(zones instanceof Set) && !Array.isArray(zones)) continue;
         const covered = [...new Set(zones)].filter(zone => Object.hasOwn(totals, zone));
-        for (const [type, value] of Object.entries(item.system.damageReductions ?? {})) {
-            const amount = Number(value);
-            if (!Number.isFinite(amount) || amount <= 0) continue;
-            const name = type.trim().replace(/\s+/g, " ").normalize("NFC");
-            if (!name) continue;
-            const normalized = name.toLocaleLowerCase("fr");
-            const label = PHYSICAL_TYPES.get(normalized) ?? name;
-            const key = label.toLocaleLowerCase("fr");
-            for (const zone of covered) {
-                const previous = totals[zone].get(key);
-                totals[zone].set(key, { label: previous?.label ?? label, amount: (previous?.amount ?? 0) + amount });
-            }
-        }
+        addDamageReductions(covered.map(zone => totals[zone]), item.system.damageReductions);
     }
     return Object.fromEntries(Object.entries(totals).map(([zone, rows]) => [zone, [...rows.values()]]));
+}
+
+export function shieldDamageReductions(items) {
+    const totals = new Map();
+    for (const item of items) {
+        if (item.type !== "shield" || !item.system?.equipped) continue;
+        addDamageReductions([totals], item.system.damageReductions);
+    }
+    return [...totals.values()];
 }
 
 // Build with textContent so free-form damage names stay text in the native
 // tooltip. A single table keeps amounts and units aligned across all rows.
 export function bindDefenseReductionTooltips(root, items) {
-    const byZone = defenseReductionsByZone(items);
-    for (const element of root.querySelectorAll("[data-defense-zone]")) {
-        const zone = element.dataset.defenseZone;
-        const rows = byZone[zone] ?? [];
+    const equipment = Array.from(items);
+    const byZone = defenseReductionsByZone(equipment);
+    const shieldRows = shieldDamageReductions(equipment);
+    for (const element of root.querySelectorAll("[data-defense-zone], [data-defense-shield]")) {
+        const shield = element.hasAttribute("data-defense-shield");
+        const rows = shield ? shieldRows : (byZone[element.dataset.defenseZone] ?? []);
+        const label = shield ? "Bouclier" : DEFENSE_ZONE_LABELS[element.dataset.defenseZone];
         delete element.dataset.tooltipHtml;
         delete element.dataset.tooltipClass;
         delete element.dataset.tooltipDirection;
@@ -45,7 +60,7 @@ export function bindDefenseReductionTooltips(root, items) {
         if (!rows.length) continue;
         const table = root.ownerDocument.createElement("table");
         table.className = "aa-defense-reductions";
-        table.setAttribute("aria-label", `Réductions — ${DEFENSE_ZONE_LABELS[zone]}`);
+        table.setAttribute("aria-label", `Réductions — ${label}`);
         const body = table.createTBody();
         for (const { label, amount } of rows) {
             const row = body.insertRow();

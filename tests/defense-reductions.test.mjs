@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { defenseReductionsByZone } from "../module/defense-reductions.mjs";
+import { defenseReductionsByZone, shieldDamageReductions } from "../module/defense-reductions.mjs";
 
 const protection = (zones, damageReductions, equipped = true) => ({ type: "protection", system: {
     equipped, zones: new Set(zones), damageReductions
@@ -64,4 +64,37 @@ test("changing equipped state or covered zones immediately changes the displayed
     assert.equal(defenseReductionsByZone([item]).arms[0].amount, 2);
     item.system.equipped = false;
     assert.deepEqual(defenseReductionsByZone([item]).arms, []);
+});
+
+test("shield reductions include only equipped shields and remain separate from zone armor", () => {
+    const items = [
+        { type: "shield", system: { equipped: true, guardEnabled: false, damageReductions: { Tranchants: 2, Perforants: 2, Contondants: 1 } } },
+        { type: "shield", system: { equipped: false, damageReductions: { Feu: 99 } } },
+        protection(["torso"], { Tranchants: 1, Feu: 3 }),
+        { type: "weapon", system: { equipped: true, damageReductions: { Froid: 5 } } }
+    ];
+    assert.deepEqual(shieldDamageReductions(items), [
+        { label: "Tranchants", amount: 2 }, { label: "Perforants", amount: 2 }, { label: "Contondants", amount: 1 }
+    ]);
+    assert.deepEqual(defenseReductionsByZone(items).torso, [{ label: "Tranchants", amount: 1 }, { label: "Feu", amount: 3 }]);
+});
+
+test("multiple shields combine normalized damage types and ignore empty or invalid reductions", () => {
+    const items = [
+        { type: "shield", system: { equipped: true, damageReductions: { slashing: 1, Feu: 2, Froid: 0, " ": 3 } } },
+        { type: "shield", system: { equipped: true, damageReductions: { " TRANCHANTS ": 2, " feu ": 1, Acide: -1, Poison: Infinity } } }
+    ];
+    const before = structuredClone(items);
+    assert.deepEqual(shieldDamageReductions(items), [{ label: "Tranchants", amount: 3 }, { label: "Feu", amount: 3 }]);
+    assert.deepEqual(items, before);
+});
+
+test("shield reductions refresh after editing or unequipping a shield", () => {
+    const shield = { type: "shield", system: { equipped: true, damageReductions: { Feu: 2 } } };
+    assert.deepEqual(shieldDamageReductions([shield]), [{ label: "Feu", amount: 2 }]);
+    shield.system.damageReductions.Feu = 4;
+    assert.deepEqual(shieldDamageReductions([shield]), [{ label: "Feu", amount: 4 }]);
+    shield.system.equipped = false;
+    assert.deepEqual(shieldDamageReductions([shield]), []);
+    assert.deepEqual(shieldDamageReductions([]), []);
 });

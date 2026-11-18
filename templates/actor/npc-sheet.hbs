@@ -94,6 +94,7 @@
         <div class="aa-npc-defense">
             <strong>Défense {{system.defense.base}}</strong>
             {{#each compactDefenseZones}}<span data-defense-zone="{{key}}">{{label}} <strong>{{value}}</strong></span>{{/each}}
+            {{#if hasEquippedShield}}<span data-defense-shield>Bouclier {{shieldBonusLabel}}</span>{{/if}}
         </div>
         <div class="aa-npc-modes">
             <div class="aa-defense-mode" role="group" aria-label="Caractéristique de Défense">

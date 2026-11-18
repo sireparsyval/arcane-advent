@@ -624,9 +624,9 @@
                             </div>
 
 
-                            {{#if system.defense.shieldBonus}}
-                                <span class="aa-defense-base">
-                                    + Bouclier {{system.defense.shieldBonus}}
+                            {{#if hasEquippedShield}}
+                                <span class="aa-defense-base" data-defense-shield>
+                                    Bouclier {{shieldBonusLabel}}
                                 </span>
                             {{/if}}
 

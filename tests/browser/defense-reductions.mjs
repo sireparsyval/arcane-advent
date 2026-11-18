@@ -6,9 +6,13 @@ export async function runDefenseReductionTests({ test, assert, equal }) {
     document.querySelector("main").replaceChildren(root);
     const torso = root.querySelector('[data-defense-zone="torso"]');
     const head = root.querySelector('[data-defense-zone="head"]');
+    const shield = root.querySelector("[data-defense-shield]");
     const items = [{ type: "protection", system: { equipped: true, zones: new Set(["torso"]),
         damageReductions: { Tranchants: 1, Contondants: 12, Feu: 0 } } },
-        { type: "protection", system: { equipped: true, zones: new Set(["arms"]), damageReductions: { Feu: 5 } } }];
+        { type: "protection", system: { equipped: true, zones: new Set(["arms"]), damageReductions: { Feu: 5 } } },
+        { type: "shield", system: { equipped: true, guardEnabled: false,
+            damageReductions: { slashing: 2, Perforants: 12, Contondants: 1, Feu: 0 } } },
+        { type: "shield", system: { equipped: false, damageReductions: { Froid: 99 } } }];
     const tooltip = document.createElement("div");
     tooltip.id = "tooltip";
     tooltip.style.cssText = "position:fixed;left:10px;top:10px;padding:10px;max-width:400px;";
@@ -56,6 +60,42 @@ export async function runDefenseReductionTests({ test, assert, equal }) {
         bindDefenseReductionTooltips(root, items);
         assert(!torso.dataset.tooltipHtml && !torso.dataset.tooltipClass, "Stale tooltip data remains after unequipping");
         equal(torso.tabIndex, -1);
+    });
+
+    await test("shield tooltip displays its own reductions with aligned columns", () => {
+        bindDefenseReductionTooltips(root, items);
+        assert(shield, "Shield bonus is missing from the character sheet template");
+        equal(shield.dataset.tooltipDirection, "UP");
+        equal(getComputedStyle(shield).cursor, "help");
+        shield.focus();
+        assert(game.tooltip.element === shield, "Focusing the shield did not activate its tooltip");
+        equal(tooltip.querySelector("table").getAttribute("aria-label"), "Réductions — Bouclier");
+        const rows = [...tooltip.querySelectorAll("tr")];
+        equal(rows.map(row => [...row.cells].map(cell => cell.textContent)), [
+            ["Tranchants", "−2", "Dgts"], ["Perforants", "−12", "Dgts"], ["Contondants", "−1", "Dgts"]
+        ]);
+        for (const row of rows.slice(1)) {
+            assert(Math.abs(rows[0].cells[0].getBoundingClientRect().left - row.cells[0].getBoundingClientRect().left) < 1, "Shield damage names are not left aligned");
+            assert(Math.abs(rows[0].cells[1].getBoundingClientRect().right - row.cells[1].getBoundingClientRect().right) < 1, "Shield reduction amounts are not right aligned");
+            assert(Math.abs(rows[0].cells[2].getBoundingClientRect().left - row.cells[2].getBoundingClientRect().left) < 1, "Shield damage units are not aligned");
+        }
+        shield.blur();
+        equal(game.tooltip.element, null);
+    });
+
+    await test("compact NPC shield tooltip refreshes and clears after unequipping", async () => {
+        root.innerHTML = await (await fetch("/templates/actor/npc-sheet.hbs")).text();
+        const compactShield = root.querySelector("[data-defense-shield]");
+        assert(compactShield, "Shield bonus is missing from the compact NPC template");
+        items[2].system.damageReductions.slashing = 4;
+        bindDefenseReductionTooltips(root, items);
+        compactShield.focus();
+        equal(tooltip.querySelector("tr").cells[1].textContent, "−4");
+        compactShield.blur();
+        items[2].system.equipped = false;
+        bindDefenseReductionTooltips(root, items);
+        assert(!compactShield.dataset.tooltipHtml && !compactShield.dataset.tooltipClass, "Shield tooltip was not cleared after unequipping");
+        equal(compactShield.tabIndex, -1);
     });
     tooltip.remove();
 }

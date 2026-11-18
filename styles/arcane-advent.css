@@ -1270,8 +1270,10 @@ body.detached > .aa-detached-sheet .window-content {
     font-size: 1.35rem;
 }
 
-[data-defense-zone][data-tooltip-html] { cursor: help; }
-[data-defense-zone][data-tooltip-html]:focus-visible { outline: 2px solid var(--aa-accent, #d9bc91); outline-offset: 2px; }
+[data-defense-zone][data-tooltip-html],
+[data-defense-shield][data-tooltip-html] { cursor: help; }
+[data-defense-zone][data-tooltip-html]:focus-visible,
+[data-defense-shield][data-tooltip-html]:focus-visible { outline: 2px solid var(--aa-accent, #d9bc91); outline-offset: 2px; }
 .aa-defense-tooltip { text-align: left; }
 .aa-defense-reductions { margin: 0; width: 100%; min-width: 10rem; border: 0; border-collapse: collapse; background: transparent; }
 .aa-defense-reductions tr { border: 0; background: transparent; }
