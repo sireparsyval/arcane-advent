@@ -23,6 +23,13 @@ export class ArcaneActor extends Actor {
 
     #inventoryOperation = Promise.resolve();
 
+    async _preCreate(data, options, user) {
+        if (await super._preCreate(data, options, user) === false) return false;
+        if (this.type === "npc" && this.getFlag("arcane-advent", "compactNPC") == null) {
+            this.updateSource({ "flags.arcane-advent.compactNPC": true });
+        }
+    }
+
     get inventory() {
         return buildInventory(this.items);
     }

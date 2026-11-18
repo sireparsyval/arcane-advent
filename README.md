@@ -2,6 +2,9 @@
 
 ## Mode PNJ compact
 
+Les nouveaux acteurs de type **PNJ** sont créés directement en mode compact.
+Le choix explicite d'une fiche complète reste conservé lors d'une copie ou d'un import.
+
 Dans **Options**, activer **Mode PNJ compact** pour réunir les informations de jeu
 sur une seule vue : PdC/PdF, Barrière, Dés de Conscience, Défense, mobilité,
 caractéristiques et sauvegardes, attaques, Aptitudes, Traits, Compétences,
