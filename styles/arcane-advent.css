@@ -1805,6 +1805,7 @@ body.detached > .aa-detached-sheet .window-content {
 }
 .aa-character .aa-age-controls > .aa-age-mode-toggle {
     flex: 0 0 29px;
+    margin-inline-start: auto;
     width: 29px;
     height: 29px;
     min-height: 29px;
