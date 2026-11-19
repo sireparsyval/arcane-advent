@@ -306,5 +306,21 @@ si l'élément est supprimé, il ne retrouve pas automatiquement un remplacement
 La création/exécution de macros de script nécessite les permissions Foundry
 correspondantes pour les joueurs concernés.
 
+### Initiative dans les rencontres de combat
+
+Le bouton **Jet d’initiative** du suivi de combat appelle le même
+`rollInitiativeCheck` que la fiche du personnage ou du PNJ. Le résultat final
+Arcane Advent est inscrit dans la rencontre : bonus/malus actuels, effets,
+Avantage/Neutre/Désavantage et règles des 1/20 naturels compris.
+Les jets groupés et les relances utilisent aussi ce calcul, avec un seul message
+par combattant. Les jets des combattants cachés restent réservés au MJ, sauf
+choix explicite d’un autre mode de visibilité.
+
+À la première ouverture du monde par le MJ, le marqueur de tour global utilise
+`assets/arcane-advent/system/battlemark.png` avec l’animation **Rotation**.
+Les jetons en mode **Par défaut** héritent de ce réglage. Les personnalisations
+par jeton restent prioritaires ; le MJ peut ensuite modifier le réglage global
+dans la configuration des rencontres sans qu’il soit réinitialisé au rechargement.
+
 > **Esprit de conception :** automatiser les calculs utiles et l'affichage,
 > jamais l'interprétation des actions, critiques, postures ou conséquences narratives.

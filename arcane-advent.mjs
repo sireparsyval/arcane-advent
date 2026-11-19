@@ -18,6 +18,8 @@ import { AptitudeData } from "./module/data/aptitude-data.mjs";
 import { TraitData } from "./module/data/trait-data.mjs";
 
 import { ArcaneActor } from "./module/documents/actor.mjs";
+import { ArcaneCombat } from "./module/documents/combat.mjs";
+import { registerCombatSettings, configureDefaultTurnMarker } from "./module/combat-settings.mjs";
 import { ArcaneItem } from "./module/documents/item.mjs";
 
 import { ArcaneCharacterSheet } from "./module/applications/actor/character-sheet.mjs";
@@ -44,6 +46,14 @@ Hooks.once("init", () => {
     registerTokenBars();
 
     CONFIG.Actor.documentClass = ArcaneActor;
+    CONFIG.Combat.documentClass = ArcaneCombat;
+    // CSS variables resolve relative URLs against Foundry's stylesheet directory.
+    const initiativeIcon = foundry.utils.getRoute("assets/arcane-advent/system/icons/tracker-initiative-white.svg");
+    CONFIG.Combat.initiativeIcon = {
+        icon: initiativeIcon,
+        hover: initiativeIcon
+    };
+    registerCombatSettings();
     CONFIG.Item.documentClass = ArcaneItem;
 
     CONFIG.Actor.dataModels.character = PlayerCharacterData;
@@ -125,6 +135,7 @@ Hooks.once("init", () => {
 
 Hooks.once("ready", async () => {
     console.log("Arcane Advent | Ready");
+    await configureDefaultTurnMarker();
     await migrateStorageActors();
     await migrateStorageImages();
 });

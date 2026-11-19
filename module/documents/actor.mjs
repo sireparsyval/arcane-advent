@@ -194,7 +194,7 @@ export class ArcaneActor extends Actor {
         return allowed !== false ? this.update(updates) : this;
     }
 
-    async _rollD20(modifier, mode, flavor, context = {}) {
+    async _rollD20(modifier, mode, flavor, context = {}, { createMessage = true, messageMode, messageOptions = {} } = {}) {
         const effects = resolveRollEffects(activeCharacterEffects(this), context, mode ?? this.system.rollMode);
         mode = effects.mode;
         modifier += effects.bonus;
@@ -265,10 +265,12 @@ export class ArcaneActor extends Actor {
                 }),
 
                 flavor:
-                    `${flavor} — ${modeLabels[finalMode]}`
+                    `${flavor} — ${modeLabels[finalMode]}`,
+                ...messageOptions
             },
             {
-                create: false
+                create: false,
+                messageMode
             }
         );
 
@@ -307,9 +309,7 @@ export class ArcaneActor extends Actor {
         chatData.content = content;
 
 
-        await foundry.documents.ChatMessage.create(
-            chatData
-        );
+        if (createMessage) await foundry.documents.ChatMessage.create(chatData);
 
 
         return {
@@ -317,7 +317,8 @@ export class ArcaneActor extends Actor {
             natural,
             modifier,
             total: finalResult,
-            mode: finalMode
+            mode: finalMode,
+            chatData
         };
     }
 
@@ -360,8 +361,8 @@ export class ArcaneActor extends Actor {
     }
 
 
-    async rollInitiativeCheck(mode = this.system.rollMode ?? "normal") {
-        return this._rollD20(this.system.trackers.initiative, mode, "Jet d’initiative", { type: "initiative", ability: "dexterity" });
+    async rollInitiativeCheck(mode = this.system.rollMode ?? "normal", options = {}) {
+        return this._rollD20(this.system.trackers.initiative, mode, "Jet d’initiative", { type: "initiative", ability: "dexterity" }, options);
     }
 
 
