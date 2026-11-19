@@ -3,6 +3,7 @@ import { getEquipmentConflictType } from "./item.mjs";
 import { guardValues } from "../guard.mjs";
 import { expertiseMatches, matchingExpertiseBonus } from "../expertise.mjs";
 import { STORAGE_IMAGE } from "../storage.mjs";
+import { activeCharacterEffects, conditionActor, resolveRollEffects, sourceConditionsSatisfied } from "../character-effects.mjs";
 
 const SORT_SPACING = 100000;
 
@@ -169,7 +170,7 @@ export class ArcaneActor extends Actor {
 
     async modifyConsciousness(amount) {
         const current = this.system.consciousness.value;
-        const maximum = this.system.consciousness.max;
+        const maximum = this.system.consciousness.effectiveMax ?? this.system.consciousness.max;
 
         const newValue = Math.min(
             maximum,
@@ -183,7 +184,23 @@ export class ArcaneActor extends Actor {
         return newValue;
     }
 
-    async _rollD20(modifier, mode, flavor) {
+    async modifyTokenAttribute(attribute, value, isDelta = false, isBar = true) {
+        const pool = ["consciousness", "fever", "consciousnessDice"].includes(attribute) ? this.system[attribute] : null;
+        if (!isBar || !Number.isFinite(pool?.effectiveMax)) return super.modifyTokenAttribute(attribute, value, isDelta, isBar);
+        const next = isDelta ? pool.value + value : value;
+        if (!Number.isFinite(next) || next === pool.value) return this;
+        const updates = { [`system.${attribute}.value`]: Math.min(pool.effectiveMax, Math.max(0, next)) };
+        const allowed = Hooks.call("modifyTokenAttribute", { attribute, value, isDelta, isBar }, updates, this);
+        return allowed !== false ? this.update(updates) : this;
+    }
+
+    async _rollD20(modifier, mode, flavor, context = {}) {
+        const effects = resolveRollEffects(activeCharacterEffects(this), context, mode ?? this.system.rollMode);
+        mode = effects.mode;
+        modifier += effects.bonus;
+        if (effects.sources.length) {
+            flavor += `<br><small>Effets : ${foundry.utils.escapeHTML(effects.sources.join(" · "))}${effects.advantage && effects.disadvantage ? " — Avantage et Désavantage : Neutre" : ""}</small>`;
+        }
         const formulas = {
             normal: "1d20",
             advantage: "2d20kh",
@@ -323,30 +340,32 @@ export class ArcaneActor extends Actor {
 
 
     async rollDeathSave() {
-        const roll = new foundry.dice.Roll("1d20");
+        const effects = resolveRollEffects(activeCharacterEffects(this), { type: "death" }, this.system.rollMode);
+        const roll = new foundry.dice.Roll({ normal: "1d20", advantage: "2d20kh", disadvantage: "2d20kl" }[effects.mode]);
         await roll.evaluate();
 
-        const success = roll.total >= 11;
+        const natural = roll.dice[0].values[0];
+        const success = natural === 20 || (natural !== 1 && natural + effects.bonus >= 11);
         const key = success ? "successes" : "failures";
-        const count = roll.total === 20 ? 3 : roll.total === 1 ? 2 : 1;
+        const count = natural === 20 ? 3 : natural === 1 ? 2 : 1;
         const value = Math.min(3, this.system.deathSaves[key] + count);
         await this.update({ [`system.deathSaves.${key}`]: value });
 
         const label = success ? "réussite" : "échec";
         await roll.toMessage({
             speaker: foundry.documents.ChatMessage.getSpeaker({ actor: this }),
-            flavor: `Contre-la-Mort — ${count} ${label}${count > 1 ? "s" : ""}`
+            flavor: `Contre-la-Mort — ${count} ${label}${count > 1 ? "s" : ""}${effects.bonus ? ` (bonus/malus ${effects.bonus})` : ""}`
         });
         return roll;
     }
 
 
-    async rollInitiativeCheck(mode = "normal") {
-        return this._rollD20(this.system.trackers.initiative, mode, "Jet d’initiative");
+    async rollInitiativeCheck(mode = this.system.rollMode ?? "normal") {
+        return this._rollD20(this.system.trackers.initiative, mode, "Jet d’initiative", { type: "initiative", ability: "dexterity" });
     }
 
 
-    async rollAbility(abilityKey, mode = "normal") {
+    async rollAbility(abilityKey, mode = this.system.rollMode ?? "normal") {
         const ability = this.system.abilities[abilityKey];
 
         if (!ability) return;
@@ -363,12 +382,12 @@ export class ArcaneActor extends Actor {
         return this._rollD20(
             ability.modifier,
             mode,
-            `Jet de ${labels[abilityKey]}`
+            `Jet de ${labels[abilityKey]}`, { type: "ability", ability: abilityKey }
         );
     }
 
 
-    async rollSavingThrow(abilityKey, mode = "normal") {
+    async rollSavingThrow(abilityKey, mode = this.system.rollMode ?? "normal") {
         const savingThrow =
             this.system.savingThrows[abilityKey];
 
@@ -386,12 +405,12 @@ export class ArcaneActor extends Actor {
         return this._rollD20(
             savingThrow.total,
             mode,
-            `Jet de sauvegarde de ${labels[abilityKey]}`
+            `Jet de sauvegarde de ${labels[abilityKey]}`, { type: "save", ability: abilityKey }
         );
     }
 
 
-    async rollSkill(skillId, mode = "normal") {
+    async rollSkill(skillId, mode = this.system.rollMode ?? "normal") {
         const skill = this.items.get(skillId);
 
         if (!skill || skill.type !== "skill") {
@@ -412,12 +431,16 @@ export class ArcaneActor extends Actor {
         return this._rollD20(
             modifier,
             mode,
-            `Jet de ${skill.name}`
+            `Jet de ${skill.name}`, { type: "skill", ability: skill.system.ability, skillId, skillName: skill.name }
         );
     }
-    async rollAptitude(itemId, rollId, mode = "normal") {
+    async rollAptitude(itemId, rollId, mode = this.system.rollMode ?? "normal") {
         const aptitude = this.items.get(itemId);
         if (aptitude?.type !== "aptitude" || !Object.hasOwn(aptitude.system.rolls, rollId)) return;
+        if (aptitude.system.requireConditions && !sourceConditionsSatisfied(conditionActor(this), aptitude.system)) {
+            ui.notifications.warn("Les conditions d'utilisation de cette aptitude ne sont pas remplies.");
+            return;
+        }
 
         const config = aptitude.system.rolls[rollId];
         const skill = this.items.get(config.skillId);
@@ -435,9 +458,13 @@ export class ArcaneActor extends Actor {
         const flavor = foundry.utils.escapeHTML(`${aptitude.name} — ${config.name}`);
         const formula = config.formula.trim();
 
-        if (formula.toLowerCase() === "1d20") return this._rollD20(modifier, mode, flavor);
+        if (formula.toLowerCase() === "1d20") return this._rollD20(modifier, mode, flavor,
+            { type: "aptitude", abilities: selectedAbilities, skillId: skill?.id, skillName: skill?.name });
 
-        const suffix = modifier < 0 ? ` - ${Math.abs(modifier)}` : modifier > 0 ? ` + ${modifier}` : "";
+        const customBonus = resolveRollEffects(activeCharacterEffects(this).filter(rule => rule.scope === "aptitude"),
+            { type: "aptitude", abilities: selectedAbilities, skillId: skill?.id, skillName: skill?.name }).bonus;
+        const customModifier = modifier + customBonus;
+        const suffix = customModifier < 0 ? ` - ${Math.abs(customModifier)}` : customModifier > 0 ? ` + ${customModifier}` : "";
         const roll = new foundry.dice.Roll(formula + suffix, this.getRollData());
         await roll.evaluate();
         await roll.toMessage({
@@ -455,7 +482,7 @@ export class ArcaneActor extends Actor {
 
     async rollWeaponAttack(
         weaponId,
-        mode = "normal"
+        mode = this.system.rollMode ?? "normal"
     ) {
         const weapon = this.items.get(weaponId);
 
@@ -481,7 +508,7 @@ export class ArcaneActor extends Actor {
         return this._rollD20(
             modifier,
             mode,
-            `Attaque — ${weapon.name}`
+            `Attaque — ${weapon.name}`, { type: "attack", ability: ability.key }
         );
     }
 
@@ -653,13 +680,13 @@ export class ArcaneActor extends Actor {
     }
 
 
-    async rollGuard(itemId, mode = "normal") {
+    async rollGuard(itemId, mode = this.system.rollMode ?? "normal") {
         const item = this.items.get(itemId);
         const stats = this.getGuardStatistics(item);
         if (!stats) return;
 
         // Un clic lance uniquement le JS de Garde (et non la Défense fixe).
         return this._rollD20(stats.savingThrowModifier, mode,
-            foundry.utils.escapeHTML("Jet de sauvegarde de Garde — " + item.name));
+            foundry.utils.escapeHTML("Jet de sauvegarde de Garde — " + item.name), { type: "guard", ability: "strength" });
     }
 }

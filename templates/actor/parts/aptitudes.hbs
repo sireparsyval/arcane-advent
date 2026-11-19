@@ -36,6 +36,7 @@
                     {{/unless}}
                     {{/unless}}
                     <div class="aa-aptitude-actions">
+                        <button type="button" data-action="editCharacterEffects" data-item-id="{{id}}" title="Effets sur le personnage, activation et conditions">Effets</button>
                         <button type="button" data-action="editAptitudeOptions" data-item-id="{{id}}"
                             aria-label="Options de {{name}}" title="Configurer l’aptitude">
                             <i class="fa-solid fa-gear" aria-hidden="true"></i> Options
@@ -83,13 +84,17 @@
             {{#if system.requirements}}
                 <div class="aa-requirements-note"><strong>Conditions requises :</strong> {{system.requirements}}</div>
             {{/if}}
+            {{#if effectCount}}
+                <div class="aa-effect-source-line"><span>{{effectCount}} effet(s) · {{#if effectActive}}Actifs{{else}}Inactifs{{/if}}</span>
+                {{#if effectManual}}<button type="button" data-action="toggleCharacterEffects" data-item-id="{{id}}" aria-pressed="{{system.effectActivation.active}}" {{#unless @root.canEditState}}disabled{{/unless}}>Activer / désactiver</button>{{/if}}</div>
+            {{/if}}
             {{#if conditions.length}}
                 <div class="aa-condition-chips aa-aptitude-condition-indicators" aria-label="Conditions de l'aptitude">
                     {{#each conditions}}
                         {{#if automatic}}
                             <button type="button" class="aa-condition-chip {{#if satisfied}}is-satisfied{{else}}is-unmet{{/if}}"
                                 data-action="editAptitudeCondition" data-item-id="{{../id}}" data-condition-id="{{id}}"
-                                title="{{label}} · {{#if satisfied}}Remplie{{else}}Non remplie{{/if}} · Cliquer pour configurer"
+                                title="{{summary}} · {{#if satisfied}}Remplie{{else}}Non remplie{{/if}} · Cliquer pour configurer"
                                 {{#unless @root.canEditState}}disabled{{/unless}}>
                                 {{#if satisfied}}✓{{else}}✕{{/if}} {{label}}{{#if consumes}} · consommable{{/if}}
                             </button>

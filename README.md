@@ -1,5 +1,59 @@
 # arcane-advent
 
+## Traits, Aptitudes et effets permanents
+
+Le bouton **Effets permanents** du Cœur (également présent dans Options) ouvre
+les sources du personnage et le résultat actuel des Avantages/Désavantages par
+type de jet. Le choix Avantage / Neutre / Désavantage de la fiche reste manuel :
+il se combine avec les sources automatiques. Un Avantage et un Désavantage
+s'annulent, même si plusieurs sources donnent l'un des deux. Ils ne se cumulent pas.
+
+La roue dentée des Traits et le bouton **Effets** des Aptitudes ouvrent le même
+éditeur. Il est aussi disponible pour ces Objets dans le répertoire. Les onglets
+séparent les effets, leur activation, la description et le récapitulatif.
+Les changements restent un brouillon jusqu'à **Enregistrer**.
+
+- **Bonus / malus / coefficient** : caractéristiques, JS, Défense de base,
+  chacune des quatre Défenses partielles, Perception passive, Initiative,
+  Vitesse, charge maximale et maxima de PdC/PdF/Dés de Conscience.
+- **Effet sur les jets** : bonus fixe et indicateurs indépendants Avantage et
+  Désavantage. Filtrer par famille de jet, caractéristique associée et compétence.
+- **Activation** : permanente, aptitude passive, manuelle, durée d'effet restante
+  ou conditions automatiques, réunies avec ET ou OU. Les effets d'une source
+  peuvent aussi être désactivés sans supprimer leur configuration.
+
+Les montants « avant » s'additionnent, puis les coefficients se multiplient,
+puis les montants « après » s'ajoutent. L'ordre des Traits dans la fiche n'a
+donc aucune influence. Les caractéristiques et valeurs entières sont arrondies
+à l'inférieur ; la vitesse et les poids conservent les décimales. Les bonus aux
+scores sont pris en compte dans leurs modificateurs et les calculs dépendants.
+Un bonus à la Défense de base concerne toutes les zones ; un bonus à une Défense
+partielle ne concerne que cette zone.
+
+Dans Options, la charge maximale possède aussi son coefficient manuel (1 par
+défaut) et une case **Ajouter le montant fixe avant la multiplication**.
+Exemple avec une base de 50 kg, +10 kg et ×2 : 120 kg avant, 110 kg après.
+Les règles des Traits/Aptitudes utilisent le même calcul, coefficients compris.
+
+Les conditions proposent des cibles prises dans la fiche et affichent leur
+lecture actuelle. Une présence d'équipement se règle avec **Oui / Non**, un nom
+ou une classe ; un poids ou un score se compare à un seuil numérique. Pour
+réutiliser un Trait sur d'autres personnages, préférer une classe ou un nom
+personnalisé à l'identifiant d'un équipement précis. Les anciens critères de
+présence numériques (ex. « équipement <= 50 ») sont signalés comme à reconfigurer.
+
+Les conditions automatiques des effets lisent la fiche **avant les effets des
+Traits et Aptitudes** (mais après les ajustements manuels, altérations et
+blessures). Ainsi, un bonus conditionnel ne peut pas s'activer lui-même ni
+osciller à chaque actualisation. Les critères d'Aptitude peuvent aussi devenir
+obligatoires pour ses jets en cochant l'option correspondante.
+
+Les effets de maximum ne changent pas les maxima de base ni les points actuels :
+un total effectif apparaît sur la fiche et les barres des jetons utilisent ce
+total pour PdC/PdF. Les Avantages/Désavantages s'appliquent aux jets standards de
+d20 ; pour une formule d'Aptitude personnalisée autre que `1d20`, seul un bonus
+fixe ciblant les jets d'Aptitude est ajouté, la formule écrite reste inchangée.
+
 ## Paramètres des nouveaux jetons
 
 Un Actor Personnage ou PNJ nommé exactement **[TEMPLATE]** sert de modèle pour
@@ -233,11 +287,12 @@ de Luqa. Le type « Formule » utilise un mini-langage **sans JavaScript** :
 
 Les indicateurs automatiques sont calculés à partir de la fiche ;
 un clic ouvre leur configuration. Les indicateurs manuels se cochent à la main.
-**Aucune condition n'interdit le jet.** L'option « consommer des objets / Luqa »
+Les conditions interdisent le jet seulement si l'option dédiée a été activée
+dans l'éditeur de l'Aptitude. L'option historique « consommer des objets / Luqa »
 n'est qu'un **rappel** pour les joueurs et le MJ : elle ne débite rien automatiquement.
 
 ### Raccourcis de jets : barre native Foundry
-1. Ouvrir une fiche personnage et repérer le **bouton d'un jet**.
+1. Ouvrir une fiche personnage ou PNJ et repérer le **bouton d'un jet**.
 2. **Glisser le bouton** vers un emplacement de la barre de raccourcis,
    en bas de Foundry.
 3. Un raccourci de macro appelle le même jet sur le personnage d'origine,

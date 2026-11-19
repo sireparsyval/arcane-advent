@@ -17,10 +17,11 @@
                     <input class="aa-trait-name" type="text" value="{{name}}" required pattern=".*\S.*"
                         data-trait-field="name" data-trait-id="{{id}}" aria-label="Nom du Trait">
                     <div class="aa-trait-actions">
-                        <button type="button" data-action="toggleTraitConfig" aria-expanded="{{configOpen}}"
-                            aria-label="Options de {{name}}" title="Options et Aptitudes liées">
+                        <button type="button" data-action="editCharacterEffects" data-item-id="{{id}}"
+                            aria-label="Configurer {{name}}" title="Description, effets et conditions du Trait">
                             <i class="fa-solid fa-gear" aria-hidden="true"></i>
                         </button>
+                        <button type="button" data-action="toggleTraitConfig" aria-expanded="{{configOpen}}" title="Aptitudes liées">↳ Aptitudes</button>
                         <button type="button" data-action="deleteTrait" data-trait-id="{{id}}"
                             aria-label="Retirer {{name}}" title="Retirer le Trait">
                             <i class="fa-solid fa-trash" aria-hidden="true"></i>
@@ -33,6 +34,10 @@
 
             {{#if system.requirements}}
                 <div class="aa-requirements-note"><strong>Conditions requises :</strong> {{system.requirements}}</div>
+            {{/if}}
+            {{#if effectCount}}
+                <div class="aa-effect-source-line"><span>{{effectCount}} effet(s) · {{#if effectActive}}Actifs{{else}}Inactifs{{/if}}</span>
+                {{#if effectManual}}<button type="button" data-action="toggleCharacterEffects" data-item-id="{{id}}" aria-pressed="{{system.effectActivation.active}}" {{#unless @root.canEditState}}disabled{{/unless}}>Activer / désactiver</button>{{/if}}</div>
             {{/if}}
 
             {{#if @root.canEditState}}

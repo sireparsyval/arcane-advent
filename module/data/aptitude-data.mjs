@@ -1,5 +1,6 @@
 import { BaseItemData } from "./base-item-data.mjs";
 import { APTITUDE_RANGE_MODES, aptitudeRangeMode } from "../aptitude-targeting.mjs";
+import { effectFields, conditionsField } from "./effect-fields.mjs";
 
 const { BooleanField, NumberField, SchemaField, SetField, StringField, TypedObjectField } = foundry.data.fields;
 
@@ -77,6 +78,8 @@ export class AptitudeData extends BaseItemData {
     static defineSchema() {
         return {
             ...super.defineSchema(),
+            ...effectFields({ aptitude: true, withConditions: false }),
+            requireConditions: new BooleanField({ initial: false }),
             category: new StringField({
                 required: true,
                 nullable: false,
@@ -138,17 +141,7 @@ export class AptitudeData extends BaseItemData {
                 propagation: new StringField({ choices: ["projectile", "beam", "instant", "wave"], initial: "instant" }),
                 travels: new BooleanField({ initial: false })
             }),
-            conditions: new TypedObjectField(new SchemaField({
-                label: new StringField({ blank: false, initial: "Condition" }),
-                kind: new StringField({ choices: ["manual", "automatic"], initial: "manual" }),
-                enabled: new BooleanField({ initial: false }),
-                metric: new StringField({ choices: ["pdcRatio", "pdfRatio", "ability", "alteration", "equipped", "expertise", "inventory", "luqa", "formula"], initial: "pdcRatio" }),
-                operator: new StringField({ choices: ["<", "<=", "=", ">=", ">", "!="], initial: "<" }),
-                value: new NumberField({ initial: 50 }),
-                key: new StringField({ blank: true, initial: "" }),
-                expression: new StringField({ blank: true, initial: "" }),
-                consumes: new BooleanField({ initial: false })
-            }), { required: true, nullable: false, initial: {} }),
+            conditions: conditionsField(),
             rolls: new TypedObjectField(new SchemaField({
                 name: new StringField({ blank: false, initial: "Jet" }),
                 formula: new StringField({ blank: false, initial: "1d20" }),

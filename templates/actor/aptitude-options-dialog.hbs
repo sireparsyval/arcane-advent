@@ -1,4 +1,5 @@
 <section class="aa-editor-form aa-aptitude-options-editor">
+    <div class="aa-effect-source-line"><strong>Effets sur le personnage</strong><button type="button" data-aa-effects>Ouvrir l'éditeur d'effets</button></div>
     <details class="aa-options-section" open>
         <summary>Charges et durée</summary>
         <div class="aa-options-section-body">
@@ -77,8 +78,10 @@
     </details>
 
     <details class="aa-options-section">
-        <summary>Conditions</summary>
+        <summary>Conditions d'utilisation / d'application des effets</summary>
         <div class="aa-options-section-body">
+            <label class="checkbox"><input type="checkbox" name="requireConditions" {{#if system.requireConditions}}checked{{/if}}>Exiger ces conditions pour lancer les jets de l'aptitude</label>
+            <label>Combinaison des critères<select name="conditionMatch"><option value="all" {{#if (eq system.conditionMatch "all")}}selected{{/if}}>Toutes (ET)</option><option value="any" {{#if (eq system.conditionMatch "any")}}selected{{/if}}>Au moins une (OU)</option></select></label>
             <div class="aa-condition-chips" data-aa-options-list="conditions">
                 {{#each conditions}}
                     <button type="button" class="aa-condition-chip" data-aa-condition="{{id}}" title="Modifier {{label}}">

@@ -1,7 +1,8 @@
 <section class="aa-panel aa-options-modifiers">
     <h2 class="aa-status-title"><span class="aa-heading-icon" aria-hidden="true">⚙️</span>Options — Bonus / malus manuels</h2>
+    <button type="button" data-action="manageCharacterEffects" {{#unless canEditState}}disabled{{/unless}}>Effets permanents et Avantages / Désavantages</button>
     <p class="aa-options-explanation">
-        Les ajustements saisis ici s'ajoutent aux effets des Altérations et Blessures/Maladies.
+        Les ajustements saisis ici s'ajoutent aux effets des Altérations, Blessures, Traits et Aptitudes actifs.
         Les caractéristiques sont modifiées avant le calcul de leur modificateur ;
         les Trackers reçoivent leur bonus/malus directement sur leur résultat.
     </p>
@@ -11,7 +12,7 @@
             <div class="aa-manual-modifier-head">
                 <span>Valeur</span>
                 <span>Manuel</span>
-                <span>Conditions</span>
+                <span>Autres sources</span>
                 <span>Total</span>
             </div>
             {{#each entries}}
@@ -35,9 +36,12 @@
                 {{#unless canEditState}}readonly{{/unless}}>
         </label>
         <p class="aa-options-explanation">
-            Ajouté après le coefficient de Volume. Peut représenter un Trait racial ou une particularité.
+            Base : 5 × Force effective × Volume. Les montants « avant » s'ajoutent, les coefficients se multiplient, puis les montants « après » s'ajoutent.
             Charge maximale actuelle : <strong>{{encumbrance.maxLabel}}</strong>.
         </p>
+        <label><span>Coefficient de charge maximale</span><input type="number" min="0" step="any" name="system.carryingCapacityCoefficient" value="{{system.carryingCapacityCoefficient}}" {{#unless canEditState}}readonly{{/unless}}></label>
+        <label class="checkbox"><input type="checkbox" name="system.carryingCapacityAddBefore" {{#if system.carryingCapacityAddBefore}}checked{{/if}} {{#unless canEditState}}disabled{{/unless}}>Ajouter le montant fixe avant la multiplication</label>
     </div>
+    {{#if resourceEffectTotals.length}}<div class="aa-effect-resource-totals"><strong>Maxima effectifs</strong>{{#each resourceEffectTotals}}<p>{{label}} : base {{base}} → total {{total}}</p>{{/each}}</div>{{/if}}
     <p class="aa-options-explanation">Les bonus/malus des conditions se modifient dans leur propre fenêtre d'édition, depuis la section État du personnage.</p>
 </section>

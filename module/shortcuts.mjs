@@ -23,7 +23,7 @@ export function hotbarRollData(actor, button) {
 export async function runArcaneShortcut(data) {
     if (!HOTBAR_ACTIONS.has(data?.action)) return;
     const actor = await fromUuid(data.actorUuid);
-    if (actor?.type !== "character" || !actor.isOwner) {
+    if (!["character", "npc"].includes(actor?.type) || !actor.isOwner) {
         ui.notifications.warn("Le personnage de ce raccourci est introuvable ou inaccessible.");
         return;
     }
@@ -51,7 +51,7 @@ export function registerArcaneHotbar() {
         void (async () => {
             if (!HOTBAR_ACTIONS.has(data.action) || !data.actorUuid || !game.user) return;
             const actor = await fromUuid(data.actorUuid);
-            if (!actor?.isOwner) {
+            if (!["character", "npc"].includes(actor?.type) || !actor.isOwner) {
                 ui.notifications.warn("Vous ne pouvez pas créer un raccourci pour ce personnage.");
                 return;
             }

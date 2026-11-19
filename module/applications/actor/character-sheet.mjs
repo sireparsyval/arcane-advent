@@ -7,7 +7,10 @@ import { VOLUME_LABELS, ENCUMBRANCE_STAGES } from "../../encumbrance.mjs";
 import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedModifier } from "../../modifiers.mjs";
 import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
 import { EXPERTISE_DOMAINS, WEAPON_PROPERTIES, PROPERTY_FILTER_STATES, normalizedClasses } from "../../expertise.mjs";
-import { CONDITION_METRICS, aptitudeConditionStatus } from "../../aptitude-conditions.mjs";
+import { aptitudeConditionStatus, conditionSummary } from "../../aptitude-conditions.mjs";
+import { characterEffectSources, conditionActor } from "../../character-effects.mjs";
+import { openCharacterEffectsEditor, openCharacterEffectsManager } from "../character-effects-editor.mjs";
+import { bindConditionControls, conditionControls, readConditionControls, validateCondition } from "../effect-condition-controls.mjs";
 import { hotbarRollData } from "../../shortcuts.mjs";
 import { ArcanologyNotebook } from "./arcanology-notebook.mjs";
 import {
@@ -187,6 +190,15 @@ export class ArcaneCharacterSheet
 
         actions: {
             setRollMode: this._onSetRollMode,
+            manageCharacterEffects: function () { if (this.isEditable) return openCharacterEffectsManager(this.actor); },
+            editCharacterEffects: function (_event, target) {
+                const item = this.actor.items.get(target.dataset.itemId);
+                if (this.isEditable && ["trait", "aptitude"].includes(item?.type)) return openCharacterEffectsEditor(item, { actor: this.actor });
+            },
+            toggleCharacterEffects: async function (_event, target) {
+                const item = this.actor.items.get(target.dataset.itemId);
+                if (this.isEditable && item?.system.effectActivation?.mode === "manual") await item.update({ "system.effectActivation.active": !item.system.effectActivation.active });
+            },
             editManualModifiers: this._onEditManualModifiers,
             toggleAgeMode: this._onToggleAgeMode,
             setDefenseMode: this._onSetDefenseMode,
@@ -352,7 +364,15 @@ export class ArcaneCharacterSheet
         const traitItems = sortableItems(this.actor.items.filter(item => item.type === "trait"));
         const aptitudeItems = sortableItems(this.actor.items.filter(item => item.type === "aptitude"));
         const traitsById = new Map(traitItems.map(item => [item.id, item]));
+        const effectsById = new Map(characterEffectSources(this.actor).map(entry => [entry.source.id, entry]));
+        const effectContext = item => ({ effectCount: effectsById.get(item.id)?.rules.length ?? 0,
+            effectActive: effectsById.get(item.id)?.active ?? false,
+            effectManual: item.system.effectActivation?.mode === "manual" });
+        context.resourceEffectTotals = [
+            ["PdC", this.actor.system.consciousness], ["PdF", this.actor.system.fever], ["Dés de Conscience", this.actor.system.consciousnessDice]
+        ].filter(([, pool]) => pool.effectiveMax !== pool.max).map(([label, pool]) => ({ label, base: pool.max, total: pool.effectiveMax }));
         context.traits = traitItems.map(item => ({
+            ...effectContext(item),
             id: item.id,
             name: item.name,
             system: item.system,
@@ -370,6 +390,7 @@ export class ArcaneCharacterSheet
         context.aptitudeDurationUnits = APTITUDE_DURATION_UNITS;
         context.aptitudeRecoveryUnits = APTITUDE_RECOVERY_UNITS;
         context.aptitudes = aptitudeItems.map(item => ({
+            ...effectContext(item),
             id: item.id,
             name: item.name,
             system: item.system,
@@ -380,9 +401,10 @@ export class ArcaneCharacterSheet
             isTechnique: item.system.category === "technique",
             conditions: Object.entries(item.system.conditions ?? {}).map(([id, condition]) => ({
                 id,
-                label: condition.label,
+                label: condition.kind === "automatic" ? `${condition.label ? condition.label + " — " : ""}${conditionSummary(this.actor, condition)}` : condition.label || "Condition manuelle",
+                summary: conditionSummary(this.actor, condition),
                 automatic: condition.kind === "automatic",
-                satisfied: aptitudeConditionStatus(this.actor, condition),
+                satisfied: aptitudeConditionStatus(conditionActor(this.actor), condition),
                 consumes: condition.consumes
             })),
             effectDuration: {
@@ -430,7 +452,8 @@ export class ArcaneCharacterSheet
         });
         context.manualModifierGroups = [
             modifierGroup("abilities", "Caractéristiques principales", ABILITY_MODIFIER_KEYS),
-            modifierGroup("trackers", "Trackers", TRACKER_MODIFIER_KEYS)
+            modifierGroup("trackers", "Trackers et Défenses partielles", TRACKER_MODIFIER_KEYS),
+            modifierGroup("savingThrows", "Jets de sauvegarde", Object.keys(MODIFIER_TARGETS).filter(key => key.startsWith("save")))
         ];
         context.conditionSections = Object.entries(CONDITION_SECTIONS).map(([type, section]) => ({
             type,
@@ -776,9 +799,10 @@ export class ArcaneCharacterSheet
 
     static async _onAddTrait() {
         if (!this.isEditable) return;
-        await this.actor.createEmbeddedDocuments("Item", [{
+        const [trait] = await this.actor.createEmbeddedDocuments("Item", [{
             name: "Nouveau Trait", type: "trait", sort: nextItemSort(this.actor, "trait")
         }]);
+        if (trait) await openCharacterEffectsEditor(trait, { actor: this.actor });
     }
 
     static _onToggleTraitConfig(event, target) {
@@ -954,7 +978,7 @@ export class ArcaneCharacterSheet
         if (aptitude?.type !== "aptitude") return;
 
         const { DialogV2 } = foundry.applications.api;
-        const system = aptitude.system;
+        let system = aptitude.system;
         const content = document.createElement("div");
         const durationActive = system.effectDuration.enabled || isAptitudeOptionVisible(system, "duration");
         const hasEffectDuration = system.effectDuration.enabled
@@ -968,7 +992,7 @@ export class ArcaneCharacterSheet
                 unitLabels[unit] = APTITUDE_RECOVERY_UNITS[unit];
             }
         }
-        const renderOptions = () => foundry.applications.handlebars.renderTemplate(
+        const renderOptions = () => { system = aptitude.system; return foundry.applications.handlebars.renderTemplate(
             "systems/arcane-advent/templates/actor/aptitude-options-dialog.hbs", {
                 system,
                 isTechnique: system.category === "technique",
@@ -985,11 +1009,11 @@ export class ArcaneCharacterSheet
                 origins: list({ caster: "Lanceur", target: "Point ciblé" }),
                 propagations: list({ projectile: "Projectile", beam: "Rayon", instant: "Instantané", wave: "Onde" }),
                 conditions: Object.entries(aptitude.system.conditions).map(([id, condition]) => ({
-                    id, label: condition.label, automatic: condition.kind === "automatic"
+                    id, label: conditionSummary(this.actor, condition), automatic: condition.kind === "automatic"
                 })),
                 rolls: Object.entries(aptitude.system.rolls).map(([id, roll]) => ({ id, name: roll.name }))
             }
-        );
+        ); };
         content.innerHTML = await renderOptions();
 
         const readCounter = (fields, name) => {
@@ -1013,6 +1037,8 @@ export class ArcaneCharacterSheet
                         if (!button.form.reportValidity()) return;
                         const values = new FormData(button.form);
                         const updates = { "system.requirements": String(values.get("requirements") ?? "").trim() };
+                        updates["system.requireConditions"] = values.has("requireConditions");
+                        updates["system.conditionMatch"] = values.get("conditionMatch") === "any" ? "any" : "all";
                         try {
                             if (system.category !== "technique") {
                                 for (const name of ["charge", "recovery", "casting"]) {
@@ -1092,6 +1118,18 @@ export class ArcaneCharacterSheet
                 if (section) section.open = true;
             }, true);
             editor.addEventListener("click", async event => {
+                if (event.target.closest("[data-aa-effects]")) {
+                    const child = await openCharacterEffectsEditor(aptitude, { actor: this.actor, parent: dialog });
+                    child?.addEventListener("close", async () => {
+                        editor.querySelector('[name="requireConditions"]').checked = aptitude.system.requireConditions;
+                        editor.querySelector('[name="conditionMatch"]').value = aptitude.system.conditionMatch;
+                        editor.querySelector('[name="requirements"]').value = aptitude.system.requirements;
+                        const refreshed = document.createElement("div");
+                        refreshed.innerHTML = await renderOptions();
+                        editor.querySelector('[data-aa-options-list="conditions"]').replaceChildren(...refreshed.querySelector('[data-aa-options-list="conditions"]').childNodes);
+                    }, { once: true });
+                    return;
+                }
                 const control = event.target.closest("[data-aa-condition], [data-aa-roll], [data-aa-add-roll]");
                 if (!control) return;
                 const data = control.dataset;
@@ -1141,42 +1179,19 @@ export class ArcaneCharacterSheet
         if (conditionId && !current) return;
         const kind = current?.kind ?? (requestedKind === "automatic" ? "automatic" : "manual");
         const starting = current ?? {
-            label: "Nouvelle condition", kind, enabled: false,
+            label: "", kind, enabled: false,
             metric: "pdcRatio", operator: "<", value: 50, key: "", expression: "", consumes: false
         };
         const content = document.createElement("div");
-        content.innerHTML = await foundry.applications.handlebars.renderTemplate(
-            "systems/arcane-advent/templates/actor/aptitude-condition-dialog.hbs", {
-                current: starting,
-                automatic: kind === "automatic",
-                metrics: Object.entries(CONDITION_METRICS).map(([key, label]) =>
-                    ({ key, label, selected: key === starting.metric })),
-                operators: ["<", "<=", "=", ">=", ">", "!="].map(key =>
-                    ({ key, label: key, selected: key === starting.operator }))
-            }
-        );
+        let conditionDraft = { ...starting };
+        content.innerHTML = `<section class="aa-effects-editor"><div data-single-condition>${conditionControls(this.actor, conditionDraft)}</div></section>`;
         const buttons = [{
             action: "save", label: "Enregistrer / Appliquer",
             callback: async (_event, button, app) => {
                 if (!button.form.reportValidity()) return;
-                const fields = new FormData(button.form);
-                const label = String(fields.get("label") ?? "").trim();
-                if (!label) return;
-                const data = { ...starting, label, kind };
-                if (kind === "automatic") {
-                    data.metric = fields.get("metric");
-                    data.operator = fields.get("operator");
-                    data.value = Number(fields.get("value"));
-                    data.key = String(fields.get("key") ?? "").trim();
-                    data.expression = String(fields.get("expression") ?? "").trim();
-                    data.consumes = fields.has("consumes");
-                    if (!Object.hasOwn(CONDITION_METRICS, data.metric)
-                        || !["<", "<=", "=", ">=", ">", "!="].includes(data.operator)
-                        || !Number.isFinite(data.value)) {
-                        ui.notifications.warn("Condition automatique invalide.");
-                        return;
-                    }
-                }
+                const data = readConditionControls(app.element.querySelector("[data-single-condition]"), conditionDraft);
+                try { validateCondition(data); } catch (error) { ui.notifications.warn(error.message); return; }
+                data.label = data.label.trim();
                 const id = conditionId ?? foundry.utils.randomID();
                 if (this.actor.items.has(aptitude.id)) {
                     await aptitude.update({ [`system.conditions.${id}`]: data });
@@ -1197,8 +1212,10 @@ export class ArcaneCharacterSheet
             callback: (_event, _button, app) => app.close() });
         const dialog = new foundry.applications.api.DialogV2({
             window: { title: kind === "automatic" ? "Condition automatique" : "Condition manuelle" },
-            position: { width: 510 }, content, modal: true, form: { closeOnSubmit: false }, buttons
+            position: { width: 650 }, content, modal: true, form: { closeOnSubmit: false }, buttons
         });
+        dialog.addEventListener("render", () => bindConditionControls(dialog.element.querySelector("[data-single-condition]"),
+            this.actor, conditionDraft, data => { conditionDraft = data; }));
         return parent ? parent.renderChild(dialog) : dialog.render({ force: true });
     }
 
@@ -1332,7 +1349,8 @@ export class ArcaneCharacterSheet
                 ...previous,
                 modifierGroups: [
                     modifierGroup("Caractéristiques principales", ABILITY_MODIFIER_KEYS),
-                    modifierGroup("Trackers", TRACKER_MODIFIER_KEYS)
+                    modifierGroup("Trackers et Défenses partielles", TRACKER_MODIFIER_KEYS),
+                    modifierGroup("Jets de sauvegarde", Object.keys(MODIFIER_TARGETS).filter(key => key.startsWith("save")))
                 ],
                 zones: type === "injury" ? INJURY_ZONES : null,
                 durationUnits: type === "alteration" ? ALTERATION_DURATION_UNITS : null

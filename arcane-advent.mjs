@@ -28,6 +28,7 @@ import { GlyphData } from "./module/data/glyph-data.mjs";
 import { GlyphSheet } from "./module/applications/item/glyph-sheet.mjs";
 import { registerGlyphCatalog } from "./module/applications/glyph-catalog.mjs";
 import { registerTokenBars } from "./module/token-bars.mjs";
+import { CharacterEffectItemSheet } from "./module/applications/item/character-effect-sheet.mjs";
 
 
 Hooks.once("init", () => {
@@ -115,6 +116,9 @@ Hooks.once("init", () => {
     });
     DocumentSheetConfig.registerSheet(foundry.documents.Item, "arcane-advent", GlyphSheet, {
         types: ["glyph"], makeDefault: true, label: "Arcane Advent — Référence de glyphe"
+    });
+    DocumentSheetConfig.registerSheet(foundry.documents.Item, "arcane-advent", CharacterEffectItemSheet, {
+        types: ["trait", "aptitude"], makeDefault: true, label: "Arcane Advent — Traits et Aptitudes"
     });
 });
 

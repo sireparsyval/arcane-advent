@@ -235,6 +235,7 @@
                                         name="system.consciousness.max"
                                         value="{{system.consciousness.max}}"
                                     >
+                                    {{#unless (eq system.consciousness.max system.consciousness.effectiveMax)}}<small class="aa-pool-effective" title="Maximum effectif après Traits / Aptitudes">Total {{system.consciousness.effectiveMax}}</small>{{/unless}}
 
                                 </div>
 
@@ -281,6 +282,7 @@
                                         name="system.consciousnessDice.max"
                                         value="{{system.consciousnessDice.max}}"
                                     >
+                                    {{#unless (eq system.consciousnessDice.max system.consciousnessDice.effectiveMax)}}<small class="aa-pool-effective" title="Maximum effectif après Traits / Aptitudes">Total {{system.consciousnessDice.effectiveMax}}</small>{{/unless}}
 
                                     <button type="button" data-action="rollConsciousnessDie"
                                         aria-label="Lancer le dé de conscience" title="Lancer le dé de conscience">🎲</button>
@@ -357,6 +359,7 @@
                                         name="system.fever.max"
                                         value="{{system.fever.max}}"
                                     >
+                                    {{#unless (eq system.fever.max system.fever.effectiveMax)}}<small class="aa-pool-effective" title="Maximum effectif après Traits / Aptitudes">Total {{system.fever.effectiveMax}}</small>{{/unless}}
 
                                 </div>
 
@@ -752,7 +755,9 @@
                             <button type="button" data-action="setRollMode" data-roll-mode="{{key}}"
                                 aria-pressed="{{selected}}" {{#unless @root.canEditState}}disabled{{/unless}}>{{label}}</button>
                         {{/each}}
+                        <button type="button" data-action="manageCharacterEffects" {{#unless canEditState}}disabled{{/unless}} title="Gérer les effets permanents et voir les Avantages/Désavantages par jet">⚙️ Effets permanents</button>
                     </div>
+                    <small class="aa-options-explanation">Choix manuel : les effets permanents sont aussi pris en compte pour chaque jet.</small>
 
                 </section>
 

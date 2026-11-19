@@ -120,5 +120,16 @@ export function registerTokenBars() {
         });
     }
     CONFIG.Token.objectClass = createArcaneTokenClass(CONFIG.Token.objectClass);
+    if (CONFIG.Token.documentClass) {
+        const Base = CONFIG.Token.documentClass;
+        CONFIG.Token.documentClass = class extends Base {
+            getBarAttribute(...args) {
+                const data = super.getBarAttribute(...args);
+                const maximum = this.actor?.system?.[data?.attribute]?.effectiveMax;
+                return data?.type === "bar" && RESOURCES[data.attribute] && Number.isFinite(maximum)
+                    ? { ...data, max: maximum } : data;
+            }
+        };
+    }
     Hooks.on("renderTokenHUD", styleTokenHUD);
 }

@@ -10,7 +10,14 @@ export const MODIFIER_TARGETS = Object.freeze({
     defense: "Défense",
     passivePerception: "Perception passive",
     initiative: "Initiative",
-    speed: "Vitesse"
+    speed: "Vitesse",
+    defenseHead: "Défense partielle — Tête",
+    defenseTorso: "Défense partielle — Torse",
+    defenseArms: "Défense partielle — Bras",
+    defenseLegs: "Défense partielle — Jambes",
+    saveStrength: "JS de Force", saveDexterity: "JS de Dextérité",
+    saveConstitution: "JS de Constitution", saveIntelligence: "JS d'Intelligence",
+    saveWisdom: "JS de Sagesse", saveCharisma: "JS de Charisme"
 });
 
 export const ABILITY_MODIFIER_KEYS = Object.freeze([
@@ -18,7 +25,8 @@ export const ABILITY_MODIFIER_KEYS = Object.freeze([
 ]);
 
 export const TRACKER_MODIFIER_KEYS = Object.freeze([
-    "defense", "passivePerception", "initiative", "speed"
+    "defense", "defenseHead", "defenseTorso", "defenseArms", "defenseLegs",
+    "passivePerception", "initiative", "speed"
 ]);
 
 export const CONDITION_MODIFIER_TYPES = Object.freeze(["alteration", "injury"]);
