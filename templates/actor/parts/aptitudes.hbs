@@ -100,12 +100,13 @@
                                 data-item-id="{{id}}" data-counter="duration" data-step="-1"
                                 aria-label="Diminuer la durée restante des effets" {{#unless effectDuration.canDecrease}}disabled{{/unless}}>−</button>
                         {{/if}}
-                        <span>{{effectDuration.remaining}} {{effectDuration.label}}</span>
+                        <span>{{effectDuration.remaining}}</span>
                         {{#if @root.canEditState}}
                             <button type="button" class="aa-aptitude-counter-step" data-action="stepAptitudeCounter"
                                 data-item-id="{{id}}" data-counter="duration" data-step="1"
                                 aria-label="Augmenter la durée restante des effets">+</button>
                         {{/if}}
+                        <span>{{effectDuration.label}}</span>
                     </div>
                 {{/if}}
                 {{#each options}}
@@ -117,12 +118,13 @@
                                     data-item-id="{{../id}}" data-counter="{{key}}" data-step="-1"
                                     aria-label="Diminuer {{label}}" {{#unless canDecrease}}disabled{{/unless}}>−</button>
                             {{/if}}
-                            <span>{{value.remaining}} / {{value.max}}{{#if unitLabel}} {{unitLabel}}{{/if}}</span>
+                            <span>{{value.remaining}} / {{value.max}}</span>
                             {{#if @root.canEditState}}
                                 <button type="button" class="aa-aptitude-counter-step" data-action="stepAptitudeCounter"
                                     data-item-id="{{../id}}" data-counter="{{key}}" data-step="1"
                                     aria-label="Augmenter {{label}}" {{#unless canIncrease}}disabled{{/unless}}>+</button>
                             {{/if}}
+                            {{#if unitLabel}}<span>{{unitLabel}}</span>{{/if}}
                         </div>
                     {{/if}}
                 {{/each}}
