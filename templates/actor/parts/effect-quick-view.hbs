@@ -1,3 +1,4 @@
+{{#if hasEffectSummary}}
 <div class="aa-source-quick-view">
     <details data-source-effects="{{id}}" {{#if effectsOpen}}open{{/if}}>
         <summary>Effets ({{effectCount}}) · {{#if effectActive}}Actifs{{else}}Inactifs{{/if}}</summary>
@@ -43,3 +44,4 @@
         </ul>
     </details>
 </div>
+{{/if}}

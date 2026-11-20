@@ -376,6 +376,7 @@ export class ArcaneCharacterSheet
         const effectContext = item => {
             const source = effectsById.get(item.id);
             return {
+                hasEffectSummary: Boolean(source?.rules.length || Object.keys(item.system.conditions ?? {}).length),
                 effectCount: source?.rules.length ?? 0,
                 effectActive: Boolean(source?.rules.some(rule => rule.active)),
                 effectsOpen: openEffects.has(item.id),
