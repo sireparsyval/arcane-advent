@@ -42,6 +42,6 @@ export const ARCANE_NEEDS = {
     },
     climate: {
         label: "Climat",
-        stages: ["Insupportable", "Éprouvant", "Pénible", "Inconfortable", "Un peu gênant", "À l’aise"]
+        stages: ["Critique", "Éprouvant", "Pénible", "Inconfort", "Gênant", "À l’aise"]
     }
 };
