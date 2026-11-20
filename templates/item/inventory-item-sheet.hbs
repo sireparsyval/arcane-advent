@@ -91,10 +91,6 @@
                     </label>
                 {{/each}}
             </fieldset>
-            <label class="checkbox">
-                <input type="checkbox" name="system.guardEnabled" {{#if system.guardEnabled}}checked{{/if}}>
-                Utilisable pour la Garde (avec Deux mains)
-            </label>
             <fieldset>
                 <legend>Lancer</legend>
                 {{> aaInventoryItemField label="Portée normale (m)" type="number" name="system.thrown.normalRange"

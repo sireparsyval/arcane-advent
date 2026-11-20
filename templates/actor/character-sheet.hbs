@@ -1206,6 +1206,8 @@
                                             data-action="toggleEquipmentProperty" data-item-id="{{id}}" data-property="twoHanded">Deux mains</button>
                                         <button type="button" aria-pressed="{{#if properties.finesse}}true{{else}}false{{/if}}"
                                             data-action="toggleEquipmentProperty" data-item-id="{{id}}" data-property="finesse">Finesse</button>
+                                        <button type="button" aria-pressed="{{#if properties.guard}}true{{else}}false{{/if}}"
+                                            data-action="toggleEquipmentProperty" data-item-id="{{id}}" data-property="guard">Garde</button>
                                         <button type="button" aria-pressed="{{#if properties.thrown}}true{{else}}false{{/if}}"
                                             data-action="toggleEquipmentProperty" data-item-id="{{id}}" data-property="thrown">Lancer</button>
                                         <button type="button" aria-pressed="{{#if properties.light}}true{{else}}false{{/if}}"
@@ -1220,16 +1222,6 @@
                                 </div>
 
                                 <div class="aa-weapon-configs">
-                                    {{#if properties.twoHanded}}
-                                        <div class="aa-weapon-property-config">
-                                            <strong>Deux mains</strong>
-                                            <label class="aa-equipment-inline">
-                                                <input type="checkbox" {{#if system.guardEnabled}}checked{{/if}}
-                                                    data-equipment-edit data-item-id="{{id}}" data-item-field="system.guardEnabled">
-                                                <span>Utilisable pour la Garde</span>
-                                            </label>
-                                        </div>
-                                    {{/if}}
                                     {{#if properties.thrown}}
                                         <div class="aa-weapon-property-config">
                                             <strong>Lancer</strong>

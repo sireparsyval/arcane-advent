@@ -60,3 +60,13 @@ test("classes d'objet pour objets non équipables et noms d'objet historiques", 
 test("Expertise hors équipement : Autre", () => {
     assert.equal(expertiseMatches(expertise({ domain: "other" }), null), true);
 });
+
+test("Garde est une propriété requise ou exclue indépendamment de Deux mains", () => {
+    const required = expertise({ classes: [], propertyFilters: { guard: "required" } });
+    const excluded = expertise({ classes: ["Épée"], propertyFilters: { guard: "excluded" } });
+    assert.equal(expertiseMatches(required, weapon("Épée", ["guard"])), true);
+    assert.equal(expertiseMatches(required, weapon("Épée", ["twoHanded"])), false);
+    assert.equal(expertiseMatches(excluded, weapon("Épée", ["guard"])), false);
+    assert.equal(expertiseMatches(excluded, weapon("Épée", ["twoHanded"])), true);
+    assert.equal(matchingExpertiseBonus([required], weapon("Épée", ["guard"]), "weaponClass"), 3);
+});

@@ -3,6 +3,7 @@
 export const WEAPON_PROPERTIES = Object.freeze({
     twoHanded: "Deux mains",
     finesse: "Finesse",
+    guard: "Garde",
     thrown: "Lancer",
     light: "Légère",
     heavy: "Lourde",

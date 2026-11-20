@@ -83,9 +83,10 @@ export class ArcaneItem extends Item {
         if (system.containerId) system.equipped = false;
         else if (system.equipped === true) system.containerId = null;
 
-        if (this.type === "weapon" && (Object.hasOwn(system, "properties") || system.guardEnabled)) {
-            const properties = system.properties ?? this.system.properties;
-            if (!hasTwoHandedProperty(properties)) system.guardEnabled = false;
+        if (this.type === "weapon" && Object.hasOwn(system, "properties")) {
+            // Une modification des propriétés clôt la migration de l'ancien indicateur :
+            // décocher Garde ne doit pas la réactiver au prochain chargement.
+            system.guardEnabled = false;
         }
     }
 

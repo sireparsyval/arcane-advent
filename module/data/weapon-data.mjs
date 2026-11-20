@@ -11,6 +11,14 @@ import { EquipmentData } from "./equipment-data.mjs";
 
 export class WeaponData extends EquipmentData {
 
+    static migrateData(source, options) {
+        if (source.guardEnabled) {
+            source.properties = [...new Set([...(source.properties ?? []), "guard"])];
+            source.guardEnabled = false;
+        }
+        return super.migrateData(source, options);
+    }
+
     static defineSchema() {
         return {
             ...super.defineSchema(),
@@ -42,6 +50,7 @@ export class WeaponData extends EquipmentData {
                 }
             ),
 
+            // Ancien indicateur conservé uniquement pour convertir les armes existantes.
             guardEnabled: new BooleanField({
                 required: true,
                 nullable: false,

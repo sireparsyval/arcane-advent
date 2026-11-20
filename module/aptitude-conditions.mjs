@@ -1,4 +1,4 @@
-import { expertiseMatches } from "./expertise.mjs";
+import { expertiseMatches, WEAPON_PROPERTIES } from "./expertise.mjs";
 
 export const CONDITION_METRICS = Object.freeze({
     pdcRatio: "PdC (% du maximum)",
@@ -31,7 +31,7 @@ export const CONDITION_KEYS = Object.freeze({
     tracker: { passivePerception: "Perception passive", initiative: "Initiative", speed: "Vitesse de base", effectiveSpeed: "Vitesse effective" },
     encumbrance: { carried: "Poids transporté (kg)", maximum: "Charge maximale (kg)", percentage: "Encombrement (%)" },
     resource: { barrier: "Barrière", mercy: "Miséricorde", "consciousnessDice.value": "Dés de Conscience restants", "consciousnessDice.max": "Dés de Conscience maximum", "deathSaves.successes": "Contre-la-Mort : réussites", "deathSaves.failures": "Contre-la-Mort : échecs" },
-    equipmentProperty: { twoHanded: "Deux mains", finesse: "Finesse", thrown: "Lancer", light: "Légère", heavy: "Lourde", versatile: "Polyvalente", ammunition: "Munitions" },
+    equipmentProperty: WEAPON_PROPERTIES,
     equippedCount: { "*": "Tous les équipements", weapon: "Armes", shield: "Boucliers", protection: "Protections", accessory: "Accessoires" },
     luqa: { copper: "Cuivre", silver: "Argent", gold: "Or", platinum: "Platine" },
     volume: { gigantic: "Gigantesque", huge: "Très Grand", large: "Grand", medium: "Moyen", small: "Petit", verySmall: "Très Petit", tiny: "Minuscule", none: "Aucun" }

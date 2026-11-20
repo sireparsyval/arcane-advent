@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { aptitudeConditionStatus, evaluateAptitudeExpression } from "../module/aptitude-conditions.mjs";
+import { aptitudeConditionStatus, evaluateAptitudeExpression, conditionKeyChoices } from "../module/aptitude-conditions.mjs";
 
 const actor = {
     system: {
@@ -54,4 +54,14 @@ test("une condition sans cible ne peut pas correspondre à des champs vides", ()
     assert.equal(aptitudeConditionStatus(actor, condition("inventory", "", 1, ">=")), false);
     assert.equal(aptitudeConditionStatus(actor, condition("equipped", "", 1, "=")), false);
     assert.equal(aptitudeConditionStatus(actor, condition("luqa", "", 1, ">=")), false);
+});
+
+test("la propriété Garde peut servir de condition d'équipement", () => {
+    assert.ok(conditionKeyChoices(actor, "equipmentProperty")
+        .some(choice => choice.value === "guard" && choice.label === "Garde"));
+    const subject = { ...actor, items: [{ type: "weapon",
+        system: { equipped: true, properties: new Set(["guard"]) } }] };
+    assert.equal(aptitudeConditionStatus(subject, condition("equipmentProperty", "guard", 1, "=")), true);
+    subject.items[0].system.equipped = false;
+    assert.equal(aptitudeConditionStatus(subject, condition("equipmentProperty", "guard", 1, "=")), false);
 });

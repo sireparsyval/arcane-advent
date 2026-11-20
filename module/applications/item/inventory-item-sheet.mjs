@@ -110,7 +110,7 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
             data.system.properties = selectedChoices(form, "data-weapon-property", WEAPON_PROPERTIES, item.system.properties);
             const types = form.querySelector("[data-weapon-damage-types]").value.split("\n");
             data.system.damageTypes = [...new Set(types.map(type => type.trim()).filter(Boolean))];
-            if (!data.system.properties.includes("twoHanded")) data.system.guardEnabled = false;
+            data.system.guardEnabled = false; // Ancien indicateur remplacé par la propriété Garde.
         }
         if (item.type === "protection") {
             data.system.zones = selectedChoices(form, "data-protection-zone", PROTECTION_ZONES, item.system.zones);

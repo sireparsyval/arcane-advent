@@ -620,6 +620,9 @@ export class ArcaneCharacterSheet
                             finesse:
                                 properties.has("finesse"),
 
+                            guard:
+                                properties.has("guard"),
+
                             thrown:
                                 properties.has("thrown"),
 
