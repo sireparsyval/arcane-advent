@@ -5,8 +5,11 @@
             {{#each effectEntries}}
                 <li class="aa-condition-chip {{#if active}}is-satisfied{{else}}is-inactive{{/if}}"
                     title="{{status}}">
-                    <span aria-hidden="true">{{#if active}}✓{{else}}✕{{/if}}</span>
-                    <span>{{#if label}}{{label}} : {{/if}}{{summary}}</span>
+                    <span class="aa-source-summary-indicator" aria-hidden="true">{{#if active}}✓{{else}}✕{{/if}}</span>
+                    <span class="aa-source-summary-text">
+                        {{#if label}}<strong>{{label}}</strong>{{/if}}
+                        <span>{{summary}}</span>
+                    </span>
                 </li>
             {{else}}
                 <li class="aa-summary-empty">Aucun effet configuré.</li>
@@ -30,7 +33,7 @@
                             title="{{#if satisfied}}Désactiver{{else}}Activer{{/if}} cette condition"
                             {{#unless @root.canEditState}}disabled{{/unless}}><span aria-hidden="true">{{#if satisfied}}☑{{else}}☐{{/if}}</span></button>
                     {{else}}
-                        <span aria-hidden="true">{{#if satisfied}}✓{{else}}✕{{/if}}</span>
+                        <span class="aa-source-summary-indicator" aria-hidden="true">{{#if satisfied}}✓{{else}}✕{{/if}}</span>
                     {{/if}}
                     <span>{{label}}</span>
                 </li>

@@ -152,6 +152,10 @@ function linkedAptitude(trait) {
 test("Traits et Aptitudes partagent les mêmes récapitulatifs sans exposer les critères automatiques", async () => {
     const { sheet, trait } = fixture();
     trait.system.conditions.automatic.label = "Danger imminent";
+    trait.system.effectRules.stealth = {
+        kind: "roll", scope: "skill", skill: "Discrétion", ability: "dexterity",
+        label: "Avantage en Discrétion", advantage: true, enabled: true
+    };
     const aptitude = linkedAptitude(trait);
     sheet.actor.items.push(aptitude);
     const before = structuredClone(sheet.actor.items);
@@ -163,6 +167,8 @@ test("Traits et Aptitudes partagent les mêmes récapitulatifs sans exposer les 
     const context = await sheet._prepareContext({});
     const traitView = context.traits[0], aptitudeView = context.aptitudes[0];
     assert.deepEqual(aptitudeView.effectEntries, traitView.effectEntries);
+    assert.equal(traitView.effectEntries[2].label, "Avantage en Discrétion");
+    assert.equal(traitView.effectEntries[2].summary, "Dextérité · Discrétion · Avantage");
     assert.deepEqual(aptitudeView.conditionEntries, traitView.conditionEntries);
     assert.equal(aptitudeView.conditionEntries[1].label, "Danger imminent");
     assert.equal(aptitudeView.effectsOpen, true);

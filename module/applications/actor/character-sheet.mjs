@@ -381,7 +381,7 @@ export class ArcaneCharacterSheet
                 effectEntries: (source?.rules ?? []).map(rule => ({
                     id: rule.id,
                     label: rule.label,
-                    summary: effectRuleSummary(rule),
+                    summary: effectRuleSummary(rule, { compact: true }),
                     active: rule.enabled !== false && Boolean(source?.active),
                     status: rule.enabled === false ? "Désactivé" : source?.active ? "Actif" : "Inactif"
                 })),

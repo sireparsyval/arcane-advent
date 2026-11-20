@@ -1669,12 +1669,14 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-source-quick-view .aa-condition-chip {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
     border: 1px solid var(--aa-border);
     border-radius: 4px;
     background: rgba(255, 255, 255, .025);
 }
 .aa-source-quick-view .aa-condition-chip > span { min-width: 0; overflow-wrap: anywhere; }
+.aa-source-summary-indicator { flex: 0 0 auto; }
+.aa-source-summary-text { display: grid; gap: 3px; text-align: start; }
 .aa-source-quick-view .aa-condition-chip.is-inactive { opacity: .65; }
 .aa-source-quick-view .aa-manual-condition-chip { padding-inline-start: 2px; }
 .arcane-advent .aa-source-quick-view button.aa-manual-condition-toggle {

@@ -113,10 +113,11 @@ export function resolveRollEffects(rules = [], context = {}, mode = "normal") {
         mode: advantage === disadvantage ? "normal" : advantage ? "advantage" : "disadvantage" };
 }
 
-export function effectRuleSummary(rule) {
+export function effectRuleSummary(rule, { compact = false } = {}) {
     const signed = value => Number(value) > 0 ? `+${Number(value)}` : String(Number(value) || 0);
     if (rule.kind === "roll") {
-        const pieces = [EFFECT_ROLL_SCOPES[rule.scope] ?? EFFECT_ROLL_SCOPES.all];
+        const namedSkill = compact && rule.scope === "skill" && rule.skill?.trim();
+        const pieces = namedSkill ? [] : [EFFECT_ROLL_SCOPES[rule.scope] ?? EFFECT_ROLL_SCOPES.all];
         if (rule.ability) pieces.push(EFFECT_ABILITIES[rule.ability]);
         if (rule.skill) pieces.push(rule.skill);
         if (rule.amount) pieces.push(signed(rule.amount));

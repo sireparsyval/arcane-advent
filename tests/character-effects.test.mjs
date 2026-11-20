@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { activeCharacterEffects, applyStatisticEffects, newEffectRule, resolveRollEffects } from "../module/character-effects.mjs";
+import { activeCharacterEffects, applyStatisticEffects, effectRuleSummary, newEffectRule, resolveRollEffects } from "../module/character-effects.mjs";
 import { conditionMetricValue, aptitudeConditionStatus, conditionSummary } from "../module/aptitude-conditions.mjs";
 
 const roll = changes => ({ ...newEffectRule("roll"), ...changes });
@@ -119,4 +119,12 @@ test("automatic effects inspect baseline values and cannot oscillate on their ow
     model.abilities.strength.value = 13;
     model.prepareDerivedData();
     assert.equal(model.abilities.strength.effective, 13);
+});
+
+test("compact skill summaries omit redundant scope while keeping ambiguous roll types explicit", () => {
+    const rule = roll({ scope: "skill", ability: "dexterity", skill: "Discrétion", advantage: true });
+    assert.equal(effectRuleSummary(rule, { compact: true }), "Dextérité · Discrétion · Avantage");
+    assert.equal(effectRuleSummary(rule), "Tests de compétence · Dextérité · Discrétion · Avantage");
+    assert.equal(effectRuleSummary({ ...rule, skill: "" }, { compact: true }), "Tests de compétence · Dextérité · Avantage");
+    assert.equal(effectRuleSummary({ ...rule, scope: "save", skill: "" }, { compact: true }), "Jets de sauvegarde · Dextérité · Avantage");
 });
