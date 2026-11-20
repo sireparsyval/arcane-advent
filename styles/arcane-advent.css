@@ -1679,6 +1679,7 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-source-summary-text { display: grid; gap: 3px; text-align: start; }
 .aa-source-quick-view .aa-condition-chip.is-inactive { opacity: .65; }
 .aa-source-quick-view .aa-manual-condition-chip { padding-inline-start: 2px; }
+.arcane-advent .aa-source-quick-view button.aa-effect-rule-toggle,
 .arcane-advent .aa-source-quick-view button.aa-manual-condition-toggle {
     display: inline-flex;
     align-items: center;

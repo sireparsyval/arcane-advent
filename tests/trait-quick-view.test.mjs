@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { activeCharacterEffects } from "../module/character-effects.mjs";
 
 globalThis.Item = class {};
 globalThis.foundry = {
@@ -206,5 +207,60 @@ for (const type of ["trait", "aptitude"]) {
         source.type = "object";
         await action.call(sheet, null, target);
         assert.equal(writes.length, 2);
+    });
+}
+
+for (const type of ["trait", "aptitude"]) {
+    test(`la bascule d’effet d’un ${type} conserve ses autres effets et ses conditions d’activation`, async () => {
+        const { sheet, trait } = fixture();
+        const source = type === "trait" ? trait : linkedAptitude(trait);
+        if (type === "aptitude") sheet.actor.items.push(source);
+        sheet.actor.items.get = id => sheet.actor.items.find(item => item.id === id);
+        const writes = [];
+        source.update = async changes => {
+            writes.push(changes);
+            for (const [path, value] of Object.entries(changes)) {
+                const match = /^system\.effectRules\.(force|save)\.enabled$/.exec(path);
+                assert.ok(match, "La bascule ne doit modifier que l’activation d’un effet existant");
+                source.system.effectRules[match[1]].enabled = value;
+            }
+        };
+        const action = ArcaneCharacterSheet.DEFAULT_OPTIONS.actions.toggleEffectRule;
+        const target = id => ({ dataset: { itemId: source.id, effectId: id } });
+        const view = context => (type === "trait" ? context.traits : context.aptitudes)[0];
+        const sourceState = structuredClone(source.system.effectActivation);
+        const conditions = structuredClone(source.system.conditions);
+        for (const [id, expected] of [["force", false], ["save", true], ["force", true], ["save", false]]) {
+            await action.call(sheet, null, target(id));
+            assert.deepEqual(writes.at(-1), { [`system.effectRules.${id}.enabled`]: expected });
+            assert.equal(activeCharacterEffects(sheet.actor).some(rule => rule.sourceId === source.id && rule.id === id), expected);
+            const sourceView = view(await sheet._prepareContext({}));
+            const entry = sourceView.effectEntries.find(rule => rule.id === id);
+            assert.equal(entry.enabled, expected);
+            assert.equal(entry.active, expected);
+            assert.equal(sourceView.effectActive, sourceView.effectEntries.some(rule => rule.active));
+        }
+        assert.deepEqual(source.system.effectActivation, sourceState);
+        assert.deepEqual(source.system.conditions, conditions);
+
+        // Un effet activé reste soumis aux conditions de sa source.
+        source.system.conditions.manual.enabled = false;
+        await action.call(sheet, null, target("save"));
+        const entries = view(await sheet._prepareContext({})).effectEntries;
+        assert.equal(entries.find(rule => rule.id === "save").enabled, true);
+        assert.equal(entries.find(rule => rule.id === "save").active, false);
+        assert.equal(activeCharacterEffects(sheet.actor).some(rule => rule.sourceId === source.id), false);
+
+        // Une ancienne règle sans champ enabled se comporte comme une règle activée.
+        delete source.system.effectRules.force.enabled;
+        await action.call(sheet, null, target("force"));
+        assert.equal(source.system.effectRules.force.enabled, false);
+        const count = writes.length;
+        await action.call({ isEditable: false }, null, target("force"));
+        await action.call(sheet, null, target("missing"));
+        await action.call(sheet, null, { dataset: { itemId: "missing", effectId: "force" } });
+        source.type = "object";
+        await action.call(sheet, null, target("force"));
+        assert.equal(writes.length, count);
     });
 }

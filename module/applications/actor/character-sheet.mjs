@@ -215,6 +215,7 @@ export class ArcaneCharacterSheet
             editAptitudeOptions: this._onEditAptitudeOptions,
             editAptitudeCondition: this._onEditAptitudeCondition,
             toggleManualCondition: this._onToggleManualCondition,
+            toggleEffectRule: this._onToggleEffectRule,
             editAptitudeRoll: this._onEditAptitudeRoll,
             rollAptitude: this._onRollAptitude,
             deleteAptitude: this._onDeleteStateItem,
@@ -374,7 +375,7 @@ export class ArcaneCharacterSheet
             const source = effectsById.get(item.id);
             return {
                 effectCount: source?.rules.length ?? 0,
-                effectActive: source?.active ?? false,
+                effectActive: Boolean(source?.active && source.rules.some(rule => rule.enabled !== false)),
                 effectManual: item.system.effectActivation?.mode === "manual",
                 effectsOpen: openEffects.has(item.id),
                 conditionsOpen: openConditions.has(item.id),
@@ -382,6 +383,7 @@ export class ArcaneCharacterSheet
                     id: rule.id,
                     label: rule.label,
                     summary: effectRuleSummary(rule, { compact: true }),
+                    enabled: rule.enabled !== false,
                     active: rule.enabled !== false && Boolean(source?.active),
                     status: rule.enabled === false ? "Désactivé" : source?.active ? "Actif" : "Inactif"
                 })),
@@ -1149,6 +1151,16 @@ export class ArcaneCharacterSheet
             });
         });
         await dialog.render({ force: true });
+    }
+
+    static async _onToggleEffectRule(event, target) {
+        if (!this.isEditable) return;
+        const source = this.actor.items.get(target.dataset.itemId);
+        const rule = source?.system.effectRules?.[target.dataset.effectId];
+        if (!["trait", "aptitude"].includes(source?.type) || !rule) return;
+        await source.update({
+            [`system.effectRules.${target.dataset.effectId}.enabled`]: rule.enabled === false
+        });
     }
 
     static async _onToggleManualCondition(event, target) {
