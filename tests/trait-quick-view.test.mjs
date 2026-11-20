@@ -301,3 +301,30 @@ test("réactiver un ancien effet manuel reprend ses réglages individuels et l�
     assert.equal(changes["system.effectRules.force.conditionMode"], "selected");
     assert.ok(!Object.keys(changes).some(key => key.startsWith("system.effectActivation")));
 });
+
+test("le bouton Garde expose sa disponibilité et les deux stances dans le récapitulatif", async () => {
+    const { sheet } = fixture();
+    const sword = { id: "sword", name: "Épée", type: "weapon", system: {
+        equipped: true, properties: new Set(["guard"]), damageTypes: new Set()
+    } };
+    sheet.actor.items.push(sword);
+    sheet.actor.getWeaponAbilityData = () => ({ label: "Force", modifier: 2 });
+    sheet.actor.getExpertiseBonus = () => 0;
+    sheet.actor.getGuardStatistics = item => item.system.equipped ? { defense: 15, savingThrowModifier: 5 } : null;
+    for (const stance of ["none", "dodge", "defend"]) {
+        sheet.actor.system.defense.stance = stance;
+        const context = await sheet._prepareContext({});
+        assert.deepEqual(context.combatStances.map(({ key, selected }) => [key, selected]),
+            [["dodge", stance === "dodge"], ["defend", stance === "defend"]]);
+        assert.equal(context.guardAction.available, stance === "defend");
+        assert.equal(context.guardAction.itemId, sword.id);
+        assert.equal(context.guardAction.hasEquipment, true);
+        assert.equal(context.guardAction.defense, 15);
+        assert.match(context.guardAction.title, /Épée.*15.*\+5/);
+    }
+    sword.system.equipped = false;
+    const context = await sheet._prepareContext({});
+    assert.equal(context.guardAction.available, false);
+    assert.equal(context.guardAction.itemId, "");
+    assert.equal(context.guardAction.hasEquipment, false);
+});

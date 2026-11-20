@@ -1,4 +1,5 @@
 import { ARCANE_NEEDS } from "../config.mjs";
+import { COMBAT_STANCES } from "../combat-stances.mjs";
 import { arcanologyField } from "./arcanology-data.mjs";
 import { buildInventory } from "../inventory.mjs";
 import { VOLUME_FACTORS, carryingCapacity, calculateEncumbrance, encumberedSpeed } from "../encumbrance.mjs";
@@ -278,6 +279,11 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
             }),
 
             defense: new SchemaField({
+
+                stance: new StringField({
+                    required: true, nullable: false, blank: false,
+                    choices: ["none", ...Object.keys(COMBAT_STANCES)], initial: "none"
+                }),
 
                 mode: new StringField({
                     required: true,

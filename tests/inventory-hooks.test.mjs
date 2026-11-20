@@ -48,3 +48,34 @@ test("storage deletion rehomes surviving children without losing their contents"
     await ArcaneItem._preDeleteOperation([bag], { parent }, { isGM: true });
     assert.deepEqual(changes, [{ _id: "child", "system.containerId": null }]);
 });
+
+test("les mises à jour directes refusent plusieurs Gardes équipées et acceptent leur échange", async () => {
+    for (const otherType of ["weapon", "shield"]) {
+        const first = entry("first", "weapon"), second = entry("second", otherType);
+        first.system = { ...first.system, equipped: true, properties: ["guard"] };
+        second.system = { ...second.system, equipped: false, properties: ["guard"], guardEnabled: true };
+        const parent = { type: "character", items: new Items([[first.id, first], [second.id, second]]), getFlag: () => null };
+        const equip = { _id: second.id, system: { equipped: true } };
+        assert.equal(await ArcaneItem._preUpdateOperation([second], { parent, updates: [equip] }, {}), false);
+        assert.equal(await ArcaneItem._preUpdateOperation([first, second], { parent,
+            updates: [{ _id: first.id, system: { equipped: false } }, equip] }, {}), undefined);
+    }
+});
+
+test("ajouter Garde à un équipement déjà porté respecte aussi la limite", async () => {
+    const first = entry("first", "weapon"), second = entry("second", "shield");
+    first.system = { ...first.system, equipped: true, properties: ["guard"] };
+    second.system = { ...second.system, equipped: true, guardEnabled: false };
+    const parent = { type: "character", items: new Items([[first.id, first], [second.id, second]]), getFlag: () => null };
+    assert.equal(await ArcaneItem._preUpdateOperation([second], { parent,
+        updates: [{ _id: second.id, system: { guardEnabled: true } }] }, {}), false);
+});
+
+test("créer plusieurs équipements de Garde n'en équipe qu'un", async () => {
+    const first = entry("first", "weapon"), second = entry("second", "weapon");
+    for (const item of [first, second]) Object.assign(item.system, { equipped: true, properties: ["guard"] });
+    const parent = { type: "character", items: new Items(), getFlag: () => null };
+    await ArcaneItem._preCreateOperation([first, second], { parent }, {});
+    assert.equal(first.system.equipped, true);
+    assert.equal(second.system.equipped, false);
+});

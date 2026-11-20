@@ -1,0 +1,18 @@
+<div class="aa-combat-stances" role="group" aria-label="Stances de combat">
+    {{#each combatStances}}
+        <button type="button" data-action="toggleCombatStance" data-combat-stance="{{key}}"
+            aria-pressed="{{selected}}" title="{{title}}" {{#unless @root.canEditState}}disabled{{/unless}}>{{label}}</button>
+    {{/each}}
+    <button type="button" class="aa-guard-action" data-action="rollGuard" data-item-id="{{guardAction.itemId}}"
+        title="{{guardAction.title}}" aria-label="Lancer la Garde — {{guardAction.title}}"
+        {{#unless guardAction.available}}disabled{{/unless}}>
+        <span aria-hidden="true">🛡️</span> {{#if guardAction.hasEquipment}}{{guardAction.defense}}{{else}}❌{{/if}}
+    </button>
+</div>
+<div class="aa-combat-footer">
+    <button type="button" class="aa-effects-help" data-action="manageCharacterEffects"
+        title="Effets permanents et Avantages/Désavantages par jet"
+        aria-label="Consulter les effets permanents" {{#unless canEditState}}disabled{{/unless}}>
+        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+    </button>
+</div>

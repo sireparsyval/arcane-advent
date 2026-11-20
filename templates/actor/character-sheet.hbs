@@ -616,7 +616,12 @@
 
                         <div class="aa-defense-header">
 
-                            <h3><span class="aa-heading-icon" aria-hidden="true">🛡️</span>Défense</h3>
+                            <div class="aa-defense-title">
+                                <h3><span class="aa-heading-icon" aria-hidden="true">🛡️</span>Défense</h3>
+                                {{#if hasEquippedShield}}
+                                    <span class="aa-defense-base" data-defense-shield>Bouclier {{shieldBonusLabel}}</span>
+                                {{/if}}
+                            </div>
 
 
                             <div class="aa-defense-mode" role="group" aria-label="Mode de Défense">
@@ -627,12 +632,6 @@
                                 {{/each}}
                             </div>
 
-
-                            {{#if hasEquippedShield}}
-                                <span class="aa-defense-base" data-defense-shield>
-                                    Bouclier {{shieldBonusLabel}}
-                                </span>
-                            {{/if}}
 
                         </div>
 
@@ -685,31 +684,6 @@
                         </div>
 
 
-                        {{#if guardSources.length}}
-
-                            <div class="aa-guard-section">
-
-                                <strong>Garde</strong>
-
-
-                                {{#each guardSources}}
-
-                                    <button
-                                        type="button"
-                                        class="aa-guard-roll"
-                                        data-action="rollGuard"
-                                        data-item-id="{{id}}"
-                                        title="Défense de Garde : {{defense}} (comparaison avec l'attaque). Cliquer pour un JS de Garde à {{saveModifierLabel}}."
-                                    >
-                                        🛡️ <span class="aa-guard-name">{{name}}</span>
-                                        <span class="aa-guard-values">— [ <strong title="Défense de Garde">{{defense}}</strong> | <strong title="Modificateur du JS de Garde">{{saveModifierLabel}}</strong> ]</span>
-                                    </button>
-
-                                {{/each}}
-
-                            </div>
-
-                        {{/if}}
 
                     </section>
 
@@ -755,9 +729,8 @@
                             <button type="button" data-action="setRollMode" data-roll-mode="{{key}}"
                                 aria-pressed="{{selected}}" {{#unless @root.canEditState}}disabled{{/unless}}>{{label}}</button>
                         {{/each}}
-                        <button type="button" data-action="manageCharacterEffects" {{#unless canEditState}}disabled{{/unless}} title="Gérer les effets permanents et voir les Avantages/Désavantages par jet">⚙️ Effets permanents</button>
                     </div>
-                    <small class="aa-options-explanation">Choix manuel : les effets permanents sont aussi pris en compte pour chaque jet.</small>
+                    {{> "systems/arcane-advent/templates/actor/parts/combat-stances.hbs"}}
 
                 </section>
 

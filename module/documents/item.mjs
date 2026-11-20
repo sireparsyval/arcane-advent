@@ -1,4 +1,5 @@
 import { canPlaceInContainer, EQUIPMENT_TYPES, isInventoryContainer, isInventoryItem } from "../inventory.mjs";
+import { equipmentAllowsGuard, equippedGuardItems } from "../guard.mjs";
 
 // Autorisation locale et temporaire pour une suppression initiée depuis les options du Trait.
 const authorizedLinkedDeletes = new WeakMap();
@@ -47,7 +48,7 @@ function hasTwoHandedProperty(properties) {
 
 function projectInventoryItem(item, changes = {}) {
     const system = {};
-    for (const field of ["containerId", "equipped", "properties"]) {
+    for (const field of ["containerId", "equipped", "properties", "guardEnabled"]) {
         system[field] = Object.hasOwn(changes, field) ? changes[field] : item.system[field];
     }
     return { id: item.id, type: item.type, system };
@@ -117,12 +118,16 @@ export class ArcaneItem extends Item {
         if (!inventoryOwner(actor)) return;
         const changedLoadout = [...changes].some(([id, update]) => {
             const item = projected.get(id);
-            return item?.system.equipped && getEquipmentConflictType(item.type, item.system.properties)
-                && (Object.hasOwn(update.system ?? {}, "equipped") || Object.hasOwn(update.system ?? {}, "properties"));
+            return item?.system.equipped && ["equipped", "properties", "guardEnabled"]
+                .some(key => Object.hasOwn(update.system ?? {}, key));
         });
         if (!changedLoadout) return;
 
         const equipped = [...projected.values()].filter(item => item.system.equipped);
+        if (equippedGuardItems(equipped).length > 1) {
+            ui.notifications.warn("Un seul équipement permettant la Garde peut être équipé à la fois.");
+            return false;
+        }
         if (equipped.some(item => item.type === "shield")
             && equipped.some(item => getEquipmentConflictType(item.type, item.system.properties) === "shield")) {
             ui.notifications.warn("Un bouclier et une arme à deux mains ne peuvent pas être équipés ensemble.");
@@ -146,6 +151,7 @@ export class ArcaneItem extends Item {
             .map(item => getEquipmentConflictType(item.type, item.system.properties))
             .filter(Boolean));
 
+        let guardTaken = equippedGuardItems(embedded).length > 0;
         for (const item of pending) {
             const { containerId, properties } = item.system;
             const changes = {};
@@ -160,8 +166,11 @@ export class ArcaneItem extends Item {
                 if ((containerId && !Object.hasOwn(changes, "system.containerId"))
                     || (inventoryOwner(actor) && conflictType && blockedTypes.has(item.type))) {
                     changes["system.equipped"] = false;
-                } else if (conflictType) {
-                    blockedTypes.add(conflictType);
+                } else if (guardTaken && equipmentAllowsGuard(item)) {
+                    changes["system.equipped"] = false;
+                } else {
+                    if (conflictType) blockedTypes.add(conflictType);
+                    if (equipmentAllowsGuard(item)) guardTaken = true;
                 }
             }
             if (Object.keys(changes).length) item.updateSource(changes);

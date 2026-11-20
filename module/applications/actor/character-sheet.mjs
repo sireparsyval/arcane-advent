@@ -6,6 +6,8 @@ import { inventoryActionDialog } from "../inventory-transfer.mjs";
 import { VOLUME_LABELS, ENCUMBRANCE_STAGES } from "../../encumbrance.mjs";
 import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedModifier } from "../../modifiers.mjs";
 import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
+import { canRollGuard } from "../../guard.mjs";
+import { COMBAT_STANCES } from "../../combat-stances.mjs";
 import { EXPERTISE_DOMAINS, WEAPON_PROPERTIES, PROPERTY_FILTER_STATES, normalizedClasses } from "../../expertise.mjs";
 import { aptitudeConditionStatus, conditionSummary } from "../../aptitude-conditions.mjs";
 import { characterEffectSources, conditionActor, effectRuleSummary, effectRuleSettings } from "../../character-effects.mjs";
@@ -198,6 +200,7 @@ export class ArcaneCharacterSheet
             editManualModifiers: this._onEditManualModifiers,
             toggleAgeMode: this._onToggleAgeMode,
             setDefenseMode: this._onSetDefenseMode,
+            toggleCombatStance: this._onToggleCombatStance,
             rollConsciousnessDie: this._onRollConsciousnessDie,
             rollDeathSave: this._onRollDeathSave,
             rollInitiativeCheck: this._onRollInitiativeCheck,
@@ -283,7 +286,7 @@ export class ArcaneCharacterSheet
         body: {
             template:
                 "systems/arcane-advent/templates/actor/character-sheet.hbs",
-            templates: ["aptitudes", "conditions", "traits", "effect-quick-view", "manual-modifiers", "sheet-mode"]
+            templates: ["aptitudes", "conditions", "traits", "effect-quick-view", "manual-modifiers", "sheet-mode", "combat-stances"]
                 .map(name => `systems/arcane-advent/templates/actor/parts/${name}.hbs`),
             scrollable: [""]
         }
@@ -690,20 +693,27 @@ export class ArcaneCharacterSheet
                 .map(equipmentView)
         };
 
-        context.guardSources = [];
-        for (const item of equipment) {
-            const stats = this.actor.getGuardStatistics(item);
-            if (!stats) continue;
-
-            context.guardSources.push({
-                id: item.id,
-                name: item.name,
-                defense: stats.defense,
-                saveModifierLabel: stats.savingThrowModifier >= 0
-                    ? "+" + stats.savingThrowModifier
-                    : String(stats.savingThrowModifier)
-            });
-        }
+        const guards = equipment.filter(item => this.actor.getGuardStatistics(item));
+        const guard = guards.length === 1 ? guards[0] : null;
+        const stats = guard ? this.actor.getGuardStatistics(guard) : null;
+        const guardLabel = stats
+            ? `${guard.name} — Défense de Garde ${stats.defense} · JS ${signedModifier(stats.savingThrowModifier)}`
+            : guards.length > 1
+                ? "Un seul équipement de Garde peut être équipé à la fois."
+                : "Équipez une arme ou un bouclier permettant la Garde.";
+        context.combatStances = Object.entries(COMBAT_STANCES).map(([key, stance]) => ({
+            key, label: stance.label, selected: key === this.actor.system.defense.stance,
+            title: `Avantage aux jets de sauvegarde de ${stance.saveLabel}`
+        }));
+        context.guardAction = {
+            itemId: guard?.id ?? "",
+            hasEquipment: Boolean(stats),
+            defense: stats?.defense,
+            available: this.isEditable && canRollGuard(this.actor, guard),
+            title: stats && this.actor.system.defense.stance !== "defend"
+                ? `${guardLabel}. Activez Se Défendre pour lancer la Garde.`
+                : guardLabel
+        };
 
         context.expertises = sortableItems(this.actor.items
             .filter(item =>
@@ -739,6 +749,14 @@ export class ArcaneCharacterSheet
         await this.actor.update({ "system.defense.mode": mode });
     }
 
+
+    static async _onToggleCombatStance(event, target) {
+        const stance = target.dataset.combatStance;
+        if (!this.isEditable || !Object.hasOwn(COMBAT_STANCES, stance)) return;
+        await this.actor.update({
+            "system.defense.stance": this.actor.system.defense.stance === stance ? "none" : stance
+        });
+    }
 
     static async _onSetRollMode(event, target) {
         const mode = target.dataset.rollMode;
@@ -798,8 +816,7 @@ export class ArcaneCharacterSheet
         const itemId =
             target.dataset.itemId;
 
-        if (!itemId) return;
-
+        if (!this.isEditable || !itemId) return;
 
         await this.actor.rollGuard(itemId, this._getRollMode());
     }

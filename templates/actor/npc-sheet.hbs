@@ -94,8 +94,8 @@
         </div>
         <div class="aa-npc-defense">
             <strong>Défense {{system.defense.base}}</strong>
-            {{#each compactDefenseZones}}<span data-defense-zone="{{key}}">{{label}} <strong>{{value}}</strong></span>{{/each}}
             {{#if hasEquippedShield}}<span data-defense-shield>Bouclier {{shieldBonusLabel}}</span>{{/if}}
+            {{#each compactDefenseZones}}<span data-defense-zone="{{key}}">{{label}} <strong>{{value}}</strong></span>{{/each}}
         </div>
         <div class="aa-npc-modes">
             <div class="aa-defense-mode" role="group" aria-label="Caractéristique de Défense">
@@ -111,14 +111,7 @@
                 {{/each}}
             </div>
         </div>
-        {{#if guardSources.length}}
-            <div class="aa-npc-guards">
-                {{#each guardSources}}
-                    <button type="button" data-action="rollGuard" data-item-id="{{id}}"
-                        title="Défense de Garde {{defense}} · JS {{saveModifierLabel}}">🛡️ {{name}} · {{defense}} / {{saveModifierLabel}}</button>
-                {{/each}}
-            </div>
-        {{/if}}
+        {{> "systems/arcane-advent/templates/actor/parts/combat-stances.hbs"}}
     </section>
 
     <section class="aa-npc-abilities" aria-label="Caractéristiques et jets de sauvegarde">

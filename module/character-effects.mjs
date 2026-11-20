@@ -1,4 +1,5 @@
 import { MODIFIER_TARGETS } from "./modifiers.mjs";
+import { combatStanceEffects } from "./combat-stances.mjs";
 import { aptitudeConditionStatus } from "./aptitude-conditions.mjs";
 import { resolveEffectAmount } from "./effect-amounts.mjs";
 
@@ -96,9 +97,10 @@ export function characterEffectSources(actor) {
 }
 
 export function activeCharacterEffects(actor) {
-    return characterEffectSources(actor).filter(entry => entry.active).flatMap(({ source, rules }) =>
+    const effects = characterEffectSources(actor).filter(entry => entry.active).flatMap(({ source, rules }) =>
         rules.filter(rule => rule.active).map(rule => ({ ...rule, sourceId: source.id,
             sourceName: source.name, sourceType: source.type })));
+    return [...effects, ...combatStanceEffects(actor?.system?.defense?.stance)];
 }
 
 // All additions before multiplication, then all coefficients, then additions after.

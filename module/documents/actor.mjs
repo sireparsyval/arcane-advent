@@ -1,6 +1,6 @@
 import { buildInventory, canPlaceInContainer, EQUIPMENT_TYPES, isInventoryContainer, isInventoryItem } from "../inventory.mjs";
 import { getEquipmentConflictType } from "./item.mjs";
-import { guardValues } from "../guard.mjs";
+import { guardValues, equipmentAllowsGuard, canRollGuard } from "../guard.mjs";
 import { expertiseMatches, matchingExpertiseBonus } from "../expertise.mjs";
 import { STORAGE_IMAGE } from "../storage.mjs";
 import { activeCharacterEffects, conditionActor, resolveRollEffects, sourceConditionsSatisfied } from "../character-effects.mjs";
@@ -145,10 +145,19 @@ export class ArcaneActor extends Actor {
                 const equipped = system.equipped ?? item.system.equipped;
                 const properties = system.properties ?? item.system.properties;
                 const conflictType = equipped && getEquipmentConflictType(item.type, properties);
-                if (conflictType && (system.equipped || Object.hasOwn(system, "properties"))) {
+                const loadoutChanged = system.equipped || Object.hasOwn(system, "properties") || Object.hasOwn(system, "guardEnabled");
+                if (conflictType && loadoutChanged) {
                     for (const other of this.items) {
                         if (other.type !== conflictType || !other.system.equipped) continue;
                         if (conflictType === "weapon" && !other.system.properties.has("twoHanded")) continue;
+                        updates.push({ _id: other.id, system: { equipped: false } });
+                    }
+                }
+                if (equipped && loadoutChanged && equipmentAllowsGuard({ type: item.type,
+                    system: { properties, guardEnabled: system.guardEnabled ?? item.system.guardEnabled } })) {
+                    for (const other of this.items) {
+                        if (other.id === itemId || !other.system.equipped || !equipmentAllowsGuard(other)
+                            || updates.some(update => update._id === other.id)) continue;
                         updates.push({ _id: other.id, system: { equipped: false } });
                     }
                 }
@@ -684,7 +693,7 @@ export class ArcaneActor extends Actor {
     async rollGuard(itemId, mode = this.system.rollMode ?? "normal") {
         const item = this.items.get(itemId);
         const stats = this.getGuardStatistics(item);
-        if (!stats) return;
+        if (!stats || !canRollGuard(this, item)) return;
 
         // Un clic lance uniquement le JS de Garde (et non la Défense fixe).
         return this._rollD20(stats.savingThrowModifier, mode,

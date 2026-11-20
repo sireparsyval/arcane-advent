@@ -188,3 +188,35 @@ test("formula functions retain statistical baselines while roll bonuses use upda
     }
     assert.equal(source.system.effectRules.strength.amountFormula, "max(@abilities.dexterity.modifier, @abilities.constitution.modifier)");
 });
+
+test("les stances accordent leur avantage au seul JS correspondant et respectent les désavantages", () => {
+    const actor = { system: { defense: { stance: "none" } }, items: [] };
+    for (const [stance, ability] of [["dodge", "dexterity"], ["defend", "constitution"]]) {
+        actor.system.defense.stance = stance;
+        const effects = activeCharacterEffects(actor);
+        assert.equal(resolveRollEffects(effects, { type: "save", ability }).mode, "advantage");
+        assert.equal(resolveRollEffects(effects, { type: "save", ability }, "disadvantage").mode, "normal");
+        assert.equal(resolveRollEffects(effects, { type: "save", ability: "strength" }).mode, "normal");
+        assert.equal(resolveRollEffects(effects, { type: "ability", ability }).mode, "normal");
+        assert.equal(resolveRollEffects(effects, { type: "attack", ability }).mode, "normal");
+        assert.equal(resolveRollEffects(effects, { type: "guard", ability: "strength" }).mode, "normal");
+        const otherAbility = ability === "dexterity" ? "constitution" : "dexterity";
+        assert.equal(resolveRollEffects(effects, { type: "save", ability: otherAbility }).mode, "normal");
+    }
+    actor.system.defense.stance = "none";
+    assert.equal(activeCharacterEffects(actor).length, 0);
+});
+
+test("les stances conservent les Défenses habituelles et partielles à côté de la Garde", () => {
+    const model = character([
+        { type: "shield", system: { equipped: true, guardEnabled: true, defenseBonus: 2 } },
+        { type: "protection", system: { equipped: true, zones: ["torso"], defenseBonus: 3 } }
+    ]);
+    model.abilities.dexterity.value = 14;
+    for (const stance of ["none", "dodge", "defend", "none"]) {
+        model.defense.stance = stance;
+        model.prepareDerivedData();
+        assert.equal(model.defense.base, 14);
+        assert.deepEqual(model.defense.zones, { head: 14, torso: 17, arms: 14, legs: 14 });
+    }
+});
