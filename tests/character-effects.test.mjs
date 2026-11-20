@@ -189,7 +189,7 @@ test("formula functions retain statistical baselines while roll bonuses use upda
     assert.equal(source.system.effectRules.strength.amountFormula, "max(@abilities.dexterity.modifier, @abilities.constitution.modifier)");
 });
 
-test("les stances accordent leur avantage au seul JS correspondant et respectent les désavantages", () => {
+test("les stances appliquent les avantages et désavantages croisés aux seuls JS concernés", () => {
     const actor = { system: { defense: { stance: "none" } }, items: [] };
     for (const [stance, ability] of [["dodge", "dexterity"], ["defend", "constitution"]]) {
         actor.system.defense.stance = stance;
@@ -201,7 +201,9 @@ test("les stances accordent leur avantage au seul JS correspondant et respectent
         assert.equal(resolveRollEffects(effects, { type: "attack", ability }).mode, "normal");
         assert.equal(resolveRollEffects(effects, { type: "guard", ability: "strength" }).mode, "normal");
         const otherAbility = ability === "dexterity" ? "constitution" : "dexterity";
-        assert.equal(resolveRollEffects(effects, { type: "save", ability: otherAbility }).mode, "normal");
+        assert.equal(resolveRollEffects(effects, { type: "save", ability: otherAbility }).mode, "disadvantage");
+        assert.equal(resolveRollEffects(effects, { type: "save", ability: otherAbility }, "advantage").mode, "normal");
+        assert.equal(resolveRollEffects(effects, { type: "ability", ability: otherAbility }).mode, "normal");
     }
     actor.system.defense.stance = "none";
     assert.equal(activeCharacterEffects(actor).length, 0);

@@ -235,13 +235,15 @@ test("l’enregistrement reprend les anciens réglages dans chaque effet sans co
     assert.equal(writes[1]["system.effectRules"].first.activationMode, "always");
 });
 
-test("le récapitulatif montre la stance active et son avantage puis se met à jour sans rouvrir", async () => {
+test("le récapitulatif montre les avantages et désavantages de la stance puis se met à jour sans rouvrir", async () => {
     const actor = { uuid: "Actor.hero", name: "Héros", isOwner: true,
         system: { rollMode: "normal", defense: { stance: "dodge" } }, items: [] };
     const beforeHooks = actorHooks.size;
     const dialog = await openCharacterEffectsManager(actor);
     assert.match(dialog.root.innerHTML, /Stance de Défense — Esquive/);
     assert.match(dialog.root.innerHTML, /Jets de sauvegarde · Dextérité · Avantage/);
+    assert.match(dialog.root.innerHTML, /Jets de sauvegarde · Constitution · Désavantage/);
+    assert.match(dialog.root.innerHTML, /<td>JS de Constitution<\/td><td>—<\/td><td>Oui<\/td><td>Désavantage<\/td>/);
     assert.doesNotMatch(dialog.root.innerHTML, /data-manage-source="undefined"/);
     assert.match(dialog.root.innerHTML, /<td>JS de Dextérité<\/td><td>Oui<\/td>/);
     assert.equal(actorHooks.size, beforeHooks + 1);
@@ -250,6 +252,8 @@ test("le récapitulatif montre la stance active et son avantage puis se met à j
     for (const { listener } of actorHooks.values()) listener(actor);
     assert.match(dialog.root.innerHTML, /Stance de Défense — Se Défendre/);
     assert.match(dialog.root.innerHTML, /Jets de sauvegarde · Constitution · Avantage/);
+    assert.match(dialog.root.innerHTML, /Jets de sauvegarde · Dextérité · Désavantage/);
+    assert.match(dialog.root.innerHTML, /<td>JS de Dextérité<\/td><td>—<\/td><td>Oui<\/td><td>Désavantage<\/td>/);
     assert.doesNotMatch(dialog.root.innerHTML, /Stance de Défense — Esquive/);
 
     actor.system.defense.stance = "none";

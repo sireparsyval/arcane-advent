@@ -703,7 +703,7 @@ export class ArcaneCharacterSheet
                 : "Équipez une arme ou un bouclier permettant la Garde.";
         context.combatStances = Object.entries(COMBAT_STANCES).map(([key, stance]) => ({
             key, label: stance.label, selected: key === this.actor.system.defense.stance,
-            title: `Avantage aux jets de sauvegarde de ${stance.saveLabel}`
+            title: `Avantage aux jets de sauvegarde de ${stance.saveLabel} ; désavantage aux jets de sauvegarde de ${stance.disadvantageSaveLabel}`
         }));
         context.guardAction = {
             itemId: guard?.id ?? "",
