@@ -7,20 +7,22 @@
         },
         "Item": {
             "storage": "Stockage / Dépôt au Sol",
-            "alteration": "Altération d’État",
-            "injury": "Blessure / Maladie",
-            "aptitude": "Aptitude",
-            "trait": "Trait",
-            "glyph": "Glyphe",
-            "object": "Objet",
-            "container": "Contenant",
-            "purse": "Bourse",
             "weapon": "Arme",
             "shield": "Bouclier",
             "protection": "Protection",
             "accessory": "Accessoire",
             "skill": "Compétence",
-            "expertise": "Expertise"
+            "expertise": "Expertise",
+            "alteration": "Altération d'État",
+            "injury": "Blessure / Maladie",
+            "aptitude": "Aptitude",
+            "trait": "Trait",
+            "glyph": "Glyphe",
+            "object": "Objet",
+            "interactiveElement": "Élément Interactif",
+            "sceneryElement": "Élément du Décor",
+            "container": "Contenant",
+            "purse": "Bourse",
         }
     }
 }

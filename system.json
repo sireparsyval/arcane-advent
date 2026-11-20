@@ -56,7 +56,9 @@
             "injury": {},
             "aptitude": {},
             "trait": {},
-            "glyph": {}
+            "glyph": {},
+            "interactiveElement": {},
+            "sceneryElement": {}
         }
     }
 }
