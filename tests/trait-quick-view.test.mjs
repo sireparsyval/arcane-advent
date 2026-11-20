@@ -98,3 +98,36 @@ test("le bouton de création lie immédiatement la nouvelle Aptitude au Trait et
     await action.call({ isEditable: false }, null, { dataset: { traitId: trait.id } });
     assert.equal(created.length, 1);
 });
+
+for (const [actionName, itemType, dataKey, rowAttribute] of [
+    ["goToLinkedTrait", "trait", "traitId", "data-trait-row"],
+    ["goToLinkedAptitude", "aptitude", "itemId", "data-aptitude-row"]
+]) {
+    test(`${actionName} rejoint la bonne carte, même sans permission d’édition`, () => {
+        const item = { id: "linked-item", type: itemType };
+        const calls = [];
+        const sheet = {
+            isEditable: false,
+            actor: { items: new Map([[item.id, item]]) },
+            element: {
+                querySelector(selector) {
+                    assert.equal(selector, `[${rowAttribute}="${item.id}"]`);
+                    return { scrollIntoView: options => calls.push(options) };
+                }
+            }
+        };
+        const action = ArcaneCharacterSheet.DEFAULT_OPTIONS.actions[actionName];
+        action.call(sheet, null, { dataset: { [dataKey]: item.id } });
+        assert.deepEqual(calls, [{ behavior: "smooth", block: "nearest" }]);
+
+        // Un élément disparu ou d’un autre type ne doit pas déclencher de navigation.
+        action.call(sheet, null, { dataset: { [dataKey]: "missing" } });
+        item.type = "weapon";
+        action.call(sheet, null, { dataset: { [dataKey]: item.id } });
+        assert.equal(calls.length, 1);
+
+        item.type = itemType;
+        sheet.element.querySelector = () => null;
+        assert.doesNotThrow(() => action.call(sheet, null, { dataset: { [dataKey]: item.id } }));
+    });
+}

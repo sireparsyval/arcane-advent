@@ -1653,6 +1653,12 @@ body.detached > .aa-detached-sheet .window-content {
 }
 .aa-trait-link-row span { min-width: 0; overflow-wrap: anywhere; }
 .aa-trait-link-row small { opacity: .75; }
+.aa-trait-link-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
 .aa-trait-row details { min-width: 0; }
 .aa-trait-row details summary { cursor: pointer; padding-block: 4px; }
 .aa-trait-row details p { white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -1673,9 +1679,20 @@ body.detached > .aa-detached-sheet .window-content {
     font-size: 0.86em;
 }
 .aa-aptitude-origin-label { font-size: 0.82em; color: var(--aa-accent); overflow-wrap: anywhere; }
-.aa-aptitude-origin {
-    font-size: 0.82em;
-    white-space: nowrap;
+.arcane-advent button.aa-linked-navigation {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 28px;
+    box-sizing: border-box;
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    min-height: 28px;
+    margin: 0;
+    padding: 0;
+    font-size: 1rem;
+    line-height: 1;
 }
 .aa-aptitude-config:not([hidden]) > .aa-aptitude-requirements-editor {
     flex: 1 0 100%;

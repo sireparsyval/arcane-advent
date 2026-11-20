@@ -79,11 +79,16 @@
                         {{#each linkedAptitudes}}
                             <div class="aa-trait-link-row">
                                 <span>{{name}} <small>· {{categoryLabel}}</small></span>
-                                {{#if @root.canEditState}}<button type="button" data-action="deleteLinkedAptitude"
-                                    data-trait-id="{{../id}}" data-item-id="{{id}}"
-                                    aria-label="Supprimer l'aptitude {{name}}" title="Supprimer cette aptitude liée">
-                                    <i class="fa-solid fa-trash" aria-hidden="true"></i>
-                                </button>{{/if}}
+                                <div class="aa-trait-link-actions">
+                                    <button type="button" data-action="goToLinkedAptitude" data-item-id="{{id}}"
+                                        class="aa-linked-navigation" title="Voir l’Aptitude {{name}}"
+                                        aria-label="Voir l’Aptitude {{name}}"><span aria-hidden="true">↳</span></button>
+                                    {{#if @root.canEditState}}<button type="button" data-action="deleteLinkedAptitude"
+                                        data-trait-id="{{../id}}" data-item-id="{{id}}"
+                                        aria-label="Supprimer l'aptitude {{name}}" title="Supprimer cette aptitude liée">
+                                        <i class="fa-solid fa-trash" aria-hidden="true"></i>
+                                    </button>{{/if}}
+                                </div>
                             </div>
                         {{/each}}
                     </div>

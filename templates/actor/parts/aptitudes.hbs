@@ -9,7 +9,7 @@
         {{/if}}
     </div>
     {{#each aptitudes}}
-        <div class="aa-condition-row aa-aptitude-row" data-sheet-sort-drop="{{id}}">
+        <div class="aa-condition-row aa-aptitude-row" data-aptitude-row="{{id}}" data-sheet-sort-drop="{{id}}">
             {{#if @root.canEditState}}
                 <div class="aa-aptitude-identity">
                     <span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}" aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>
@@ -43,8 +43,8 @@
                         </button>
                         {{#if linkedTraitId}}
                             <button type="button" data-action="goToLinkedTrait" data-trait-id="{{linkedTraitId}}"
-                                class="aa-aptitude-origin" title="Gérer depuis le Trait {{linkedTraitName}}"
-                                aria-label="Voir le Trait {{linkedTraitName}}">↳ Trait</button>
+                                class="aa-linked-navigation" title="Voir le Trait {{linkedTraitName}}"
+                                aria-label="Voir le Trait {{linkedTraitName}}"><span aria-hidden="true">↳</span></button>
                         {{else}}
                             <button type="button" data-action="deleteAptitude" data-item-id="{{id}}"
                                 aria-label="Retirer {{name}}" title="Retirer l’aptitude">
@@ -57,6 +57,13 @@
                 <div class="aa-aptitude-identity">
                     <strong>{{name}}</strong>
                     <span class="aa-condition-level">{{categoryLabel}}{{#unless isPassive}} · Niv. {{system.level}} ({{system.level}} PdF){{/unless}}</span>
+                    {{#if linkedTraitId}}
+                        <div class="aa-aptitude-actions">
+                            <button type="button" data-action="goToLinkedTrait" data-trait-id="{{linkedTraitId}}"
+                                class="aa-linked-navigation" title="Voir le Trait {{linkedTraitName}}"
+                                aria-label="Voir le Trait {{linkedTraitName}}"><span aria-hidden="true">↳</span></button>
+                        </div>
+                    {{/if}}
                 </div>
             {{/if}}
             {{#if @root.compactNPC}}

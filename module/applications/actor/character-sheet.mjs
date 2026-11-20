@@ -219,6 +219,7 @@ export class ArcaneCharacterSheet
             rollAptitude: this._onRollAptitude,
             deleteAptitude: this._onDeleteStateItem,
             goToLinkedTrait: this._onGoToLinkedTrait,
+            goToLinkedAptitude: this._onGoToLinkedAptitude,
             addTrait: this._onAddTrait,
             createLinkedAptitude: this._onCreateLinkedAptitude,
             deleteLinkedAptitude: this._onDeleteLinkedAptitude,
@@ -956,6 +957,14 @@ export class ArcaneCharacterSheet
         const trait = this.actor.items.get(target.dataset.traitId);
         if (trait?.type !== "trait") return;
         const row = this.element.querySelector(`[data-trait-row="${trait.id}"]`);
+        if (!row) return;
+        row.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    static _onGoToLinkedAptitude(event, target) {
+        const aptitude = this.actor.items.get(target.dataset.itemId);
+        if (aptitude?.type !== "aptitude") return;
+        const row = this.element.querySelector(`[data-aptitude-row="${aptitude.id}"]`);
         if (!row) return;
         row.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
