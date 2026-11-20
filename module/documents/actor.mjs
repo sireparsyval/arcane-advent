@@ -1,6 +1,7 @@
 import { buildInventory, canPlaceInContainer, EQUIPMENT_TYPES, isInventoryContainer, isInventoryItem } from "../inventory.mjs";
 import { getEquipmentConflictType } from "./item.mjs";
 import { guardValues, equipmentAllowsGuard, canRollGuard } from "../guard.mjs";
+import { signedModifier } from "../modifiers.mjs";
 import { expertiseMatches, matchingExpertiseBonus } from "../expertise.mjs";
 import { STORAGE_IMAGE } from "../storage.mjs";
 import { activeCharacterEffects, conditionActor, resolveRollEffects, sourceConditionsSatisfied } from "../character-effects.mjs";
@@ -676,12 +677,24 @@ export class ArcaneActor extends Actor {
                 ? this.getExpertiseBonus("shieldClass", item.system.shieldClass, item)
                 : 0;
 
-        return guardValues(item, {
+        const stats = guardValues(item, {
             strengthModifier: strength.modifier,
             dexterityModifier: dexterity.modifier,
             constitutionModifier: constitution.modifier,
             expertiseBonus
         });
+        if (!stats) return null;
+
+        const parts = [
+            "10",
+            `FOR (${signedModifier(strength.modifier)})`,
+            item.type === "weapon"
+                ? `DEX (${signedModifier(dexterity.modifier)})`
+                : `CON (${signedModifier(constitution.modifier)})`,
+            ...(item.type === "shield" ? [`Défense du bouclier (${signedModifier(item.system.defenseBonus)})`] : []),
+            `Expertise (${signedModifier(expertiseBonus)})`
+        ];
+        return { ...stats, calculation: `${parts.join(" + ")} = ${stats.defense}` };
     }
 
     // Compatibilité avec les macros qui récupèrent déjà le modificateur du JS de Garde.

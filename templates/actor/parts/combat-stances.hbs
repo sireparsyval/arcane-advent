@@ -6,7 +6,10 @@
     <button type="button" class="aa-guard-action" data-action="rollGuard" data-item-id="{{guardAction.itemId}}"
         title="{{guardAction.title}}" aria-label="Lancer la Garde — {{guardAction.title}}"
         {{#unless guardAction.available}}disabled{{/unless}}>
-        <span aria-hidden="true">🛡️</span> {{#if guardAction.hasEquipment}}{{guardAction.defense}}{{else}}❌{{/if}}
+        <span aria-hidden="true">🛡️</span>
+        {{#if guardAction.hasEquipment}}
+            <strong data-guard-defense="{{guardAction.defense}}">{{guardAction.defense}}</strong>
+        {{else}}❌{{/if}}
     </button>
 </div>
 <div class="aa-combat-footer">

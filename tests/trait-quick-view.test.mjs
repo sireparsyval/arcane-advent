@@ -328,6 +328,7 @@ test("le bouton Garde expose les statistiques réelles et suit les changements d
         assert.equal(context.guardAction.itemId, sword.id);
         assert.equal(context.guardAction.hasEquipment, true);
         assert.equal(context.guardAction.defense, 17);
+        assert.ok(context.guardAction.title.includes("10 + FOR (+2) + DEX (+3) + Expertise (+2) = 17"));
         assert.match(context.guardAction.title, /Épée.*17.*\+7/);
     }
     sheet.actor.system.abilities.dexterity.modifier = 5;
@@ -349,6 +350,7 @@ test("le bouton Garde expose les statistiques réelles et suit les changements d
     const context = await sheet._prepareContext({});
     assert.equal(context.guardAction.defense, 19);
     assert.equal(context.guardAction.itemId, shield.id);
+    assert.ok(context.guardAction.title.includes("10 + FOR (-2) + CON (+3) + Défense du bouclier (+4) + Expertise (+4) = 19"));
     shield.system.defenseBonus = 2;
     assert.equal((await sheet._prepareContext({})).guardAction.defense, 17);
     shield.system.equipped = false;

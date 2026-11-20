@@ -697,7 +697,7 @@ export class ArcaneCharacterSheet
         const guard = guards.length === 1 ? guards[0] : null;
         const stats = guard ? this.actor.getGuardStatistics(guard) : null;
         const guardLabel = stats
-            ? `${guard.name} — Défense de Garde ${stats.defense} · JS ${signedModifier(stats.savingThrowModifier)}`
+            ? `${guard.name} — Défense de Garde ${stats.defense} · JS ${signedModifier(stats.savingThrowModifier)}. ${stats.calculation}`
             : guards.length > 1
                 ? "Un seul équipement de Garde peut être équipé à la fois."
                 : "Équipez une arme ou un bouclier permettant la Garde.";
