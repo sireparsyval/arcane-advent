@@ -1297,11 +1297,9 @@
                                                 data-equipment-edit data-item-id="{{id}}" data-item-field="system.defenseBonus">
                                         </label>
                                         <span class="aa-equipment-stat" title="Bonus d'Expertise">Exp. {{expertiseBonus}}</span>
-                                        <label class="aa-equipment-inline">
-                                            <input type="checkbox" {{#if system.guardEnabled}}checked{{/if}}
-                                                data-equipment-edit data-item-id="{{id}}" data-item-field="system.guardEnabled">
-                                            <span>Garde</span>
-                                        </label>
+                                        <button type="button" aria-pressed="{{#if system.guardEnabled}}true{{else}}false{{/if}}"
+                                            data-action="toggleEquipmentProperty" data-item-id="{{id}}" data-property="guard"
+                                            {{#unless @root.canEditState}}disabled{{/unless}}>Garde</button>
                                         {{> equippedInventoryControls}}
                                     </div>
                                 </div>

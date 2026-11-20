@@ -2216,7 +2216,12 @@ export class ArcaneCharacterSheet
         const item =
             this.actor.items.get(itemId);
 
-        if (!this.isEditable || item?.type !== "weapon" || !property) return;
+        if (!this.isEditable || !property) return;
+        if (item?.type === "shield" && property === "guard") {
+            await this.actor.updateInventoryItem(item.id, { "system.guardEnabled": !item.system.guardEnabled });
+            return;
+        }
+        if (item?.type !== "weapon") return;
 
 
         const properties =

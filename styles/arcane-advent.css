@@ -921,6 +921,7 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-combat-stances button[aria-pressed="true"],
 .aa-defense-mode button[aria-pressed="true"],
 .aa-equipment-options button[aria-pressed="true"],
+.aa-shield-controls button[aria-pressed="true"],
 .aa-inventory-heading button[aria-pressed="true"],
 .aa-aptitude-config button[aria-pressed="true"],
 .aa-aptitude-actions button[aria-expanded="true"] {
