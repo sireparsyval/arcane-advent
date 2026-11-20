@@ -375,7 +375,7 @@ export class ArcaneCharacterSheet
             const source = effectsById.get(item.id);
             return {
                 effectCount: source?.rules.length ?? 0,
-                effectActive: Boolean(source?.active && source.rules.some(rule => rule.enabled !== false)),
+                effectActive: Boolean(source?.rules.some(rule => rule.active)),
                 effectManual: item.system.effectActivation?.mode === "manual",
                 effectsOpen: openEffects.has(item.id),
                 conditionsOpen: openConditions.has(item.id),
@@ -384,8 +384,8 @@ export class ArcaneCharacterSheet
                     label: rule.label,
                     summary: effectRuleSummary(rule, { compact: true }),
                     enabled: rule.enabled !== false,
-                    active: rule.enabled !== false && Boolean(source?.active),
-                    status: rule.enabled === false ? "Désactivé" : source?.active ? "Actif" : "Inactif"
+                    active: rule.active,
+                    status: rule.enabled === false ? "Désactivé" : rule.active ? "Actif" : "Inactif"
                 })),
                 conditionEntries: Object.entries(item.system.conditions ?? {}).map(([id, condition]) => ({
                     id,

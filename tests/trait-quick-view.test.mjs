@@ -137,6 +137,24 @@ for (const [actionName, itemType, dataKey, rowAttribute] of [
     });
 }
 
+test("les récapitulatifs montrent l’état individuel des effets selon leur sélection de conditions", async () => {
+    const { sheet, trait } = fixture();
+    trait.system.effectRules.force.conditionMode = "selected";
+    trait.system.effectRules.force.conditionIds = ["automatic"];
+    trait.system.effectRules.save.enabled = true;
+    trait.system.effectRules.save.conditionMode = "selected";
+    trait.system.effectRules.save.conditionIds = ["manual"];
+    const aptitude = linkedAptitude(trait);
+    sheet.actor.items.push(aptitude);
+    const context = await sheet._prepareContext({});
+    for (const view of [context.traits[0], context.aptitudes[0]]) {
+        assert.equal(view.effectActive, true);
+        assert.deepEqual(view.effectEntries.map(rule => rule.active), [false, true]);
+        assert.deepEqual(view.effectEntries.map(rule => rule.status), ["Inactif", "Actif"]);
+        assert.ok(view.effectEntries.every(rule => rule.enabled));
+    }
+});
+
 function linkedAptitude(trait) {
     return {
         ...structuredClone(trait), id: "torrent", type: "aptitude", name: "Torrent Ailé",

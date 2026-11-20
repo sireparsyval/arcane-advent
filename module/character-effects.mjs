@@ -20,7 +20,8 @@ export const EFFECT_STAT_TARGETS = Object.freeze({ ...MODIFIER_TARGETS,
 
 export function newEffectRule(kind = "stat") {
     return { label: "", enabled: true, kind, target: "strength", amount: 0, coefficient: 1,
-        addBefore: false, scope: "all", ability: "", skill: "", advantage: false, disadvantage: false };
+        addBefore: false, scope: "all", ability: "", skill: "", advantage: false, disadvantage: false,
+        conditionMode: "source", conditionIds: [], conditionMatch: "all" };
 }
 
 export function sourceConditionsSatisfied(actor, system) {
@@ -30,7 +31,7 @@ export function sourceConditionsSatisfied(actor, system) {
     return system.conditionMatch === "any" ? values.some(Boolean) : values.every(Boolean);
 }
 
-export function effectSourceActive(actor, source) {
+function sourceActivationActive(actor, source, customConditions = false) {
     const system = source.system ?? {};
     if (system.effectActivation?.enabled === false) return false;
     switch (system.effectActivation?.mode ?? (source.type === "aptitude" ? "passive" : "always")) {
@@ -38,9 +39,29 @@ export function effectSourceActive(actor, source) {
         case "passive": return source.type === "aptitude" && system.category === "passive";
         case "manual": return Boolean(system.effectActivation?.active);
         case "duration": return source.type === "aptitude" && Boolean(system.effectDuration?.enabled) && system.effectDuration.remaining > 0;
-        case "conditions": return sourceConditionsSatisfied(actor, system);
+        case "conditions": return customConditions || sourceConditionsSatisfied(actor, system);
         default: return false;
     }
+}
+
+export function effectRuleActive(actor, source, rule) {
+    if (rule.enabled === false) return false;
+    const custom = rule.conditionMode === "selected";
+    if (!sourceActivationActive(actor, source, custom)) return false;
+    if (!custom) return true;
+    const ids = Array.from(rule.conditionIds ?? []);
+    if (!ids.length) return true;
+    const conditions = source.system?.conditions ?? {};
+    const values = ids.map(id => Object.hasOwn(conditions, id)
+        && aptitudeConditionStatus(actor, conditions[id]));
+    return rule.conditionMatch === "any" ? values.some(Boolean) : values.every(Boolean);
+}
+
+export function effectSourceActive(actor, source) {
+    const rules = Object.values(source.system?.effectRules ?? {});
+    // Legacy rules retain their common activation setting.
+    if (!rules.some(rule => rule.conditionMode === "selected")) return sourceActivationActive(actor, source);
+    return rules.some(rule => effectRuleActive(actor, source, rule));
 }
 
 // Conditions always inspect the pre-Trait/Aptitude snapshot, never their own result.
@@ -55,12 +76,14 @@ export function characterEffectSources(actor) {
     return [{ id: "actor", name: "Effets permanents du personnage", type: "character", system: actor.system },
         ...[...(actor.items ?? [])].filter(item => ["trait", "aptitude"].includes(item.type))]
         .map(source => ({ source, active: effectSourceActive(viewer, source),
-            rules: Object.entries(source.system.effectRules ?? {}).map(([id, rule]) => ({ id, ...rule })) }));
+            rules: Object.entries(source.system.effectRules ?? {}).map(([id, rule]) => ({
+                id, ...rule, active: effectRuleActive(viewer, source, rule)
+            })) }));
 }
 
 export function activeCharacterEffects(actor) {
     return characterEffectSources(actor).filter(entry => entry.active).flatMap(({ source, rules }) =>
-        rules.filter(rule => rule.enabled !== false).map(rule => ({ ...rule, sourceId: source.id,
+        rules.filter(rule => rule.active).map(rule => ({ ...rule, sourceId: source.id,
             sourceName: source.name, sourceType: source.type })));
 }
 

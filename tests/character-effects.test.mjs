@@ -128,3 +128,24 @@ test("compact skill summaries omit redundant scope while keeping ambiguous roll 
     assert.equal(effectRuleSummary({ ...rule, skill: "" }, { compact: true }), "Tests de compétence · Dextérité · Avantage");
     assert.equal(effectRuleSummary({ ...rule, scope: "save", skill: "" }, { compact: true }), "Jets de sauvegarde · Dextérité · Avantage");
 });
+
+test("selected automatic conditions inspect the baseline and update statistics independently", () => {
+    const source = item("indépendant", "trait", {
+        strength: stat({ amount: 4, conditionMode: "selected", conditionIds: ["weak"], conditionMatch: "all" }),
+        speed: stat({ target: "speed", amount: 3, conditionMode: "selected", conditionIds: ["ready"], conditionMatch: "all" })
+    }, { effectActivation: { mode: "conditions" }, conditionMatch: "all", conditions: {
+        weak: { kind: "automatic", metric: "ability", key: "strength", operator: "<", value: 12 },
+        ready: { kind: "manual", enabled: false }
+    } });
+    const model = character([source]);
+    for (let i = 0; i < 3; i++) {
+        model.prepareDerivedData();
+        assert.equal(model.abilities.strength.effective, 14);
+        assert.equal(model.trackers.effectiveSpeed, 9);
+    }
+    source.system.conditions.ready.enabled = true;
+    model.abilities.strength.value = 13;
+    model.prepareDerivedData();
+    assert.equal(model.abilities.strength.effective, 13);
+    assert.equal(model.trackers.effectiveSpeed, 12);
+});

@@ -17,7 +17,7 @@ export function conditionsField() {
 }
 
 export function effectFields({ aptitude = false, withConditions = true } = {}) {
-    const { BooleanField, NumberField, SchemaField, StringField, TypedObjectField } = foundry.data.fields;
+    const { ArrayField, BooleanField, NumberField, SchemaField, StringField, TypedObjectField } = foundry.data.fields;
     return {
         effectActivation: new SchemaField({
             enabled: new BooleanField({ initial: true }),
@@ -38,7 +38,10 @@ export function effectFields({ aptitude = false, withConditions = true } = {}) {
             ability: new StringField({ choices: ["", ...Object.keys(EFFECT_ABILITIES)], blank: true, initial: "" }),
             skill: new StringField({ blank: true, initial: "" }),
             advantage: new BooleanField({ initial: false }),
-            disadvantage: new BooleanField({ initial: false })
+            disadvantage: new BooleanField({ initial: false }),
+            conditionMode: new StringField({ choices: ["source", "selected"], initial: "source" }),
+            conditionIds: new ArrayField(new StringField({ blank: false }), { initial: [] }),
+            conditionMatch: new StringField({ choices: ["all", "any"], initial: "all" })
         }), { required: true, nullable: false, initial: {} })
     };
 }
