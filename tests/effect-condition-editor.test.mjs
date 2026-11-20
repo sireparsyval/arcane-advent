@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { newEffectRule } from "../module/character-effects.mjs";
-import { openCharacterEffectsEditor } from "../module/applications/character-effects-editor.mjs";
+import { openCharacterEffectsEditor, openCharacterEffectsManager } from "../module/applications/character-effects-editor.mjs";
 
 const errors = [], notices = [];
 let latest, serial = 0;
@@ -15,11 +15,17 @@ class Dialog extends EventTarget {
         latest = this;
     }
     async render() { this.dispatchEvent(new Event("render")); return this; }
-    async close() { this.closed = true; }
+    async close() { this.closed = true; this.dispatchEvent(new Event("close")); }
 }
 globalThis.foundry = { utils: { randomID: () => `copy${++serial}` },
     data: { operators: { ForcedDeletion: class {} } }, applications: { api: { DialogV2: Dialog } } };
 globalThis.document = { createElement: () => ({ innerHTML: "" }) };
+const actorHooks = new Map();
+let hookId = 0;
+globalThis.Hooks = {
+    on(name, listener) { const id = ++hookId; actorHooks.set(id, { name, listener }); return id; },
+    off(_name, id) { actorHooks.delete(id); }
+};
 globalThis.ui = { notifications: { error: text => errors.push(text), warn: text => notices.push(text) } };
 
 async function fixture(type = "trait") {
@@ -227,4 +233,29 @@ test("l’enregistrement reprend les anciens réglages dans chaque effet sans co
     await save(other);
     assert.equal(writes[1]["system.effectRules"].first.enabled, true);
     assert.equal(writes[1]["system.effectRules"].first.activationMode, "always");
+});
+
+test("le récapitulatif montre la stance active et son avantage puis se met à jour sans rouvrir", async () => {
+    const actor = { uuid: "Actor.hero", name: "Héros", isOwner: true,
+        system: { rollMode: "normal", defense: { stance: "dodge" } }, items: [] };
+    const beforeHooks = actorHooks.size;
+    const dialog = await openCharacterEffectsManager(actor);
+    assert.match(dialog.root.innerHTML, /Stance de Défense — Esquive/);
+    assert.match(dialog.root.innerHTML, /Jets de sauvegarde · Dextérité · Avantage/);
+    assert.doesNotMatch(dialog.root.innerHTML, /data-manage-source="undefined"/);
+    assert.match(dialog.root.innerHTML, /<td>JS de Dextérité<\/td><td>Oui<\/td>/);
+    assert.equal(actorHooks.size, beforeHooks + 1);
+
+    actor.system.defense.stance = "defend";
+    for (const { listener } of actorHooks.values()) listener(actor);
+    assert.match(dialog.root.innerHTML, /Stance de Défense — Se Défendre/);
+    assert.match(dialog.root.innerHTML, /Jets de sauvegarde · Constitution · Avantage/);
+    assert.doesNotMatch(dialog.root.innerHTML, /Stance de Défense — Esquive/);
+
+    actor.system.defense.stance = "none";
+    for (const { listener } of actorHooks.values()) listener(actor);
+    assert.doesNotMatch(dialog.root.innerHTML, /Stance de Défense —/);
+    assert.match(dialog.root.innerHTML, /<td>JS de Constitution<\/td><td>—<\/td>/);
+    await dialog.close();
+    assert.equal(actorHooks.size, beforeHooks);
 });

@@ -31,11 +31,13 @@ export function conditionControls(actor, condition) {
         <label>Vérification<select data-cfield="kind">${options({ automatic: "Automatique : lire la fiche", manual: "Manuelle : cocher à la table" }, condition.kind)}</select></label>
         ${manual ? `<label class="checkbox"><input data-cfield="enabled" type="checkbox" ${condition.enabled ? "checked" : ""}>Condition validée</label>` : `
         <label>Information de la fiche<select data-cfield="metric">${options(CONDITION_METRICS, condition.metric)}</select></label>
-        ${needsKey ? `<label>Cible du critère${keyControl}</label>` : ""}
+        ${needsKey ? `<label>${condition.metric === "defenseStance" ? "Stance" : "Cible du critère"}${keyControl}</label>` : ""}
         ${advanced ? `<label>Expression<textarea data-cfield="expression" rows="2" placeholder="pdc < pdcMax * 0.5 && FOR >= 14">${escape(condition.expression)}</textarea></label>
             <details><summary>Variables disponibles et valeurs actuelles</summary><p class="hint">Opérateurs : + − * /, &lt; &lt;= == != &gt;= &gt;, &amp;&amp; (ET), || (OU), ! (NON). Aucun JavaScript.</p>
             <dl class="aa-expression-variables">${Object.entries(aptitudeExpressionVariables(conditionActor(actor))).map(([key, value]) => `<dt>${escape(key)}</dt><dd>${escape(value)}</dd>`).join("")}</dl></details>`
-            : boolean ? `<label>Résultat attendu<select data-cfield="presence">${options({ yes: "Oui / présent / porté", no: "Non / absent / non porté" }, present ? "yes" : "no")}</select></label>`
+            : boolean ? `<label>Résultat attendu<select data-cfield="presence">${options(condition.metric === "defenseStance"
+                ? { yes: "Oui — stance active", no: "Non — stance inactive" }
+                : { yes: "Oui / présent / porté", no: "Non / absent / non porté" }, present ? "yes" : "no")}</select></label>`
             : `<div class="aa-effect-grid"><label>Comparaison<select data-cfield="operator">${options(CONDITION_OPERATORS, condition.operator)}</select></label>
             <label>Seuil${["pdcRatio", "pdfRatio"].includes(condition.metric) ? " (%)" : ""}<input data-cfield="value" type="number" step="any" value="${escape(condition.value)}" required></label></div>`}`}
         <p class="aa-effect-condition-preview" data-condition-preview aria-live="polite"></p>
@@ -61,6 +63,9 @@ export function validateCondition(condition) {
     if (!Object.hasOwn(CONDITION_METRICS, condition.metric)) throw Error("Choisissez une information valide pour la condition.");
     if (!["pdcRatio", "pdfRatio", "pdc", "pdf", "pdcMax", "pdfMax", "formula"].includes(condition.metric) && !condition.key?.trim()) {
         throw Error("Choisissez la cible de chaque condition (équipement, caractéristique, objet…).");
+    }
+    if (condition.metric === "defenseStance" && !Object.hasOwn(CONDITION_KEYS.defenseStance, condition.key)) {
+        throw Error("Choisissez une stance de Défense valide.");
     }
     if (condition.metric === "formula" && !condition.expression?.trim()) throw Error("L'expression de la condition est vide.");
     if (!Number.isFinite(Number(condition.value))) throw Error("Le seuil de la condition est invalide.");

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { activeCharacterEffects } from "../module/character-effects.mjs";
 
 globalThis.Item = class {};
+globalThis.Actor = class {};
 globalThis.foundry = {
     abstract: { TypeDataModel: class {} },
     data: { fields: {} },
@@ -13,6 +14,7 @@ globalThis.foundry = {
 };
 
 const { ArcaneCharacterSheet } = await import("../module/applications/actor/character-sheet.mjs");
+const { ArcaneActor } = await import("../module/documents/actor.mjs");
 
 function fixture(editable = true) {
     const trait = {
@@ -302,15 +304,21 @@ test("réactiver un ancien effet manuel reprend ses réglages individuels et l�
     assert.ok(!Object.keys(changes).some(key => key.startsWith("system.effectActivation")));
 });
 
-test("le bouton Garde expose sa disponibilité et les deux stances dans le récapitulatif", async () => {
+test("le bouton Garde expose les statistiques réelles et suit les changements du personnage et de son équipement", async () => {
     const { sheet } = fixture();
     const sword = { id: "sword", name: "Épée", type: "weapon", system: {
-        equipped: true, properties: new Set(["guard"]), damageTypes: new Set()
+        equipped: true, weaponClass: "Épée", properties: new Set(["guard"]), damageTypes: new Set()
     } };
-    sheet.actor.items.push(sword);
+    const expertise = { id: "expertise", type: "expertise", name: "Épéiste", system: {
+        domain: "weaponClass", classes: ["Épée"], propertyFilters: { guard: "required" }, bonus: 2
+    } };
+    sheet.actor.items.push(sword, expertise);
     sheet.actor.getWeaponAbilityData = () => ({ label: "Force", modifier: 2 });
-    sheet.actor.getExpertiseBonus = () => 0;
-    sheet.actor.getGuardStatistics = item => item.system.equipped ? { defense: 15, savingThrowModifier: 5 } : null;
+    sheet.actor.getExpertiseBonus = ArcaneActor.prototype.getExpertiseBonus;
+    sheet.actor.getGuardStatistics = ArcaneActor.prototype.getGuardStatistics;
+    sheet.actor.system.abilities.strength.modifier = 2;
+    sheet.actor.system.abilities.dexterity.modifier = 3;
+
     for (const stance of ["none", "dodge", "defend"]) {
         sheet.actor.system.defense.stance = stance;
         const context = await sheet._prepareContext({});
@@ -319,12 +327,34 @@ test("le bouton Garde expose sa disponibilité et les deux stances dans le réca
         assert.equal(context.guardAction.available, stance === "defend");
         assert.equal(context.guardAction.itemId, sword.id);
         assert.equal(context.guardAction.hasEquipment, true);
-        assert.equal(context.guardAction.defense, 15);
-        assert.match(context.guardAction.title, /Épée.*15.*\+5/);
+        assert.equal(context.guardAction.defense, 17);
+        assert.match(context.guardAction.title, /Épée.*17.*\+7/);
     }
+    sheet.actor.system.abilities.dexterity.modifier = 5;
+    assert.equal((await sheet._prepareContext({})).guardAction.defense, 19);
+    sheet.actor.system.abilities.strength.modifier = -2;
+    assert.equal((await sheet._prepareContext({})).guardAction.defense, 15);
+    expertise.system.bonus = 4;
+    assert.equal((await sheet._prepareContext({})).guardAction.defense, 17);
+
     sword.system.equipped = false;
+    const shield = { id: "shield", name: "Pavois", type: "shield", system: {
+        equipped: true, guardEnabled: true, shieldClass: "Pavois", defenseBonus: 4
+    } };
+    sheet.actor.items.push(shield);
+    sheet.actor.system.abilities.constitution.modifier = 3;
+    expertise.system.domain = "shieldClass";
+    expertise.system.classes = ["Pavois"];
+    expertise.system.propertyFilters = {};
     const context = await sheet._prepareContext({});
-    assert.equal(context.guardAction.available, false);
-    assert.equal(context.guardAction.itemId, "");
-    assert.equal(context.guardAction.hasEquipment, false);
+    assert.equal(context.guardAction.defense, 19);
+    assert.equal(context.guardAction.itemId, shield.id);
+    shield.system.defenseBonus = 2;
+    assert.equal((await sheet._prepareContext({})).guardAction.defense, 17);
+    shield.system.equipped = false;
+    const unavailable = await sheet._prepareContext({});
+    assert.equal(unavailable.guardAction.available, false);
+    assert.equal(unavailable.guardAction.itemId, "");
+    assert.equal(unavailable.guardAction.hasEquipment, false);
+    assert.equal(unavailable.guardAction.defense, undefined);
 });

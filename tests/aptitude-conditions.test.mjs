@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { aptitudeConditionStatus, evaluateAptitudeExpression, conditionKeyChoices } from "../module/aptitude-conditions.mjs";
+import { aptitudeConditionStatus, evaluateAptitudeExpression, conditionKeyChoices, conditionSummary } from "../module/aptitude-conditions.mjs";
 
 const actor = {
     system: {
@@ -64,4 +64,22 @@ test("la propriété Garde peut servir de condition d'équipement", () => {
     assert.equal(aptitudeConditionStatus(subject, condition("equipmentProperty", "guard", 1, "=")), true);
     subject.items[0].system.equipped = false;
     assert.equal(aptitudeConditionStatus(subject, condition("equipmentProperty", "guard", 1, "=")), false);
+});
+
+test("les conditions de stance distinguent actif et inactif pour Esquive et Se Défendre", () => {
+    assert.deepEqual(conditionKeyChoices(actor, "defenseStance"), [
+        { value: "dodge", label: "Esquive" }, { value: "defend", label: "Se Défendre" }
+    ]);
+    for (const stance of [undefined, "none", "dodge", "defend"]) {
+        const subject = { ...actor, system: { ...actor.system, defense: { stance } } };
+        for (const key of ["dodge", "defend"]) {
+            assert.equal(aptitudeConditionStatus(subject, condition("defenseStance", key, 1, "=")), stance === key);
+            assert.equal(aptitudeConditionStatus(subject, condition("defenseStance", key, 1, "!=")), stance !== key);
+            assert.equal(aptitudeConditionStatus(subject, condition("defenseStance", key, 0, "=")), stance !== key);
+        }
+    }
+    assert.match(conditionSummary(actor, condition("defenseStance", "dodge", 1, "!=")), /Stance de Défense — Esquive : non/);
+    for (const key of ["", "unknown", "none", "toString"]) {
+        assert.equal(aptitudeConditionStatus(actor, condition("defenseStance", key, 1, "!=")), false);
+    }
 });

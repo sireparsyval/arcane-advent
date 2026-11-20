@@ -1,4 +1,5 @@
 import { expertiseMatches, WEAPON_PROPERTIES } from "./expertise.mjs";
+import { COMBAT_STANCES } from "./combat-stances.mjs";
 
 export const CONDITION_METRICS = Object.freeze({
     pdcRatio: "PdC (% du maximum)",
@@ -13,6 +14,7 @@ export const CONDITION_METRICS = Object.freeze({
     pdc: "PdC actuels", pdcMax: "PdC maximum (avant effets)",
     pdf: "PdF actuels", pdfMax: "PdF maximum (avant effets)",
     abilityBase: "Caractéristique — score de base", abilityModifier: "Caractéristique — modificateur",
+    defenseStance: "Stance de Défense",
     defense: "Défense de base ou partielle", tracker: "Tracker du personnage",
     encumbrance: "Inventaire — poids / capacité / encombrement",
     equipmentProperty: "Porte un équipement avec une propriété", equippedCount: "Nombre d'équipements portés",
@@ -21,11 +23,12 @@ export const CONDITION_METRICS = Object.freeze({
 });
 
 export const BOOLEAN_CONDITION_METRICS = Object.freeze([
-    "alteration", "equipped", "expertise", "equipmentProperty", "injury", "trait", "aptitude", "volume"
+    "alteration", "equipped", "expertise", "equipmentProperty", "injury", "trait", "aptitude", "volume", "defenseStance"
 ]);
 export const CONDITION_OPERATORS = Object.freeze({ "<": "inférieur à", "<=": "au plus",
     "=": "égal à", ">=": "au moins", ">": "supérieur à", "!=": "différent de" });
 export const CONDITION_KEYS = Object.freeze({
+    defenseStance: Object.fromEntries(Object.entries(COMBAT_STANCES).map(([key, stance]) => [key, stance.label])),
     ability: { strength: "Force", dexterity: "Dextérité", constitution: "Constitution", intelligence: "Intelligence", wisdom: "Sagesse", charisma: "Charisme" },
     defense: { base: "Défense de base", head: "Tête", torso: "Torse", arms: "Bras", legs: "Jambes" },
     tracker: { passivePerception: "Perception passive", initiative: "Initiative", speed: "Vitesse de base", effectiveSpeed: "Vitesse effective" },
@@ -180,6 +183,8 @@ export function conditionMetricValue(actor, condition) {
         case "tracker": return actor.system.trackers?.[key];
         case "encumbrance": return actor.system.encumbrance?.[key];
         case "resource": return key.split(".").reduce((data, part) => data?.[part], actor.system);
+        case "defenseStance": return Object.hasOwn(COMBAT_STANCES, key)
+            ? Number(actor.system.defense?.stance === key) : NaN;
         case "volume": return Number(actor.system.identity?.volume === key);
         case "alteration": case "injury": case "trait": case "aptitude":
             return Number(items.some(item => item.type === metric && matches(item)));

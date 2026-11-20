@@ -2,6 +2,7 @@ import { EFFECT_ABILITIES, EFFECT_ROLL_SCOPES, EFFECT_STAT_TARGETS,
     activeCharacterEffects, characterEffectSources, conditionActor, effectRuleSummary, effectRuleActive, effectRuleSettings, effectSourceActive,
     newEffectRule, resolveRollEffects } from "../character-effects.mjs";
 import { conditionSummary } from "../aptitude-conditions.mjs";
+import { COMBAT_STANCES, combatStanceEffects } from "../combat-stances.mjs";
 import { fixedEffectAmount, resolveEffectAmount } from "../effect-amounts.mjs";
 import { bindConditionControls, conditionControls, escape, newCondition, options, validateCondition } from "./effect-condition-controls.mjs";
 
@@ -213,6 +214,12 @@ export async function openCharacterEffectsManager(actor) {
     });
     const render = () => {
         const root = dialog.element.querySelector("[data-effect-manager]"), sources = characterEffectSources(actor), rules = activeCharacterEffects(actor);
+        const stance = actor.system.defense?.stance;
+        const stanceRules = combatStanceEffects(stance);
+        if (stanceRules.length) sources.push({
+            source: { name: `Stance de Défense — ${COMBAT_STANCES[stance].label}` },
+            active: true, rules: stanceRules, readOnly: true
+        });
         const rows = Object.entries(EFFECT_ABILITIES).flatMap(([key, label]) => [
             { label: `Test de ${label}`, type: "ability", ability: key }, { label: `JS de ${label}`, type: "save", ability: key }
         ]);
@@ -222,7 +229,7 @@ export async function openCharacterEffectsManager(actor) {
         for (const [key, label] of Object.entries(EFFECT_ABILITIES)) rows.push({ label: `Aptitude (${label})`, type: "aptitude", abilities: [key] });
         root.innerHTML = `<div class="aa-effect-body"><p class="hint">Le mode manuel actuel de la fiche est pris en compte. Les sources opposées s'annulent : au moins un Avantage + au moins un Désavantage = Neutre.</p>
             <button type="button" data-manage-source="actor">Modifier les effets permanents du personnage</button>
-            <details open><summary>Sources et activation</summary>${sources.map(({ source, active, rules }) => `<article class="aa-effect-card"><div class="aa-effect-card-heading"><strong>${escape(source.name)}</strong><span>${active ? "● Actif" : "○ Inactif"}</span><button type="button" data-manage-source="${escape(source.id)}">Modifier</button></div>
+            <details open><summary>Sources et activation</summary>${sources.map(({ source, active, rules, readOnly }) => `<article class="aa-effect-card"><div class="aa-effect-card-heading"><strong>${escape(source.name)}</strong><span>${active ? "● Actif" : "○ Inactif"}</span>${readOnly ? '<span class="hint">Gérée par les boutons de stance</span>' : `<button type="button" data-manage-source="${escape(source.id)}">Modifier</button>`}</div>
                 ${rules.map(rule => `<p class="hint">${rule.enabled === false ? "Désactivé — " : ""}${escape(effectRuleSummary(rule, { actor: summaryActor(actor) }))}</p>`).join("") || '<p class="hint">Aucun effet configuré.</p>'}</article>`).join("")}</details>
             <details open><summary>Résultat actuel par jet</summary><table class="aa-effect-roll-summary"><thead><tr><th>Jet</th><th>Avantage</th><th>Désavantage</th><th>Résultat</th><th>Bonus</th></tr></thead><tbody>${rows.map(row => {
                 const state = resolveRollEffects(rules, row, actor.system.rollMode);
@@ -238,5 +245,10 @@ export async function openCharacterEffectsManager(actor) {
         };
     };
     dialog.addEventListener("render", render);
-    return dialog.render({ force: true });
+    const application = await dialog.render({ force: true });
+    const hook = Hooks.on("updateActor", updated => {
+        if (updated === actor || (actor.uuid && updated.uuid === actor.uuid)) render();
+    });
+    dialog.addEventListener("close", () => Hooks.off("updateActor", hook), { once: true });
+    return application;
 }
