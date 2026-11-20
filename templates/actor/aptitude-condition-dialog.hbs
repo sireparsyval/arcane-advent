@@ -1,10 +1,10 @@
 <section class="aa-editor-form standard-form">
-    <label>Nom de l'indicateur
+    <label>Nom de l'Indicateur
         <input name="label" type="text" value="{{current.label}}" required pattern=".*\S.*">
     </label>
     <p class="hint">{{#if automatic}}Cet indicateur s'actualisera automatiquement ; cliquer dessus ouvre sa configuration. Il ne bloque aucun jet.{{else}}Cet indicateur est activé/désactivé manuellement, sans lien avec la fiche.{{/if}}</p>
     {{#if automatic}}
-        <label>Type de condition
+        <label>Type de Condition
             <select name="metric">
                 {{#each metrics}}
                     <option value="{{key}}" {{#if selected}}selected{{/if}}>{{label}}</option>
@@ -19,7 +19,7 @@
                     {{/each}}
                 </select>
             </label>
-            <label>Valeur / seuil
+            <label>Valeur / Seuil
                 <input name="value" type="number" step="any" value="{{current.value}}">
             </label>
         </div>
