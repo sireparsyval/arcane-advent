@@ -60,6 +60,25 @@ test("arrival selection reveals and enables final-effect settings only when need
     env.reply(null); await impact;
 });
 
+test("the visual effect's saved preset populates preparation and stays unchanged after a one-off adjustment", async () => {
+    const env = setup();
+    env.item.system.animation = { arrival: "replace", finalEffectUuid: "Item.blast", finalMode: "once-keep",
+        finalDuration: 3, initialSize: 50, finalSize: 200, spin: 180 };
+    const original = structuredClone(env.item.system);
+    const pending = prepareSceneAnimation({ item: env.item });
+    const html = env.dialogs[0].content;
+    assert.match(html, /value="replace" selected/); assert.match(html, /value="Item.blast" selected/);
+    assert.match(html, /value="once-keep" selected/);
+    assert.match(html, /name="initialSize"[^>]*value="50"/);
+    assert.match(html, /name="finalSize"[^>]*value="200"/);
+    assert.match(html, /name="spin"[^>]*value="180"/);
+    env.reply({ ...draft, ...original.animation, spin: 90 }); await flush(); await trace(env);
+    env.reply({ ...draft, ...original.animation, spin: 90 }); await pending;
+    assert.equal(env.requests[0].spin, 90);
+    assert.equal(env.requests[0].finalMode, "once-keep");
+    assert.deepEqual(env.item.system, original);
+});
+
 test("preparation creates nothing until the final confirmation and keeps Ctrl waypoints", async () => {
     const env = setup(), pending = prepareSceneAnimation({ item: env.item });
     assert.equal(env.requests.length, 0);

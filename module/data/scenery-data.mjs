@@ -51,5 +51,16 @@ export class InteractiveElementData extends BaseItemData {
 
 export class VisualEffectData extends BaseItemData {
     static migrateData(data) { return super.migrateData(migrateVisualMist(data)); }
-    static defineSchema() { return { ...super.defineSchema(), ...sceneFields({ visual: true }) }; }
+    static defineSchema() {
+        const { SchemaField, StringField, NumberField } = foundry.data.fields;
+        const number = (initial, min, max) => new NumberField({ required: true, nullable: false, initial, min, max });
+        return { ...super.defineSchema(), ...sceneFields({ visual: true }),
+            animation: new SchemaField({
+                arrival: new StringField({ initial: "keep", choices: ["keep", "delete", "replace"], blank: false }),
+                finalEffectUuid: new StringField({ initial: "", blank: true }),
+                finalMode: new StringField({ initial: "once-delete", choices: ["once-delete", "once-keep", "loop"], blank: false }),
+                finalDuration: number(1, 0.1, 60), initialSize: number(100, 1, 1000),
+                finalSize: number(100, 1, 1000), spin: number(0, -3600, 3600)
+            }) };
+    }
 }

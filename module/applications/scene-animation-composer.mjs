@@ -1,6 +1,7 @@
 import { chooseAnimationPath } from "../scene-animation-path.mjs";
 import { requestSceneAnimation } from "../scene-animation-service.mjs";
 import { sceneObjectPosition } from "../scene-projectiles.mjs";
+import { animationSettings, validateAnimationAppearance } from "../scene-animation-settings.mjs";
 const escape = value => foundry.utils.escapeHTML(String(value ?? ""));
 const dialogAPI = () => foundry.applications.api.DialogV2;
 
@@ -17,6 +18,9 @@ function fields(draft, { transition = false } = {}) {
     return `<div class="standard-form aa-animation-options">
         ${transition ? "" : `<label>Durée totale du trajet (s)
             <input name="duration" type="number" min="0.1" max="60" step="0.1" value="${escape(draft.duration)}" required></label>
+            <label>Taille initiale (% du placement)<input name="initialSize" type="number" min="1" max="1000" step="any" value="${escape(draft.initialSize ?? 100)}" required></label>
+            <label>Taille finale (% de la taille initiale)<input name="finalSize" type="number" min="1" max="1000" step="any" value="${escape(draft.finalSize ?? 100)}" required></label>
+            <label>Rotation continue (°/s)<input name="spin" type="number" min="-3600" max="3600" step="any" value="${escape(draft.spin ?? 0)}" required></label>
             <label>À l’arrivée<select name="arrival">
                 ${option("keep", "Garder l’effet sur place", draft.arrival)}
                 ${option("delete", "Supprimer l’effet", draft.arrival)}
@@ -40,9 +44,12 @@ function read(dialog, defaults) {
     return { ...defaults, duration: value("duration") === undefined ? defaults.duration : Number(value("duration")),
         arrival: value("arrival") ?? defaults.arrival,
         finalEffectUuid: value("finalEffectUuid") ?? "", finalMode: value("finalMode") ?? "once-delete",
-        finalDuration: Number(value("finalDuration")) };
+        finalDuration: Number(value("finalDuration")),
+        ...Object.fromEntries(["initialSize", "finalSize", "spin"].map(key => [key,
+            value(key) === undefined ? defaults[key] : Number(value(key))])) };
 }
 function validate(draft, transition = false) {
+    if (!transition) validateAnimationAppearance(draft);
     if (!transition && (!Number.isFinite(draft.duration) || draft.duration < 0.1 || draft.duration > 60)) {
         throw Error("Choisissez une durée de trajet entre 0,1 et 60 secondes.");
     }
@@ -86,8 +93,9 @@ export async function prepareSceneAnimation({ item = null, tile = null } = {}) {
     const model = tile?.getFlag?.("arcane-advent", "sceneObject") ?? tile?.flags?.["arcane-advent"]?.sceneObject;
     if (tile && model?.flight) throw Error("Attendez la fin du trajet en cours.");
     if (!tile && item?.type !== "visualEffect") throw Error("Choisissez un modèle d’effet visuel.");
-    let draft = { duration: model?.projectileDuration ?? item?.system.projectileDuration ?? 0.8,
-        arrival: "keep", finalEffectUuid: "", finalMode: "once-delete", finalDuration: 1 };
+    let draft = animationSettings(model ?? item?.system);
+    // A continuation begins at the size reached by the previous trajectory.
+    if (tile) draft.initialSize = 100;
     const name = tile ? model.name : item.name;
     draft = await configuration(draft, { title: "Préparer — " + name });
     if (!draft) return;
@@ -109,7 +117,8 @@ export async function prepareSceneAnimation({ item = null, tile = null } = {}) {
 
 export async function prepareSceneTransition(tile) {
     if (!game.user.isGM) throw Error("Seul le MJ peut déclencher un effet final.");
-    const draft = await configuration({ finalEffectUuid: "", finalMode: "once-delete", finalDuration: 1 },
+    const model = tile?.getFlag?.("arcane-advent", "sceneObject") ?? tile?.flags?.["arcane-advent"]?.sceneObject;
+    const draft = await configuration(animationSettings(model),
         { title: "Déclencher l’effet final", transition: true });
     if (!draft) return;
     return requestSceneAnimation({ ...draft, action: "transition", sceneId: tile.parent.id, tileId: tile.id });

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createAnimationService, validateAnimationRoute } from "../module/scene-animation-service.mjs";
-import { projectileFrame } from "../module/scene-projectiles.mjs";
+import { projectileFrame, projectileAppearance } from "../module/scene-projectiles.mjs";
 
 class Collection extends Map { [Symbol.iterator]() { return this.values(); } }
 function setup() {
@@ -57,6 +57,27 @@ test("route validation bounds points and duration and removes duplicate consecut
     for (const duration of [0, 61, NaN, "1"]) assert.throws(() => validateAnimationRoute(scene, [{x:1,y:1},{x:2,y:2}], duration), /durée/);
     assert.throws(() => validateAnimationRoute(scene, [{ x: -1, y: 0 }, { x: 0, y: 0 }], 1), /scène/);
     assert.throws(() => validateAnimationRoute(scene, [{ x: 1, y: 1 }, { x: 1, y: 1 }], 1), /différents/);
+});
+
+test("size and rotation interpolate from initial dimensions and persist their final values", async () => {
+    const env = setup();
+    const { tileId } = await env.launch({ initialSize: 50, finalSize: 200, spin: -90, duration: 2 });
+    const tile = env.scene.tiles.get(tileId), flight = env.model(tile).flight;
+    assert.deepEqual(projectileAppearance(flight, flight.startedAt), { width: 50, height: 50, rotation: 0 });
+    assert.deepEqual(projectileAppearance(flight, flight.startedAt + 1000), { width: 75, height: 75, rotation: -90 });
+    assert.equal(tile.width, 100); assert.equal(tile.height, 100); assert.equal(tile.rotation, 180);
+    await env.arrive(tile);
+    assert.equal(env.model(tile).flight, null);
+    assert.equal(tile.width, 100); assert.equal(tile.rotation, 180);
+    assert.equal(env.model(tile).animation.spin, -90);
+});
+
+test("invalid size or spin is rejected before creating an instance", async () => {
+    for (const values of [{ initialSize: 0 }, { finalSize: -50 }, { spin: Infinity }, { initialSize: "50" }]) {
+        const env = setup();
+        await assert.rejects(env.launch(values), /invalide/);
+        assert.equal(env.events.length, 0);
+    }
 });
 
 test("waypoints are followed at constant speed over the entire route", () => {

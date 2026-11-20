@@ -38,19 +38,32 @@ export function sceneObjectPosition(tile, now = sceneClock()) {
     return frame ? { x: frame.x, y: frame.y } : { x: tile.x, y: tile.y };
 }
 
+export function projectileAppearance(flight, now = sceneClock()) {
+    const frame = projectileFrame(flight, now), visual = flight?.visual;
+    if (!frame || !visual) return null;
+    const scale = 1 + (visual.endScale - 1) * frame.progress;
+    return { width: visual.width * scale, height: visual.height * scale,
+        rotation: visual.rotation + visual.spin * frame.progress * flight.duration / 1000 };
+}
+
 export function registerSceneProjectiles({ onComplete } = {}) {
     const running = new Map();
     const related = (document, tile) => document.getFlag?.(SCOPE, "sceneObjectParent") === tile.id
         || document.flags?.[SCOPE]?.sceneObjectParent === tile.id;
-    function paint(tile, point) {
+    function paint(tile, point, appearance = null) {
         const object = tile.object;
         const display = object?.mesh ?? object?.bg;
         if (display && !display.destroyed) display.position.set(point.x, point.y);
+        if (display && !display.destroyed) {
+            display.width = appearance?.width ?? tile.width;
+            display.height = appearance?.height ?? tile.height;
+            display.rotation = (appearance?.rotation ?? tile.rotation) * Math.PI / 180;
+        }
         if (object?.controls && !object.destroyed && !object.controls.destroyed) {
             object.controls.shape.updateSource({ x: point.x, y: point.y });
             object.controls.refresh();
         }
-        Hooks.callAll("arcaneAdventSceneObjectPosition", tile, point);
+        Hooks.callAll("arcaneAdventSceneObjectPosition", tile, point, appearance);
     }
     function forget(tile, flight) {
         if (!flight || !game.users?.activeGM?.isSelf || !tile.parent.tiles.has(tile.id)
@@ -84,7 +97,7 @@ export function registerSceneProjectiles({ onComplete } = {}) {
                 }
                 if (!object.destroyed) object.initializeLightSource();
             }
-            for (const object of regions) if (!object.destroyed) object.position.set(0, 0);
+            for (const object of regions) if (!object.destroyed) { object.position.set(0, 0); object.scale?.set(1); }
             if (completed) forget(tile, flight);
         }
         function tick() {
@@ -93,13 +106,16 @@ export function registerSceneProjectiles({ onComplete } = {}) {
                 || !tile.parent.tiles.has(tile.id) || sceneObjectFlight(tile)?.id !== flight.id) return stop();
             const point = projectileFrame(flight);
             if (!point) return stop();
-            paint(tile, point);
+            const appearance = projectileAppearance(flight);
+            paint(tile, point, appearance);
+            const sizeRatio = appearance ? appearance.width / tile.width : 1;
             // Regions are purely visual boundaries here; no behavior is run along the trajectory.
             for (const region of tile.parent.regions ?? []) {
                 const object = region.object, origin = region.shapes?.[0];
                 if (!related(region, tile) || !object || !origin) continue;
                 regions.add(object);
-                object.position.set(point.x - origin.x, point.y - origin.y);
+                object.scale?.set(sizeRatio);
+                object.position.set(point.x - origin.x * sizeRatio, point.y - origin.y * sizeRatio);
             }
             const now = sceneClock();
             if (now - lastLight >= 33 || point.done) {
@@ -111,7 +127,10 @@ export function registerSceneProjectiles({ onComplete } = {}) {
                         const original = { own: Object.hasOwn(object, "_getLightSourceData"), method: object._getLightSourceData };
                         // Keep the persisted document at B; native lighting reads the current visual position.
                         original.wrapper = function () {
-                            return { ...original.method.call(this), ...sceneObjectPosition(tile) };
+                            const data = original.method.call(this), visual = projectileAppearance(sceneObjectFlight(tile));
+                            const ratio = visual ? visual.width / tile.width : 1;
+                            return { ...data, ...sceneObjectPosition(tile), ...(visual ? {
+                                dim: data.dim * ratio, bright: data.bright * ratio } : {}) };
                         };
                         object._getLightSourceData = original.wrapper;
                         lights.set(object, original);

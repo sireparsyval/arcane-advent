@@ -1,4 +1,6 @@
 import { placeSceneObject } from "../../scene-objects.mjs";
+import { animationModels } from "../scene-animation-composer.mjs";
+import { animationSettings } from "../../scene-animation-settings.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -23,12 +25,18 @@ export class SceneryElementSheet extends HandlebarsApplicationMixin(ItemSheetV2)
 
     async _prepareContext(options) {
         const animations = animationsFor(this.document.system.light.negative);
+        const preset = animationSettings(this.document.system);
+        const finalEffects = animationModels().map(item => ({ uuid: item.uuid, name: item.name }));
+        if (preset.finalEffectUuid && !finalEffects.some(item => item.uuid === preset.finalEffectUuid)) {
+            finalEffects.push({ uuid: preset.finalEffectUuid, name: "Effet indisponible — choisir un remplacement" });
+        }
         return {
             ...await super._prepareContext(options), system: this.document.system,
             isInteractive: this.document.type === "interactiveElement",
             isVisual: this.document.type === "visualEffect",
             typeLabel: game.i18n.localize("TYPES.Item." + this.document.type),
-            animations, canPlace: game.user.isGM && Boolean(canvas.scene)
+            animations, animationSettings: preset, finalEffects,
+            canPlace: game.user.isGM && Boolean(canvas.scene)
         };
     }
 

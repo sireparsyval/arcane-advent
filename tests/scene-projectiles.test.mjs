@@ -79,6 +79,27 @@ test("every animation tick moves media, light and boundary without writing scene
     assert.deepEqual([env.region.object.position.x, env.region.object.position.y], [0, 0]);
 });
 
+test("growth and spin update the visual, light radius and boundary together and restore on completion", () => {
+    const env = setupRuntime();
+    Object.assign(env.tile, { width: 200, height: 200, rotation: 180 });
+    env.tile.flags["arcane-advent"].sceneObject.flight.visual = {
+        width: 100, height: 100, rotation: 0, endScale: 2, spin: 225
+    };
+    env.lightDoc.object._getLightSourceData = () => ({ x: 500, y: 400, dim: 200, bright: 100 });
+    env.region.object.scale = { set(value) { this.value = value; } };
+    env.callbacks.get("canvasReady")();
+    game.time.serverTime = 1400;
+    for (const tick of env.ticks) tick();
+    assert.equal(env.display.width, 150); assert.equal(env.display.height, 150);
+    assert.equal(env.display.rotation, Math.PI / 2);
+    assert.equal(env.lightDoc.object.samples.at(-1).dim, 150);
+    assert.equal(env.region.object.scale.value, 0.75);
+    game.time.serverTime = 1800;
+    for (const tick of env.ticks) tick();
+    assert.equal(env.display.width, 200); assert.equal(env.display.rotation, Math.PI);
+    assert.equal(env.region.object.scale.value, 1);
+});
+
 test("a user joining halfway through sees the remaining part without restarting", () => {
     const env = setupRuntime();
     game.time.serverTime = 1400;

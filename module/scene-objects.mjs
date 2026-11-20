@@ -58,7 +58,7 @@ export function sceneObjectPlan(item, scene, position) {
             movable: item.type === "interactiveElement" && interaction.movable,
             toggleLight: item.type === "interactiveElement" && interaction.toggleLight,
             active: light.initiallyOn, showBoundary: system.showBoundary,
-            projectileDuration: system.projectileDuration ?? 0.8
+            projectileDuration: system.projectileDuration ?? 0.8, animation: system.animation
         } } }
     };
 }

@@ -1,4 +1,5 @@
 import { sceneClock, projectileFrame } from "./scene-projectiles.mjs";
+import { validateAnimationAppearance } from "./scene-animation-settings.mjs";
 
 export const ANIMATION_QUERY = "arcane-advent.animations";
 const scope = "arcane-advent";
@@ -102,6 +103,7 @@ export function createAnimationService({ planFor, create, remove, resolve = uuid
         }
         if (!["launch", "continue"].includes(data.action)) throw Error("Cette action d’animation n’est pas autorisée.");
         const route = validateAnimationRoute(scene, data.points, data.duration);
+        const appearance = validateAnimationAppearance(data);
         const end = route.points.at(-1), arrival = { mode: arrivalMode(data.arrival ?? "keep") };
         if (data.action === "continue") {
             stationary(tile);
@@ -115,15 +117,30 @@ export function createAnimationService({ planFor, create, remove, resolve = uuid
         const startedAt = clock() + 200;
         const flight = { id: randomID(), points: route.points, from: route.points[0], to: end,
             startedAt, duration: route.duration, arrival };
+        const geometry = data.action === "launch" ? initial.source : tile;
+        const visual = flight.visual = {
+            width: geometry.width * appearance.initialSize / 100,
+            height: geometry.height * appearance.initialSize / 100,
+            rotation: geometry.rotation ?? 0, endScale: appearance.finalSize / 100, spin: appearance.spin
+        };
+        const dimensions = { width: visual.width * visual.endScale, height: visual.height * visual.endScale,
+            rotation: ((visual.rotation + visual.spin * data.duration) % 360 + 360) % 360 };
+        const settings = { arrival: arrival.mode, finalEffectUuid: data.finalEffectUuid ?? "",
+            finalMode: data.finalMode ?? "once-delete", finalDuration: data.finalDuration ?? 1, ...appearance };
         if (data.action === "launch") {
             const source = playback(initial.source, "loop", initial.metadata.duration ?? 0, startedAt);
+            Object.assign(source, dimensions);
+            source.flags[scope].sceneObject.animation = settings;
+            source.flags[scope].sceneObject.projectileDuration = data.duration;
             source.flags[scope].sceneObject.flight = flight;
             if (data.levelId && scene.levels?.has(data.levelId)) source.levels = [data.levelId];
             else if (canvas.scene?.id === scene.id && canvas.level?.id) source.levels = [canvas.level.id];
             const created = await create(scene, source);
             return { ok: true, tileId: created.id };
         }
-        await tile.update({ ...end, hidden: false, "flags.arcane-advent.sceneObject.active": true,
+        await tile.update({ ...end, ...dimensions, hidden: false, "flags.arcane-advent.sceneObject.active": true,
+            "flags.arcane-advent.sceneObject.animation": settings,
+            "flags.arcane-advent.sceneObject.projectileDuration": data.duration,
             "flags.arcane-advent.sceneObject.flight": flight }, { sceneObjectSync: true });
         // Persist child positions at B; clients interpolate their rendering along the route.
         await adapters.sync(tile);

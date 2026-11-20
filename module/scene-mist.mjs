@@ -115,8 +115,14 @@ export function registerSceneMist() {
         for (const tile of canvas.scene.tiles) refresh(tile);
     });
     Hooks.on("canvasTearDown", clear);
-    Hooks.on("arcaneAdventSceneObjectPosition", (tile, point) => {
-        if (tile.parent.id === canvas.scene?.id) views.get(tile.id)?.position.set(point.x, point.y);
+    Hooks.on("arcaneAdventSceneObjectPosition", (tile, point, appearance) => {
+        const mesh = tile.parent.id === canvas.scene?.id && views.get(tile.id);
+        if (mesh) {
+            mesh.position.set(point.x, point.y);
+            mesh.width = appearance?.width ?? tile.width;
+            mesh.height = appearance?.height ?? tile.height;
+            mesh.rotation = (appearance?.rotation ?? tile.rotation) * Math.PI / 180;
+        }
     });
     for (const event of ["createTile", "updateTile"]) Hooks.on(event, refresh);
     Hooks.on("deleteTile", tile => {

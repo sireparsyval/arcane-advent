@@ -373,6 +373,21 @@ de conditions aux personnages ; la région sert ici à délimiter la zone.
 
 ### Animations : préparer, projeter et déclencher un impact
 
+Chaque modèle d’**Effet Visuel** possède une section **Animation** : elle mémorise
+la durée totale du trajet, la taille initiale (% des dimensions de placement), la
+taille finale (% de la taille initiale), la rotation continue en degrés/seconde,
+le comportement à l’arrivée, le modèle de remplacement et son mode de lecture.
+100 % conserve la taille, 50 % la réduit de moitié, 200 % la double. Une rotation
+à 0 est désactivée ; une valeur négative inverse son sens. Ces transformations
+évoluent régulièrement pendant le trajet ; la taille et l’orientation finales
+sont conservées à l’arrivée et la rotation s’arrête.
+
+La fenêtre **Animations** reprend ce preset ; modifier ses valeurs pour une
+projection ne change pas le modèle. Dupliquer un Effet Visuel permet de garder
+plusieurs presets pour une même image/vidéo. Le trajet reste choisi à chaque
+utilisation. Une continuation part de la position et de la taille atteintes ;
+l’effet final manuel reprend aussi les réglages de fin de la projection.
+
 Le bouton **Animations**, en bas du répertoire **Objets**, propose les modèles
 d’**Effet Visuel** du monde avant même qu’un exemplaire soit placé.
 Choisir un modèle et **Préparer une projection**. Régler la durée totale du
