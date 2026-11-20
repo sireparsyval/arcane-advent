@@ -306,6 +306,8 @@ export class ArcaneCharacterSheet
         context.system = this.actor.system;
         context.hasEquippedShield = this.actor.items.some(item => item.type === "shield" && item.system.equipped);
         context.shieldBonusLabel = signedModifier(this.actor.system.defense.shieldBonus);
+        const initiative = this.actor.system.trackers.initiative ?? 0;
+        context.initiativeLabel = initiative >= 0 ? `+${initiative}` : String(initiative);
         context.compactNPC = this.compactNPC;
         context.npcOptionsOpen = Boolean(this.element?.querySelector("[data-npc-options][open]"));
         // L’onglet doit être visible avant que Foundry restaure le défilement.

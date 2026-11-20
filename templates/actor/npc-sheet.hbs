@@ -84,7 +84,8 @@
 
     <section class="aa-panel aa-npc-combat" aria-label="Défense et mobilité">
         <div class="aa-npc-metrics">
-            <button type="button" data-action="rollInitiativeCheck" title="Lancer l’initiative">🎲 Initiative <strong>{{system.trackers.initiative}}</strong></button>
+            <span>Initiative <button type="button" class="aa-initiative-roll" data-action="rollInitiativeCheck"
+                title="Lancer l’initiative" aria-label="Lancer l’initiative">{{initiativeLabel}}</button></span>
             <span>Perception <strong>{{system.trackers.passivePerception}}</strong></span>
             <label>Vitesse <input type="number" min="0" step="any" name="system.trackers.speed" value="{{system.trackers.speed}}"
                 aria-label="Vitesse de base en mètres" {{#unless canEditState}}readonly{{/unless}}> m</label>

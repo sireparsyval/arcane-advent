@@ -30,7 +30,6 @@ body.detached > .aa-detached-sheet .window-content {
         .aa-defense-header h3,
         .aa-defense-zone > span,
         .aa-tracker > label,
-        .aa-tracker-roll > span,
         .aa-roll-mode button,
         .aa-defense-mode button,
         .aa-death-save-group > span,
@@ -652,8 +651,7 @@ body.detached > .aa-detached-sheet .window-content {
     margin-top: 12px;
 }
 
-.aa-tracker label,
-.aa-tracker-roll > span {
+.aa-tracker label {
     font-weight: bold;
     font-size: 0.8rem;
 }
@@ -1295,14 +1293,15 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-defense-reductions .aa-defense-reduction-amount { text-align: right; font-variant-numeric: tabular-nums; }
 .aa-defense-reductions .aa-defense-reduction-unit { padding-inline-start: 6px; text-align: left; }
 
-.aa-tracker-roll {
-    width: 100%;
+.aa-tracker > .aa-initiative-roll {
+    width: auto;
+    min-width: 3.25rem;
     height: auto;
-    min-width: 0;
-    justify-content: flex-start;
-    gap: 0;
-    line-height: inherit;
-    overflow-wrap: anywhere;
+    min-height: 0;
+    padding: 2px 6px;
+    line-height: 1.1;
+    font-size: 1.35rem;
+    font-weight: bold;
 }
 
 

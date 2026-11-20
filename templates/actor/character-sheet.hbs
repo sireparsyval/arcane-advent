@@ -698,11 +698,11 @@
                         </div>
 
 
-                        <button type="button" class="aa-tracker aa-tracker-roll" data-action="rollInitiativeCheck"
-                            title="Lancer l’initiative">
-                            <span><span aria-hidden="true">🎲</span> Initiative</span>
-                            <strong>{{system.trackers.initiative}}</strong>
-                        </button>
+                        <div class="aa-tracker">
+                            <label>Initiative</label>
+                            <button type="button" class="aa-initiative-roll" data-action="rollInitiativeCheck"
+                                title="Lancer l’initiative" aria-label="Lancer l’initiative">{{initiativeLabel}}</button>
+                        </div>
 
 
                         <div class="aa-tracker">
