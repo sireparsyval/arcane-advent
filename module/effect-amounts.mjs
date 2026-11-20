@@ -2,16 +2,12 @@ const NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i;
 const FORBIDDEN = new Set(["__proto__", "prototype", "constructor"]);
 const FUNCTIONS = Object.freeze({ min: Math.min, max: Math.max, abs: Math.abs,
     floor: Math.floor, ceil: Math.ceil, round: Math.round });
-const MODIFIERS = Object.freeze({ for: "strength", str: "strength", dex: "dexterity",
-    con: "constitution", int: "intelligence", sag: "wisdom", wis: "wisdom", cha: "charisma" });
 
 function referenceParts(reference) {
     const parts = reference.replace(/^@/, "").split(".");
     if (parts.some(key => FORBIDDEN.has(key))) throw Error("Cette référence n’est pas autorisée.");
     if (parts[0]?.toLowerCase() === "mod") {
-        const key = MODIFIERS[parts[1]?.toLowerCase()];
-        if (parts.length !== 2 || !key) throw Error("Modificateur inconnu : " + reference);
-        return ["abilities", key, "modifier"];
+        throw Error("Utilisez une référence complète, par exemple @abilities.dexterity.modifier.");
     }
     if (parts[0] === "items" && (parts.length < 4 || parts[2] !== "system")) {
         throw Error("Utilisez @items.ID.system.champ pour référencer un élément possédé.");

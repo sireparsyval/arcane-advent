@@ -19,10 +19,6 @@
                 <li class="aa-summary-empty">Aucun effet configuré.</li>
             {{/each}}
         </ul>
-        {{#if effectManual}}
-            <button type="button" data-action="toggleCharacterEffects" data-item-id="{{id}}"
-                aria-pressed="{{system.effectActivation.active}}" {{#unless @root.canEditState}}disabled{{/unless}}>Activer / désactiver</button>
-        {{/if}}
     </details>
     <details data-source-conditions="{{id}}" {{#if conditionsOpen}}open{{/if}}>
         <summary>Conditions ({{conditionEntries.length}})</summary>

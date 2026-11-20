@@ -234,6 +234,11 @@ for (const type of ["trait", "aptitude"]) {
         const source = type === "trait" ? trait : linkedAptitude(trait);
         if (type === "aptitude") sheet.actor.items.push(source);
         sheet.actor.items.get = id => sheet.actor.items.find(item => item.id === id);
+        for (const rule of Object.values(source.system.effectRules)) {
+            rule.activationMode = "conditions";
+            rule.conditionIds = ["manual", "automatic"];
+            rule.conditionMatch = "any";
+        }
         const writes = [];
         source.update = async changes => {
             writes.push(changes);
@@ -282,3 +287,17 @@ for (const type of ["trait", "aptitude"]) {
         assert.equal(writes.length, count);
     });
 }
+
+test("réactiver un ancien effet manuel reprend ses réglages individuels et l’affranchit du verrou commun", async () => {
+    const { sheet, trait } = fixture();
+    trait.system.effectActivation = { mode: "manual", enabled: false, active: false };
+    sheet.actor.items.get = id => id === trait.id ? trait : null;
+    let changes;
+    trait.update = async updates => { changes = updates; };
+    const action = ArcaneCharacterSheet.DEFAULT_OPTIONS.actions.toggleEffectRule;
+    await action.call(sheet, null, { dataset: { itemId: trait.id, effectId: "force" } });
+    assert.equal(changes["system.effectRules.force.enabled"], true);
+    assert.equal(changes["system.effectRules.force.activationMode"], "always");
+    assert.equal(changes["system.effectRules.force.conditionMode"], "selected");
+    assert.ok(!Object.keys(changes).some(key => key.startsWith("system.effectActivation")));
+});

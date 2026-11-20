@@ -4,7 +4,7 @@ import { activeCharacterEffects, characterEffectSources, effectRuleActive, effec
     newEffectRule, resolveRollEffects, sourceConditionsSatisfied } from "../module/character-effects.mjs";
 
 const selected = (ids, match = "all", extra = {}) => ({ ...newEffectRule("roll"), amount: 2,
-    conditionMode: "selected", conditionIds: ids, conditionMatch: match, ...extra });
+    activationMode: "conditions", conditionMode: "selected", conditionIds: ids, conditionMatch: match, ...extra });
 function fixture(rules) {
     const source = { id: "trait", type: "trait", name: "Deux états", system: {
         effectActivation: { enabled: true, mode: "conditions" }, conditionMatch: "all",
@@ -49,22 +49,31 @@ test("condition IDs resolve only inside their own source", () => {
     assert.deepEqual(activeCharacterEffects(actor).map(rule => rule.sourceId), ["other"]);
 });
 
-test("custom condition selections respect the source switch, manual activation, passive category and duration", () => {
+test("independent condition selections ignore every former source activation switch", () => {
     const { actor, source } = fixture({ local: selected(["ready"]) });
     const rule = source.system.effectRules.local;
-    source.type = "aptitude";
-    for (const [mode, category, active, remaining, expected] of [
-        ["always", "technique", false, 0, true], ["manual", "technique", false, 0, false],
-        ["manual", "technique", true, 0, true], ["passive", "technique", false, 0, false],
-        ["passive", "passive", false, 0, true], ["duration", "technique", false, 0, false],
-        ["duration", "technique", false, 1, true], ["conditions", "technique", false, 0, true]
-    ]) {
-        Object.assign(source.system, { category, effectActivation: { mode, active, enabled: true },
-            effectDuration: { enabled: true, remaining } });
-        assert.equal(effectRuleActive(actor, source, rule), expected, mode);
-        source.system.effectActivation.enabled = false;
-        assert.equal(effectRuleActive(actor, source, rule), false, "source disabled: " + mode);
+    for (const mode of ["always", "manual", "passive", "duration", "conditions"]) {
+        source.system.effectActivation = { mode, enabled: false, active: false };
+        assert.equal(effectRuleActive(actor, source, rule), true, mode);
+        source.system.conditions.ready.enabled = false;
+        assert.equal(effectRuleActive(actor, source, rule), false, mode);
+        source.system.conditions.ready.enabled = true;
     }
+    delete rule.activationMode;
+    assert.equal(effectRuleActive(actor, source, rule), true, "previous custom selections are independent too");
+});
+
+test("passive and duration modes are evaluated for each effect", () => {
+    const { actor, source } = fixture({ passive: selected([], "all", { activationMode: "passive" }),
+        duration: selected([], "all", { activationMode: "duration" }) });
+    source.type = "aptitude";
+    source.system.category = "technique";
+    source.system.effectDuration = { enabled: true, remaining: 0 };
+    assert.equal(activeCharacterEffects(actor).length, 0);
+    source.system.category = "passive";
+    assert.deepEqual(activeCharacterEffects(actor).map(rule => rule.id), ["passive"]);
+    source.system.effectDuration.remaining = 1;
+    assert.deepEqual(activeCharacterEffects(actor).map(rule => rule.id), ["passive", "duration"]);
 });
 
 test("legacy effects retain the common activation and combination until customized", () => {

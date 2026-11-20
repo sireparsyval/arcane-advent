@@ -74,25 +74,25 @@ test("resolved effect amounts recalculate and invalid references disable their e
     assert.equal(source.system.effectRules.reference.amount, 0);
 });
 
-test("max/min and modifier aliases select the intended value and compose with arithmetic", () => {
+test("max/min and complete references select the intended value and compose with arithmetic", () => {
     const actor = fixture();
     Object.assign(actor.system.abilities, { dexterity: { modifier: 2 }, constitution: { modifier: 4 },
         intelligence: { modifier: -1 }, wisdom: { modifier: 0 }, charisma: { modifier: -3 } });
     const rule = newEffectRule("roll");
     for (const [amountFormula, expected] of [
-        ["max(mod.dex, mod.con)", 4], ["min(mod.dex, mod.con)", 2],
-        ["max(-2, -4)", -2], ["max(mod.dex, @abilities.constitution.modifier) + 2", 6],
-        ["max(mod.for, mod.int, mod.sag, mod.cha)", 4],
-        ["-max(mod.dex, mod.con)", -4], ["min(0, mod.cha)", -3],
-        ["abs(mod.cha)", 3], ["floor(5 / 2)", 2], ["ceil(5 / 2)", 3], ["round(2.4)", 2],
+        ["max(@abilities.dexterity.modifier, @abilities.constitution.modifier)", 4], ["min(@abilities.dexterity.modifier, @abilities.constitution.modifier)", 2],
+        ["max(-2, -4)", -2], ["max(@abilities.dexterity.modifier, @abilities.constitution.modifier) + 2", 6],
+        ["max(@abilities.strength.modifier, @abilities.intelligence.modifier, @abilities.wisdom.modifier, @abilities.charisma.modifier)", 4],
+        ["-max(@abilities.dexterity.modifier, @abilities.constitution.modifier)", -4], ["min(0, @abilities.charisma.modifier)", -3],
+        ["abs(@abilities.charisma.modifier)", 3], ["floor(5 / 2)", 2], ["ceil(5 / 2)", 3], ["round(2.4)", 2],
         ["max(min(7, 3), abs(-5))", 5], ["1+2*3", 7], ["(1+2)*3", 9],
-        ["10-3-2", 5], ["8/2/2", 2], ["-2*-3", 6], ["mod.con-mod.dex", 2],
+        ["10-3-2", 5], ["8/2/2", 2], ["-2*-3", 6], ["@abilities.constitution.modifier-@abilities.dexterity.modifier", 2],
         ["max(1, 2, 3)", 3], ["max(1; 2)", 2]
     ]) {
         assert.deepEqual(resolveEffectAmount(actor, { ...rule, amountFormula }), { value: expected, error: "" }, amountFormula);
     }
     actor.system.abilities.dexterity.modifier = 6;
-    assert.equal(resolveEffectAmount(actor, { ...rule, amountFormula: "max(mod.dex, mod.con)" }).value, 6);
+    assert.equal(resolveEffectAmount(actor, { ...rule, amountFormula: "max(@abilities.dexterity.modifier, @abilities.constitution.modifier)" }).value, 6);
 });
 
 test("functions accept owned Item references with hyphenated IDs without confusing subtraction", () => {
@@ -118,13 +118,27 @@ test("formula validation rejects malformed calls, division by zero, excessive ne
 
 test("deferred template formulas still validate syntax while preserving unknown operands", () => {
     const rule = newEffectRule("roll");
-    for (const amountFormula of ["max(mod.dex, mod.con)", "10 / (mod.dex - mod.con)"]) {
+    for (const amountFormula of ["max(@abilities.dexterity.modifier, @abilities.constitution.modifier)", "10 / (@abilities.dexterity.modifier - @abilities.constitution.modifier)"]) {
         assert.deepEqual(resolveEffectAmount(null, { ...rule, amountFormula }, { deferReferences: true }),
             { value: 0, error: "", pending: true });
     }
     assert.deepEqual(resolveEffectAmount(null, { ...rule, amountFormula: "floor(5 / 2)" }, { deferReferences: true }),
         { value: 2, error: "" });
-    for (const amountFormula of ["max(mod.dex,)", "mod.dex/0", "Math.max(mod.dex, 2)"]) {
+    for (const amountFormula of ["max(@abilities.dexterity.modifier,)", "@abilities.dexterity.modifier/0", "Math.max(@abilities.dexterity.modifier, 2)"]) {
         assert.ok(resolveEffectAmount(null, { ...rule, amountFormula }, { deferReferences: true }).error);
     }
+});
+
+test("mod.xxx shortcuts are rejected even when reference lookup is deferred", () => {
+    const actor = fixture();
+    actor.system.mod = { dex: 3, con: 4 };
+    const rule = newEffectRule("roll");
+    for (const amountFormula of ["mod.dex", "@mod.dex", "max(mod.dex,mod.con)"]) {
+        for (const deferReferences of [false, true]) {
+            assert.match(resolveEffectAmount(actor, { ...rule, amountFormula }, { deferReferences }).error, /référence complète/);
+        }
+    }
+    Object.assign(actor.system.abilities, { dexterity: { modifier: 3 }, constitution: { modifier: 4 } });
+    assert.deepEqual(resolveEffectAmount(actor, { ...rule,
+        amountFormula: "max(@abilities.dexterity.modifier,@abilities.constitution.modifier)" }), { value: 4, error: "" });
 });

@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { activeCharacterEffects, applyStatisticEffects, effectRuleSummary, newEffectRule, resolveRollEffects } from "../module/character-effects.mjs";
 import { conditionMetricValue, aptitudeConditionStatus, conditionSummary } from "../module/aptitude-conditions.mjs";
 
-const roll = changes => ({ ...newEffectRule("roll"), ...changes });
-const stat = changes => ({ ...newEffectRule(), ...changes });
+const roll = changes => ({ ...newEffectRule("roll"), activationMode: "legacy", conditionMode: "source", ...changes });
+const stat = changes => ({ ...newEffectRule(), activationMode: "legacy", conditionMode: "source", ...changes });
 const item = (id, type, rules, system = {}) => ({ id, name: id, type, system: { effectRules: rules, ...system } });
 
 test("advantages are boolean sources: three advantages and one disadvantage cancel", () => {
@@ -173,8 +173,8 @@ test("numeric references feed statistics without feedback and rolls use the resu
 test("formula functions retain statistical baselines while roll bonuses use updated modifiers", () => {
     const source = item("formules", "trait", {
         dex: stat({ target: "dexterity", amount: 4 }),
-        strength: stat({ amountFormula: "max(mod.dex, mod.con)" }),
-        bonus: roll({ scope: "save", amountFormula: "max(mod.dex, mod.con)" })
+        strength: stat({ amountFormula: "max(@abilities.dexterity.modifier, @abilities.constitution.modifier)" }),
+        bonus: roll({ scope: "save", amountFormula: "max(@abilities.dexterity.modifier, @abilities.constitution.modifier)" })
     });
     const model = character([source]);
     model.abilities.strength.value = 16;
@@ -186,5 +186,5 @@ test("formula functions retain statistical baselines while roll bonuses use upda
         assert.equal(model.abilities.dexterity.effective, 18);
         assert.equal(resolveRollEffects(activeCharacterEffects(model.parent), { type: "save" }).bonus, 4);
     }
-    assert.equal(source.system.effectRules.strength.amountFormula, "max(mod.dex, mod.con)");
+    assert.equal(source.system.effectRules.strength.amountFormula, "max(@abilities.dexterity.modifier, @abilities.constitution.modifier)");
 });

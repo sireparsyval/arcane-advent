@@ -8,7 +8,7 @@ import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedM
 import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
 import { EXPERTISE_DOMAINS, WEAPON_PROPERTIES, PROPERTY_FILTER_STATES, normalizedClasses } from "../../expertise.mjs";
 import { aptitudeConditionStatus, conditionSummary } from "../../aptitude-conditions.mjs";
-import { characterEffectSources, conditionActor, effectRuleSummary } from "../../character-effects.mjs";
+import { characterEffectSources, conditionActor, effectRuleSummary, effectRuleSettings } from "../../character-effects.mjs";
 import { openCharacterEffectsEditor, openCharacterEffectsManager } from "../character-effects-editor.mjs";
 import { bindConditionControls, conditionControls, readConditionControls, validateCondition } from "../effect-condition-controls.mjs";
 import { hotbarRollData } from "../../shortcuts.mjs";
@@ -195,10 +195,6 @@ export class ArcaneCharacterSheet
                 const item = this.actor.items.get(target.dataset.itemId);
                 if (this.isEditable && ["trait", "aptitude"].includes(item?.type)) return openCharacterEffectsEditor(item, { actor: this.actor });
             },
-            toggleCharacterEffects: async function (_event, target) {
-                const item = this.actor.items.get(target.dataset.itemId);
-                if (this.isEditable && item?.system.effectActivation?.mode === "manual") await item.update({ "system.effectActivation.active": !item.system.effectActivation.active });
-            },
             editManualModifiers: this._onEditManualModifiers,
             toggleAgeMode: this._onToggleAgeMode,
             setDefenseMode: this._onSetDefenseMode,
@@ -376,7 +372,6 @@ export class ArcaneCharacterSheet
             return {
                 effectCount: source?.rules.length ?? 0,
                 effectActive: Boolean(source?.rules.some(rule => rule.active)),
-                effectManual: item.system.effectActivation?.mode === "manual",
                 effectsOpen: openEffects.has(item.id),
                 conditionsOpen: openConditions.has(item.id),
                 effectEntries: (source?.rules ?? []).map(rule => ({
@@ -1158,9 +1153,15 @@ export class ArcaneCharacterSheet
         const source = this.actor.items.get(target.dataset.itemId);
         const rule = source?.system.effectRules?.[target.dataset.effectId];
         if (!["trait", "aptitude"].includes(source?.type) || !rule) return;
-        await source.update({
-            [`system.effectRules.${target.dataset.effectId}.enabled`]: rule.enabled === false
-        });
+        const settings = effectRuleSettings(source, rule);
+        const prefix = `system.effectRules.${target.dataset.effectId}`;
+        const updates = { [prefix + ".enabled"]: !settings.enabled };
+        if (!rule.activationMode || rule.activationMode === "legacy") {
+            for (const key of ["activationMode", "conditionMode", "conditionIds", "conditionMatch"]) {
+                updates[prefix + "." + key] = settings[key];
+            }
+        }
+        await source.update(updates);
     }
 
     static async _onToggleManualCondition(event, target) {

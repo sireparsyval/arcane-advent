@@ -64,7 +64,7 @@ export async function runCharacterEffectsTests({ test, assert, equal }) {
             writes.length = 0;
             const dialog = await openCharacterEffectsEditor(owner, { actor });
             dialog.element.querySelector('[data-effect-tab="activation"]').click();
-            change(dialog.element, '[data-source="mode"]', "conditions");
+            assert(!dialog.element.querySelector("[data-source]"), "Global activation controls are still present");
             dialog.element.querySelector("[data-add-condition]").click();
             change(dialog.element, '[data-cfield="metric"]', "equipped");
             assert(!dialog.element.querySelector('[data-cfield="value"]'), "Boolean criterion still has a numeric threshold");

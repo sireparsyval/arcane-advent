@@ -50,7 +50,7 @@ for (const type of ["trait", "aptitude"]) {
     test(`l’éditeur d’un ${type} enregistre plusieurs conditions et une combinaison propre à chaque effet`, async () => {
         const { owner, dialog, writes } = await fixture(type);
         const before = structuredClone(owner.system);
-        change(dialog, "first", { efield: "conditionMode" }, "selected");
+        change(dialog, "first", { efield: "activationMode" }, "conditions");
         assert.match(dialog.root.innerHTML, /Prêt &lt;ici&gt;/);
         assert.doesNotMatch(dialog.root.innerHTML, /data-rule-condition-id="foreign"/);
         change(dialog, "first", { ruleConditionId: "ready" }, true, true);
@@ -73,7 +73,7 @@ for (const type of ["trait", "aptitude"]) {
 
 test("dupliquer un effet conserve sa sélection sans partager la liste avec l’original", async () => {
     const { dialog, writes } = await fixture();
-    change(dialog, "first", { efield: "conditionMode" }, "selected");
+    change(dialog, "first", { efield: "activationMode" }, "conditions");
     change(dialog, "first", { ruleConditionId: "ready" }, true, true);
     click(dialog, { duplicateEffect: "first" });
     change(dialog, "copy1", { ruleConditionId: "weather" }, true, true);
@@ -85,7 +85,7 @@ test("dupliquer un effet conserve sa sélection sans partager la liste avec l’
 
 test("supprimer une condition sélectionnée demande de corriger la sélection sans activer silencieusement un effet", async () => {
     const { dialog, writes } = await fixture();
-    change(dialog, "first", { efield: "conditionMode" }, "selected");
+    change(dialog, "first", { efield: "activationMode" }, "conditions");
     change(dialog, "first", { ruleConditionId: "weather" }, true, true);
     click(dialog, { removeCondition: "weather" });
     await save(dialog);
@@ -100,8 +100,8 @@ test("supprimer une condition sélectionnée demande de corriger la sélection s
 
 test("une sélection vide explicite peut être enregistrée et Annuler ne modifie rien", async () => {
     const { owner, dialog, writes } = await fixture();
-    change(dialog, "first", { efield: "conditionMode" }, "selected");
-    change(dialog, "second", { efield: "conditionMode" }, "selected");
+    change(dialog, "first", { efield: "activationMode" }, "conditions");
+    change(dialog, "second", { efield: "activationMode" }, "conditions");
     click(dialog, { removeCondition: "ready" });
     click(dialog, { removeCondition: "weather" });
     await save(dialog);
@@ -110,7 +110,7 @@ test("une sélection vide explicite peut être enregistrée et Annuler ne modifi
     assert.deepEqual(writes[0]["system.effectRules"].first.conditionIds, []);
     const before = structuredClone(owner.system);
     const another = await openCharacterEffectsEditor(owner, { actor: { system: {}, items: [] } });
-    change(another, "first", { efield: "conditionMode" }, "selected");
+    change(another, "first", { efield: "activationMode" }, "conditions");
     await another.config.buttons.find(button => button.action === "cancel").callback(null, null, another);
     assert.equal(writes.length, 1);
     assert.deepEqual(owner.system, before);
@@ -173,17 +173,58 @@ test("les formules saisies sont prévisualisées et enregistrées sans modifier 
     const before = structuredClone(actor.system);
     const dialog = await openCharacterEffectsEditor(owner, { actor });
     assert.equal(owner.system.effectRules.second.amountFormula, "");
-    change(dialog, "second", { efield: "amount" }, "max(mod.dex, mod.con)");
+    change(dialog, "second", { efield: "amount" }, "max(@abilities.dexterity.modifier, @abilities.constitution.modifier)");
     click(dialog, { effectTab: "effects" });
     assert.match(dialog.root.innerHTML, /Valeur actuelle : \+4/);
-    assert.match(dialog.root.innerHTML, /value="max\(mod.dex, mod.con\)"/);
+    assert.match(dialog.root.innerHTML, /value="max\(@abilities.dexterity.modifier, @abilities.constitution.modifier\)"/);
     await save(dialog);
     assert.deepEqual(errors, []);
-    assert.equal(writes[0]["system.effectRules"].second.amountFormula, "max(mod.dex, mod.con)");
+    assert.equal(writes[0]["system.effectRules"].second.amountFormula, "max(@abilities.dexterity.modifier, @abilities.constitution.modifier)");
     assert.deepEqual(actor.system, before);
     const other = await openCharacterEffectsEditor(owner, { actor });
-    change(other, "second", { efield: "amount" }, "max(mod.dex,)");
+    change(other, "second", { efield: "amount" }, "max(@abilities.dexterity.modifier,)");
     await save(other);
     assert.equal(writes.length, 1);
     assert.ok(errors.length);
+});
+
+test("l’onglet Conditions ne contient aucune activation commune et les sélections sont autonomes", async () => {
+    const { owner, actor, writes } = await fixture();
+    owner.system.effectActivation = { enabled: false, mode: "manual", active: false };
+    const dialog = await openCharacterEffectsEditor(owner, { actor });
+    click(dialog, { effectTab: "activation" });
+    assert.match(dialog.root.innerHTML, />Conditions<\/button>/);
+    assert.doesNotMatch(dialog.root.innerHTML, /data-source=|Quand appliquer les effets|Activer les effets de cette source|Combinaison par défaut/);
+    click(dialog, { effectTab: "effects" });
+    change(dialog, "first", { efield: "activationMode" }, "conditions");
+    change(dialog, "first", { ruleConditionId: "ready" }, true, true);
+    click(dialog, { effectTab: "preview" });
+    assert.match(dialog.root.innerHTML, /Actif —/);
+    await save(dialog);
+    assert.deepEqual(errors, []);
+    assert.equal(writes[0]["system.effectRules"].first.activationMode, "conditions");
+    assert.ok(!Object.hasOwn(writes[0], "system.effectActivation"));
+    assert.ok(!Object.hasOwn(writes[0], "system.conditionMatch"));
+});
+
+test("l’enregistrement reprend les anciens réglages dans chaque effet sans conserver de verrou global", async () => {
+    const { owner, actor, writes } = await fixture();
+    owner.system.effectActivation = { enabled: true, mode: "manual", active: false };
+    for (const rule of Object.values(owner.system.effectRules)) {
+        delete rule.activationMode;
+        rule.conditionMode = "source";
+    }
+    const dialog = await openCharacterEffectsEditor(owner, { actor });
+    await save(dialog);
+    assert.deepEqual(errors, []);
+    for (const rule of Object.values(writes[0]["system.effectRules"])) {
+        assert.equal(rule.activationMode, "always");
+        assert.equal(rule.enabled, false);
+    }
+    assert.ok(!Object.hasOwn(writes[0], "system.effectActivation"));
+    const other = await openCharacterEffectsEditor(owner, { actor });
+    change(other, "first", { efield: "enabled" }, true, true);
+    await save(other);
+    assert.equal(writes[1]["system.effectRules"].first.enabled, true);
+    assert.equal(writes[1]["system.effectRules"].first.activationMode, "always");
 });

@@ -40,6 +40,7 @@ export function effectFields({ aptitude = false, withConditions = true } = {}) {
             skill: new StringField({ blank: true, initial: "" }),
             advantage: new BooleanField({ initial: false }),
             disadvantage: new BooleanField({ initial: false }),
+            activationMode: new StringField({ choices: ["legacy", ...Object.keys(EFFECT_ACTIVATIONS)], initial: "legacy" }),
             conditionMode: new StringField({ choices: ["source", "selected"], initial: "source" }),
             conditionIds: new ArrayField(new StringField({ blank: false }), { initial: [] }),
             conditionMatch: new StringField({ choices: ["all", "any"], initial: "all" })

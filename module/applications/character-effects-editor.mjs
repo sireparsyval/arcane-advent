@@ -1,5 +1,5 @@
-import { EFFECT_ACTIVATIONS, EFFECT_ABILITIES, EFFECT_ROLL_SCOPES, EFFECT_STAT_TARGETS,
-    activeCharacterEffects, characterEffectSources, conditionActor, effectRuleSummary, effectRuleActive, effectSourceActive,
+import { EFFECT_ABILITIES, EFFECT_ROLL_SCOPES, EFFECT_STAT_TARGETS,
+    activeCharacterEffects, characterEffectSources, conditionActor, effectRuleSummary, effectRuleActive, effectRuleSettings, effectSourceActive,
     newEffectRule, resolveRollEffects } from "../character-effects.mjs";
 import { conditionSummary } from "../aptitude-conditions.mjs";
 import { fixedEffectAmount, resolveEffectAmount } from "../effect-amounts.mjs";
@@ -21,7 +21,7 @@ function amountPreview(actor, rule) {
 
 function amountInput(actor, rule, label) {
     return `<label>${label}${input("amount", rule.amountFormula || rule.amount,
-        'type="text" required spellcheck="false" placeholder="2 ou max(mod.dex, mod.con)"')}
+        'type="text" required spellcheck="false" placeholder="Nombre, référence ou max(@abilities.dexterity.modifier, @abilities.constitution.modifier)"')}
         <small data-amount-preview aria-live="polite">${escape(amountPreview(actor, rule))}</small></label>`;
 }
 
@@ -46,8 +46,10 @@ function rollRuleHTML(actor, rule) {
     </div><p class="hint" data-rule-summary>${escape(effectRuleSummary(rule, { actor: summaryActor(actor) }))}</p>`;
 }
 
-function ruleConditionsHTML(rule, conditions) {
-    const custom = rule.conditionMode === "selected";
+function ruleConditionsHTML(rule, conditions, ownerType) {
+    const custom = rule.activationMode === "conditions";
+    const modes = { always: "Lorsque l’effet est activé", conditions: "Selon les conditions sélectionnées",
+        ...(ownerType === "aptitude" ? { passive: "Si l’aptitude est passive", duration: "Pendant la durée de l’aptitude" } : {}) };
     const selected = new Set(rule.conditionIds ?? []);
     const entries = Object.entries(conditions).map(([id, condition], index) => ({
         id, label: condition.label?.trim() || `Condition ${condition.kind === "manual" ? "manuelle" : "automatique"} ${index + 1}`
@@ -55,20 +57,21 @@ function ruleConditionsHTML(rule, conditions) {
     for (const id of selected) {
         if (!Object.hasOwn(conditions, id)) entries.push({ id, label: "Condition supprimée — désélectionner cette référence" });
     }
-    return `<fieldset class="aa-effect-rule-conditions"><legend>Conditions de cet effet</legend>
-        <label>Conditions prises en compte${select("conditionMode", { source: "Réglage commun", selected: "Choisir les conditions" }, rule.conditionMode ?? "source")}</label>
+    return `<fieldset class="aa-effect-rule-conditions"><legend>Activation de cet effet</legend>
+        <label>Quand appliquer cet effet ?${select("activationMode", modes, rule.activationMode)}</label>
         ${custom ? `<label>Combinaison${select("conditionMatch", { all: "Toutes les conditions sélectionnées (ET)", any: "Au moins une condition sélectionnée (OU)" }, rule.conditionMatch ?? "all")}</label>
             <div class="aa-effect-condition-choices">${entries.map(({ id, label }) => `<label class="checkbox"><input type="checkbox" data-rule-condition-id="${escape(id)}" ${checked(selected.has(id))}>${escape(label)}</label>`).join("") || '<p class="hint">Aucune condition créée dans cette source.</p>'}</div>
-            <p class="hint">Sans condition sélectionnée, cet effet n’exige aucune condition. Les autres réglages d’activation de la source restent applicables.</p>`
-            : '<p class="hint">Utilise le mode d’activation et la combinaison commune de la source.</p>'}
+            <p class="hint">Sans condition sélectionnée, cet effet n’exige aucune condition.</p>`
+            : '<p class="hint">La coche Activé permet d’activer ou de désactiver cet effet.</p>'}
     </fieldset>`;
 }
 
 function sourceData(owner) {
     return { name: owner.name, description: owner.system.description ?? "", requirements: owner.system.requirements ?? "",
         category: owner.system.category, requireConditions: Boolean(owner.system.requireConditions),
-        effectActivation: { enabled: true, mode: owner.type === "aptitude" ? "passive" : "always", active: false, ...copy(owner.system.effectActivation) },
-        effectRules: copy(owner.system.effectRules), conditions: copy(owner.system.conditions), conditionMatch: owner.system.conditionMatch ?? "all" };
+        effectRules: Object.fromEntries(Object.entries(copy(owner.system.effectRules))
+            .map(([id, rule]) => [id, effectRuleSettings(owner, rule)])),
+        conditions: copy(owner.system.conditions), conditionMatch: owner.system.conditionMatch ?? "all" };
 }
 
 function replacementWithDeletions(before, after) {
@@ -94,7 +97,7 @@ export async function openCharacterEffectsEditor(owner, { actor = owner.actor ??
                     const amount = editorAmount(actor, rule);
                     if (amount.error) throw Error(amount.error);
                     if (rule.kind === "stat" && (!Number.isFinite(Number(rule.coefficient)) || rule.coefficient < 0)) throw Error("Coefficient invalide.");
-                    if (rule.conditionMode === "selected") {
+                    if (rule.activationMode === "conditions") {
                         if (!["all", "any"].includes(rule.conditionMatch ?? "all")) throw Error("Combinaison de conditions invalide.");
                         if (Array.from(rule.conditionIds ?? []).some(id => !Object.hasOwn(draft.conditions, id))) {
                             throw Error("Une condition sélectionnée par un effet a été supprimée. Ajustez sa sélection de conditions.");
@@ -104,15 +107,14 @@ export async function openCharacterEffectsEditor(owner, { actor = owner.actor ??
                 for (const condition of Object.values(draft.conditions)) {
                     validateCondition(condition);
                 }
-                if (draft.effectActivation.mode === "conditions" && !Object.keys(draft.conditions).length
-                    && (!Object.keys(draft.effectRules).length || Object.values(draft.effectRules).some(rule => rule.conditionMode !== "selected"))) {
-                    throw Error("Ajoutez au moins une condition ou personnalisez les conditions de chaque effet.");
-                }
-                const updates = { "system.effectActivation": draft.effectActivation, "system.conditionMatch": draft.conditionMatch,
+                const updates = {
                     "system.effectRules": replacementWithDeletions(owner.system.effectRules, draft.effectRules),
                     "system.conditions": replacementWithDeletions(owner.system.conditions, draft.conditions) };
                 if (isItem) Object.assign(updates, { name: draft.name.trim() || owner.name, "system.description": draft.description, "system.requirements": draft.requirements });
-                if (owner.type === "aptitude") Object.assign(updates, { "system.category": draft.category, "system.requireConditions": draft.requireConditions });
+                if (owner.type === "aptitude") Object.assign(updates, {
+                    "system.category": draft.category, "system.requireConditions": draft.requireConditions,
+                    "system.conditionMatch": draft.conditionMatch
+                });
                 await owner.update(updates);
                 await app.close();
             } catch (error) { ui.notifications.error(error.message); }
@@ -122,8 +124,7 @@ export async function openCharacterEffectsEditor(owner, { actor = owner.actor ??
     const render = () => {
         const root = dialog.element.querySelector("[data-effect-editor]");
         const rules = Object.entries(draft.effectRules);
-        const activation = Object.fromEntries(Object.entries(EFFECT_ACTIVATIONS).filter(([key]) => owner.type === "aptitude" || !["passive", "duration"].includes(key)));
-        root.innerHTML = `<nav class="aa-effect-tabs" aria-label="Éditeur d'effets">${Object.entries({ effects: "Effets", activation: "Activation et conditions", identity: isItem ? "Description" : "Aide", preview: "Récapitulatif" }).map(([key, label]) => `<button type="button" data-effect-tab="${key}" aria-pressed="${tab === key}">${label}</button>`).join("")}</nav>
+        root.innerHTML = `<nav class="aa-effect-tabs" aria-label="Éditeur d'effets">${Object.entries({ effects: "Effets", activation: "Conditions", identity: isItem ? "Description" : "Aide", preview: "Récapitulatif" }).map(([key, label]) => `<button type="button" data-effect-tab="${key}" aria-pressed="${tab === key}">${label}</button>`).join("")}</nav>
             <datalist id="aa-effect-skills">${[...(actor.items ?? [])].filter(item => item.type === "skill").map(item => `<option value="${escape(item.name)}"></option>`).join("")}</datalist>
             <div class="aa-effect-body">
             ${tab === "effects" ? `<p class="hint">Les effets s'appliquent au personnage qui possède cette source. Ajoutez autant de règles que nécessaire.</p>
@@ -134,25 +135,22 @@ export async function openCharacterEffectsEditor(owner, { actor = owner.actor ??
                     <button type="button" data-duplicate-effect="${escape(id)}" title="Dupliquer cet effet">⧉</button>
                     <button type="button" data-remove-effect="${escape(id)}" title="Retirer cet effet">×</button></div>
                     ${rule.kind === "roll" ? rollRuleHTML(actor, rule) : statRuleHTML(actor, rule)}
-                    ${ruleConditionsHTML(rule, draft.conditions)}</article>`).join("") || '<p class="hint">Aucun effet configuré.</p>'}
-                <p class="hint">Bonus / malus : nombre fixe ou référence à la fiche, par exemple @abilities.strength.value (score de Force), @abilities.strength.modifier (modificateur), ou -@abilities.strength.modifier pour un malus. Le préfixe @system. est aussi accepté. Formules : max(mod.dex, mod.con), min(mod.dex, mod.con), abs(...), floor(...), ceil(...) et round(...), avec +, −, *, / et des parenthèses. Raccourcis : mod.for, mod.dex, mod.con, mod.int, mod.sag, mod.cha. Les arguments sont séparés par des virgules ; les décimales utilisent un point dans les formules. Pour un élément possédé : @items.ID.system.level, avec son identifiant réel.</p>
+                    ${ruleConditionsHTML(rule, draft.conditions, owner.type)}</article>`).join("") || '<p class="hint">Aucun effet configuré.</p>'}
+                <p class="hint">Bonus / malus : nombre fixe ou référence à la fiche, par exemple @abilities.strength.value (score de Force), @abilities.strength.modifier (modificateur), ou -@abilities.strength.modifier pour un malus. Le préfixe @system. est aussi accepté. Formules : max(@abilities.dexterity.modifier, @abilities.constitution.modifier), min(...), abs(...), floor(...), ceil(...) et round(...), avec +, −, *, / et des parenthèses. Les arguments sont séparés par des virgules ; les décimales utilisent un point dans les formules. Pour un élément possédé : @items.ID.system.level, avec son identifiant réel.</p>
                 <p class="hint">Un avantage et un désavantage s'annulent, même s'il y a plusieurs sources d'un côté. « Neutre » sur la fiche n'efface pas les effets permanents. Pour les formules d'aptitude autres que 1d20, seul le bonus fixe ciblant les jets d'aptitude s'applique ; la formule reste telle qu'elle a été écrite.</p>` : ""}
-            ${tab === "activation" ? `<div class="aa-effect-grid"><label class="checkbox"><input data-source="enabled" type="checkbox" ${checked(draft.effectActivation.enabled)}>Activer les effets de cette source</label>
-                <label>Quand appliquer les effets ?<select data-source="mode">${options(activation, draft.effectActivation.mode)}</select></label>
-                ${draft.effectActivation.mode === "manual" ? `<label class="checkbox"><input data-source="active" type="checkbox" ${checked(draft.effectActivation.active)}>Effets actuellement activés</label>` : ""}</div>
+            ${tab === "activation" ? `<p class="hint">Les conditions sont créées ici, puis sélectionnées dans chaque effet avec leur combinaison ET/OU.</p>
                 <p class="hint">Les critères automatiques lisent la fiche avant les effets des Traits et Aptitudes. Un effet ne peut donc pas déclencher ou annuler sa propre condition.</p>
-                <label>Combinaison par défaut<select data-draft="conditionMatch">${options({ all: "Toutes doivent être remplies (ET)", any: "Au moins une doit être remplie (OU)" }, draft.conditionMatch)}</select></label>
-                <p class="hint">Chaque effet peut choisir ses propres conditions et sa combinaison dans l’onglet Effets.</p>
-                ${owner.type === "aptitude" ? `<label class="checkbox"><input data-draft="requireConditions" type="checkbox" ${checked(draft.requireConditions)}>Exiger ces conditions pour lancer les jets de l'aptitude</label>` : ""}
+                ${owner.type === "aptitude" ? `<label class="checkbox"><input data-draft="requireConditions" type="checkbox" ${checked(draft.requireConditions)}>Exiger ces conditions pour lancer les jets de l'aptitude</label>
+                <label>Combinaison pour l’utilisation de l’aptitude<select data-draft="conditionMatch">${options({ all: "Toutes doivent être remplies (ET)", any: "Au moins une doit être remplie (OU)" }, draft.conditionMatch)}</select></label>` : ""}
                 <button type="button" data-add-condition>+ Ajouter un critère</button>
                 ${Object.entries(draft.conditions).map(([id, condition]) => `<article class="aa-effect-card"><div class="aa-effect-card-heading"><strong>Critère</strong><button type="button" data-remove-condition="${escape(id)}">Retirer</button></div><div data-effect-condition="${escape(id)}">${conditionControls(actor, condition)}</div></article>`).join("")}` : ""}
             ${tab === "identity" ? isItem ? `<label>Nom<input data-draft="name" type="text" value="${escape(draft.name)}" required></label>
                 ${owner.type === "aptitude" ? `<label>Catégorie<select data-draft="category">${options({ technique: "Technique", spell: "Sort", hybrid: "Hybride", passive: "Passif" }, draft.category)}</select></label>` : ""}
                 <label>Description<textarea data-draft="description" rows="8">${escape(draft.description)}</textarea></label><label>Conditions / précisions libres<textarea data-draft="requirements" rows="3">${escape(draft.requirements)}</textarea></label>`
                 : `<p>Les effets permanents saisis ici complètent ceux des Traits, Aptitudes, Altérations et Blessures.</p><p>Utilisez le montant fixe pour un bonus/malus et le coefficient pour une multiplication (1 = inchangé). Les bonus avant multiplication s'additionnent, les coefficients se multiplient, puis les bonus après multiplication s'ajoutent. Les résultats entiers sont arrondis à l'inférieur ; vitesse et charge conservent les décimales.</p><p>Les maxima de PdC, PdF et Dés de Conscience sont affichés avec leur total effectif, sans modifier leur valeur de base ni ajouter de points actuels.</p>` : ""}
-            ${tab === "preview" ? `<p><strong>Source ${effectSourceActive(conditionActor(actor), { type: owner.type, system: { ...draft, category: draft.category } }) ? "active" : "inactive"}</strong> · ${escape(EFFECT_ACTIVATIONS[draft.effectActivation.mode])}</p>
+            ${tab === "preview" ? `<p><strong>Source ${effectSourceActive(conditionActor(actor), { type: owner.type, system: { ...draft, category: draft.category } }) ? "active" : "inactive"}</strong></p>
                 <ul>${rules.map(([, rule]) => `<li>${rule.enabled === false ? "Désactivé" : !resolveEffectAmount(actor, rule).error && effectRuleActive(conditionActor(actor), { type: owner.type, system: draft }, rule) ? "Actif" : "Inactif"} — ${escape(rule.label ? rule.label + " : " : "")}${escape(effectRuleSummary(rule, { actor: summaryActor(actor) }))}</li>`).join("") || "<li>Aucun effet.</li>"}</ul>
-                <p>Conditions : ${draft.conditionMatch === "any" ? "au moins une" : "toutes"}</p><ul>${Object.values(draft.conditions).map(condition => `<li>${escape(conditionSummary(actor, condition))}</li>`).join("") || "<li>Aucune condition.</li>"}</ul>
+                <p>Conditions disponibles</p><ul>${Object.values(draft.conditions).map(condition => `<li>${escape(conditionSummary(actor, condition))}</li>`).join("") || "<li>Aucune condition.</li>"}</ul>
                 <p class="hint">Les changements de cette fenêtre seront appliqués à l'enregistrement.</p>` : ""}
             </div>`;
         for (const host of root.querySelectorAll("[data-effect-condition]")) {
@@ -178,16 +176,16 @@ export async function openCharacterEffectsEditor(owner, { actor = owner.actor ??
                 rule[field.dataset.efield] = field.dataset.efield === "addBefore" ? value === "yes" : value;
             }
             card.querySelector("[data-rule-summary]").textContent = effectRuleSummary(rule, { actor: summaryActor(actor) });
-            if (field.dataset.efield === "conditionMode") render();
+            if (field.dataset.efield === "activationMode") {
+                rule.conditionMode = "selected";
+                render();
+            }
         } else if (field.dataset.ruleConditionId) {
             const card = field.closest("[data-effect-rule]"), rule = draft.effectRules[card.dataset.effectRule];
             const ids = new Set(rule.conditionIds ?? []);
             if (field.checked) ids.add(field.dataset.ruleConditionId);
             else ids.delete(field.dataset.ruleConditionId);
             rule.conditionIds = [...ids];
-        } else if (field.dataset.source) {
-            draft.effectActivation[field.dataset.source] = value;
-            if (field.dataset.source === "mode") render();
         } else if (field.dataset.draft) draft[field.dataset.draft] = value;
     };
     const click = event => {
