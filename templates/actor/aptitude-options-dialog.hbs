@@ -3,29 +3,27 @@
     <details class="aa-options-section" open>
         <summary>Charges et durée</summary>
         <div class="aa-options-section-body">
-            {{#unless isTechnique}}
-                <label class="checkbox"><input type="checkbox" name="enable.charge" {{#if chargeActive}}checked{{/if}}> Charges multiples</label>
-                <div class="aa-aptitude-options-grid" data-aa-fields="enable.charge" {{#unless chargeActive}}hidden{{/unless}}>
-                    <label>Charges restantes<input type="number" name="charge.remaining" min="0" step="1" required value="{{system.chargeCounter.remaining}}"></label>
-                    <label>Charges maximales<input type="number" name="charge.max" min="0" step="1" required value="{{system.chargeCounter.max}}"></label>
-                </div>
-                <label class="checkbox"><input type="checkbox" name="enable.recovery" {{#if recoveryActive}}checked{{/if}}> Récupération</label>
-                <div class="aa-aptitude-options-grid" data-aa-fields="enable.recovery" {{#unless recoveryActive}}hidden{{/unless}}>
-                    <label>Temps restant<input type="number" name="recovery.remaining" min="0" step="1" required value="{{system.recoveryCounter.remaining}}"></label>
-                    <label>Durée totale<input type="number" name="recovery.max" min="0" step="1" required value="{{system.recoveryCounter.max}}"></label>
-                    <label>Unité<select name="recovery.unit">
-                        {{#each units}}<option value="{{key}}" {{#if (eq key ../system.recoveryCounter.unit)}}selected{{/if}}>{{label}}</option>{{/each}}
-                    </select></label>
-                </div>
-                <label class="checkbox"><input type="checkbox" name="enable.casting" {{#if castingActive}}checked{{/if}}> Incantation</label>
-                <div class="aa-aptitude-options-grid" data-aa-fields="enable.casting" {{#unless castingActive}}hidden{{/unless}}>
-                    <label>Temps écoulé<input type="number" name="casting.remaining" min="0" step="1" required value="{{system.castingCounter.remaining}}"></label>
-                    <label>Durée totale<input type="number" name="casting.max" min="0" step="1" required value="{{system.castingCounter.max}}"></label>
-                    <label>Unité<select name="casting.unit">
-                        {{#each units}}<option value="{{key}}" {{#if (eq key ../system.castingCounter.unit)}}selected{{/if}}>{{label}}</option>{{/each}}
-                    </select></label>
-                </div>
-            {{/unless}}
+            <label class="checkbox"><input type="checkbox" name="enable.charge" {{#if chargeActive}}checked{{/if}}> Charges multiples</label>
+            <div class="aa-aptitude-options-grid" data-aa-fields="enable.charge" {{#unless chargeActive}}hidden{{/unless}}>
+                <label>Charges restantes<input type="number" name="charge.remaining" min="0" step="1" required value="{{system.chargeCounter.remaining}}"></label>
+                <label>Charges maximales<input type="number" name="charge.max" min="0" step="1" required value="{{system.chargeCounter.max}}"></label>
+            </div>
+            <label class="checkbox"><input type="checkbox" name="enable.recovery" {{#if recoveryActive}}checked{{/if}}> Récupération</label>
+            <div class="aa-aptitude-options-grid" data-aa-fields="enable.recovery" {{#unless recoveryActive}}hidden{{/unless}}>
+                <label>Temps restant<input type="number" name="recovery.remaining" min="0" step="1" required value="{{system.recoveryCounter.remaining}}"></label>
+                <label>Durée totale<input type="number" name="recovery.max" min="0" step="1" required value="{{system.recoveryCounter.max}}"></label>
+                <label>Unité<select name="recovery.unit">
+                    {{#each units}}<option value="{{key}}" {{#if (eq key ../system.recoveryCounter.unit)}}selected{{/if}}>{{label}}</option>{{/each}}
+                </select></label>
+            </div>
+            <label class="checkbox"><input type="checkbox" name="enable.casting" {{#if castingActive}}checked{{/if}}> Incantation</label>
+            <div class="aa-aptitude-options-grid" data-aa-fields="enable.casting" {{#unless castingActive}}hidden{{/unless}}>
+                <label>Temps écoulé<input type="number" name="casting.remaining" min="0" step="1" required value="{{system.castingCounter.remaining}}"></label>
+                <label>Durée totale<input type="number" name="casting.max" min="0" step="1" required value="{{system.castingCounter.max}}"></label>
+                <label>Unité<select name="casting.unit">
+                    {{#each units}}<option value="{{key}}" {{#if (eq key ../system.castingCounter.unit)}}selected{{/if}}>{{label}}</option>{{/each}}
+                </select></label>
+            </div>
             <label class="checkbox"><input type="checkbox" name="effect.enabled" {{#if durationActive}}checked{{/if}}> Durée des effets</label>
             <div class="aa-aptitude-options-grid" data-aa-fields="effect.enabled" {{#unless durationActive}}hidden{{/unless}}>
                 <label>Temps restant<input type="number" name="effect.remaining" min="0" step="1" required value="{{effectRemaining}}"></label>

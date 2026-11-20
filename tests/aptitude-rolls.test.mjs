@@ -246,3 +246,87 @@ test("enregistrer les Options préserve les conditions gérées par leur éditeu
     }
     assert.doesNotMatch(optionsTemplate, /name="(?:requirements|requireConditions|conditionMatch)"|data-aa-condition/);
 });
+
+test("Techniques et Sorts proposent Repos Long et enregistrent tous les compteurs", async () => {
+    const originalRender = foundry.applications.handlebars.renderTemplate;
+    let rendered;
+    foundry.applications.handlebars.renderTemplate = async (path, context) => {
+        if (path.endsWith("aptitude-options-dialog.hbs")) rendered = context;
+        return originalRender(path, context);
+    };
+    try {
+        for (const category of ["technique", "spell"]) {
+            const { sheet, item } = fixture();
+            item.system.category = category;
+            await ArcaneCharacterSheet._onEditAptitudeOptions.call(sheet, null, { dataset: { itemId: item.id } });
+            assert.ok(rendered.units.some(unit => unit.key === "longRest" && unit.label === "Repos Long"));
+            const dialog = dialogs[0];
+            await dialog.options.buttons.find(button => button.action === "save").callback(null, { form: {
+                reportValidity: () => true, fields: {
+                    "enable.charge": "on", "charge.remaining": "2", "charge.max": "3",
+                    "enable.recovery": "on", "recovery.remaining": "1", "recovery.max": "2", "recovery.unit": "longRest",
+                    "enable.casting": "on", "casting.remaining": "1", "casting.max": "4", "casting.unit": "turns",
+                    "effect.enabled": "on", "effect.remaining": "3", "effect.unit": "longRest"
+                }
+            } }, dialog);
+            assert.deepEqual(item.system.chargeCounter, { remaining: 2, max: 3 });
+            assert.deepEqual(item.system.recoveryCounter, { remaining: 1, max: 2, unit: "longRest" });
+            assert.deepEqual(item.system.castingCounter, { remaining: 1, max: 4, unit: "turns" });
+            assert.deepEqual(item.system.effectDuration, { enabled: true, remaining: 3, unit: "longRest" });
+            assert.equal(item.system.durationUnit, "longRest");
+            assert.deepEqual(item.system.showOptions, { charge: true, recovery: true, casting: true, duration: true });
+        }
+    } finally {
+        foundry.applications.handlebars.renderTemplate = originalRender;
+    }
+});
+
+test("les boutons des trois compteurs restent entre zéro et leur maximum sans changer les unités", async () => {
+    const action = ArcaneCharacterSheet.DEFAULT_OPTIONS.actions.stepAptitudeCounter;
+    for (const counter of ["charge", "recovery", "casting"]) {
+        const { sheet, item, writes } = fixture();
+        const value = item.system[counter + "Counter"] = { remaining: 1, max: 2, unit: "longRest" };
+        const step = delta => action.call(sheet, null, { dataset: { itemId: item.id, counter, step: String(delta) } });
+        await step(-1);
+        assert.equal(value.remaining, 0);
+        const afterZero = writes.length;
+        await step(-1);
+        assert.equal(writes.length, afterZero);
+        await step(1); await step(1);
+        assert.equal(value.remaining, 2);
+        const afterMax = writes.length;
+        await step(1);
+        assert.equal(writes.length, afterMax);
+        assert.equal(value.max, 2);
+        assert.equal(value.unit, "longRest");
+        sheet.isEditable = false;
+        await step(-1);
+        assert.equal(value.remaining, 2);
+    }
+});
+
+test("la durée restante ne descend pas sous zéro et les anciennes durées restent synchronisées", async () => {
+    const action = ArcaneCharacterSheet.DEFAULT_OPTIONS.actions.stepAptitudeCounter;
+    for (const enabled of [true, false]) {
+        const { sheet, item, writes } = fixture();
+        item.system.effectDuration = { enabled, remaining: 1, unit: enabled ? "longRest" : "turns" };
+        item.system.durationTurns = 1;
+        item.system.durationUnit = "longRest";
+        const step = delta => action.call(sheet, null, { dataset: { itemId: item.id, counter: "duration", step: String(delta) } });
+        await step(-1);
+        assert.equal(item.system.durationTurns, 0);
+        assert.equal(item.system.effectDuration.remaining, 0);
+        const count = writes.length;
+        await step(-1);
+        assert.equal(writes.length, count);
+        await step(1); await step(1);
+        assert.equal(item.system.durationTurns, 2);
+        assert.equal(item.system.effectDuration.remaining, 2);
+        assert.equal(item.system.effectDuration.unit, "longRest");
+        assert.equal(item.system.effectDuration.enabled, enabled);
+        for (const [counter, delta] of [["unknown", 1], ["duration", 5]]) {
+            await action.call(sheet, null, { dataset: { itemId: item.id, counter, step: String(delta) } });
+            assert.equal(item.system.durationTurns, 2);
+        }
+    }
+});

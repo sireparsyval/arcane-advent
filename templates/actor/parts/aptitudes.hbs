@@ -95,14 +95,34 @@
             <div class="aa-aptitude-facts">
                 {{#if effectDuration.active}}
                     <div class="aa-aptitude-option"><strong>Durée d’effet</strong>
+                        {{#if @root.canEditState}}
+                            <button type="button" class="aa-aptitude-counter-step" data-action="stepAptitudeCounter"
+                                data-item-id="{{id}}" data-counter="duration" data-step="-1"
+                                aria-label="Diminuer la durée restante des effets" {{#unless effectDuration.canDecrease}}disabled{{/unless}}>−</button>
+                        {{/if}}
                         <span>{{effectDuration.remaining}} {{effectDuration.label}}</span>
+                        {{#if @root.canEditState}}
+                            <button type="button" class="aa-aptitude-counter-step" data-action="stepAptitudeCounter"
+                                data-item-id="{{id}}" data-counter="duration" data-step="1"
+                                aria-label="Augmenter la durée restante des effets">+</button>
+                        {{/if}}
                     </div>
                 {{/if}}
                 {{#each options}}
                     {{#if active}}
                         <div class="aa-aptitude-option">
                             <strong>{{label}}</strong>
+                            {{#if @root.canEditState}}
+                                <button type="button" class="aa-aptitude-counter-step" data-action="stepAptitudeCounter"
+                                    data-item-id="{{../id}}" data-counter="{{key}}" data-step="-1"
+                                    aria-label="Diminuer {{label}}" {{#unless canDecrease}}disabled{{/unless}}>−</button>
+                            {{/if}}
                             <span>{{value.remaining}} / {{value.max}}{{#if unitLabel}} {{unitLabel}}{{/if}}</span>
+                            {{#if @root.canEditState}}
+                                <button type="button" class="aa-aptitude-counter-step" data-action="stepAptitudeCounter"
+                                    data-item-id="{{../id}}" data-counter="{{key}}" data-step="1"
+                                    aria-label="Augmenter {{label}}" {{#unless canIncrease}}disabled{{/unless}}>+</button>
+                            {{/if}}
                         </div>
                     {{/if}}
                 {{/each}}

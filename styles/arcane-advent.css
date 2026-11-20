@@ -2959,3 +2959,14 @@ body.detached > .aa-detached-sheet .window-content {
     background: transparent;
     color: var(--aa-accent);
 }
+
+.aa-aptitude-option > .aa-aptitude-counter-step {
+    align-self: center;
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    min-height: 18px;
+    padding: 0;
+    font-size: 0.8rem;
+    line-height: 1;
+}

@@ -23,12 +23,12 @@ export const APTITUDE_DURATION_UNITS = Object.freeze({
     minutes: "Minutes",
     hours: "Heures",
     days: "Jours",
-    rests: "Repos"
+    rests: "Repos",
+    longRest: "Repos Long"
 });
 
 export const APTITUDE_RECOVERY_UNITS = Object.freeze({
     ...APTITUDE_DURATION_UNITS,
-    longRest: "Repos long",
     shortRest: "Repos court"
 });
 

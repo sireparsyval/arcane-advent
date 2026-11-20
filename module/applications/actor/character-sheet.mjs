@@ -225,6 +225,7 @@ export class ArcaneCharacterSheet
             deleteLinkedAptitude: this._onDeleteLinkedAptitude,
             deleteTrait: this._onDeleteTrait,
             stepTrack: this._onStepTrack,
+            stepAptitudeCounter: this._onStepAptitudeCounter,
             showMercyHelp: this._onShowMercyHelp,
 
             addSkill: this._onAddSkill,
@@ -428,7 +429,8 @@ export class ArcaneCharacterSheet
             effectDuration: {
                 active: item.system.effectDuration.enabled || isAptitudeOptionVisible(item.system, "duration"),
                 remaining: item.system.effectDuration.enabled ? item.system.effectDuration.remaining : item.system.durationTurns,
-                label: APTITUDE_RECOVERY_UNITS[item.system.effectDuration.enabled ? item.system.effectDuration.unit : item.system.durationUnit]
+                label: APTITUDE_RECOVERY_UNITS[item.system.effectDuration.enabled ? item.system.effectDuration.unit : item.system.durationUnit],
+                canDecrease: (item.system.effectDuration.enabled ? item.system.effectDuration.remaining : item.system.durationTurns) > 0
             },
             targetingSummary: [item.system.targeting?.mode === "multiple"
                 ? `Cibles : ${item.system.targeting.maxTargets}`
@@ -444,7 +446,7 @@ export class ArcaneCharacterSheet
                 name: roll.name.replace(/^(?:🎲\uFE0F?\s*)+/u, "")
             })),
             options: Object.entries(APTITUDE_OPTIONS)
-                .filter(([key]) => key !== "duration" && item.system.category !== "technique")
+                .filter(([key]) => key !== "duration")
                 .map(([key, label]) => ({
                 key,
                 label,
@@ -453,7 +455,9 @@ export class ArcaneCharacterSheet
                 note: item.system[key] && parseLegacyAptitudeOption(key, item.system[key]) === null
                     ? item.system[key].trim()
                     : "",
-                active: isAptitudeOptionVisible(item.system, key)
+                active: isAptitudeOptionVisible(item.system, key),
+                canDecrease: item.system[`${key}Counter`].remaining > 0,
+                canIncrease: item.system[`${key}Counter`].remaining < item.system[`${key}Counter`].max
             }))
         }));
         const totalModifiers = this.actor.system.modifierTotals;
@@ -1002,6 +1006,31 @@ export class ArcaneCharacterSheet
         }
     }
 
+    static async _onStepAptitudeCounter(event, target) {
+        const { itemId, counter } = target.dataset;
+        const step = Number(target.dataset.step);
+        const aptitude = this.actor.items.get(itemId);
+        if (!this.isEditable || aptitude?.type !== "aptitude"
+            || !["duration", "recovery", "casting", "charge"].includes(counter) || ![-1, 1].includes(step)) return;
+
+        const updates = {};
+        if (counter === "duration") {
+            const active = aptitude.system.effectDuration.enabled;
+            const current = active ? aptitude.system.effectDuration.remaining : aptitude.system.durationTurns;
+            const next = Math.max(0, current + step);
+            if (!Number.isSafeInteger(next) || next === current) return;
+            updates["system.effectDuration.remaining"] = next;
+            updates["system.durationTurns"] = next;
+            if (!active) updates["system.effectDuration.unit"] = aptitude.system.durationUnit;
+        } else {
+            const value = aptitude.system[`${counter}Counter`];
+            const next = Math.min(value.max, Math.max(0, value.remaining + step));
+            if (!Number.isSafeInteger(next) || next === value.remaining) return;
+            updates[`system.${counter}Counter.remaining`] = next;
+        }
+        await aptitude.update(updates);
+    }
+
     static async _onEditAptitudeOptions(event, target) {
         if (!this.isEditable) return;
         const aptitude = this.actor.items.get(target.dataset.itemId);
@@ -1014,7 +1043,7 @@ export class ArcaneCharacterSheet
         const hasEffectDuration = system.effectDuration.enabled
             || system.effectDuration.remaining > 0 || system.effectDuration.unit !== "turns";
         const list = data => Object.entries(data).map(([key, label]) => ({ key, label }));
-        // Cinq unités proposées pour les nouvelles Aptitudes, sans supprimer les valeurs historiques.
+        // Proposer les unités courantes, dont Repos Long, sans supprimer les valeurs historiques.
         const unitLabels = { ...APTITUDE_DURATION_UNITS };
         for (const unit of [system.recoveryCounter.unit, system.castingCounter.unit,
             system.effectDuration.unit, system.durationUnit]) {
@@ -1065,17 +1094,15 @@ export class ArcaneCharacterSheet
                         const values = new FormData(button.form);
                         const updates = {};
                         try {
-                            if (system.category !== "technique") {
-                                for (const name of ["charge", "recovery", "casting"]) {
-                                    const base = name + "Counter";
-                                    const enabled = values.has("enable." + name);
-                                    updates["system.showOptions." + name] = enabled;
-                                    if (!enabled) continue;
-                                    const counter = readCounter(values, name);
-                                    updates["system." + base + ".remaining"] = counter.remaining;
-                                    updates["system." + base + ".max"] = counter.max;
-                                    if (counter.unit) updates["system." + base + ".unit"] = counter.unit;
-                                }
+                            for (const name of ["charge", "recovery", "casting"]) {
+                                const base = name + "Counter";
+                                const enabled = values.has("enable." + name);
+                                updates["system.showOptions." + name] = enabled;
+                                if (!enabled) continue;
+                                const counter = readCounter(values, name);
+                                updates["system." + base + ".remaining"] = counter.remaining;
+                                updates["system." + base + ".max"] = counter.max;
+                                if (counter.unit) updates["system." + base + ".unit"] = counter.unit;
                             }
                             const effectEnabled = values.has("effect.enabled");
                             updates["system.effectDuration.enabled"] = effectEnabled;

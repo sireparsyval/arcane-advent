@@ -360,3 +360,23 @@ test("le bouton Garde expose les statistiques réelles et suit les changements d
     assert.equal(unavailable.guardAction.hasEquipment, false);
     assert.equal(unavailable.guardAction.defense, undefined);
 });
+
+test("les récapitulatifs des Techniques affichent les quatre compteurs et leurs limites", async () => {
+    const { sheet, trait } = fixture();
+    const aptitude = linkedAptitude(trait);
+    Object.assign(aptitude.system, {
+        effectDuration: { enabled: true, remaining: 0, unit: "longRest" },
+        recoveryCounter: { remaining: 1, max: 2, unit: "longRest" },
+        chargeCounter: { remaining: 0, max: 2 }, castingCounter: { remaining: 2, max: 2, unit: "turns" }
+    });
+    sheet.actor.items.push(aptitude);
+    const { aptitudes: [view] } = await sheet._prepareContext({});
+    assert.equal(view.isTechnique, true);
+    assert.equal(view.effectDuration.active, true);
+    assert.equal(view.effectDuration.label, "Repos Long");
+    assert.equal(view.effectDuration.canDecrease, false);
+    assert.deepEqual(view.options.map(({ key, active, canDecrease, canIncrease }) =>
+        [key, active, canDecrease, canIncrease]), [
+        ["recovery", true, true, true], ["charge", true, false, true], ["casting", true, true, false]
+    ]);
+});
