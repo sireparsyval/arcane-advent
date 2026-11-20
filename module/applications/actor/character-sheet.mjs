@@ -8,7 +8,7 @@ import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedM
 import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
 import { EXPERTISE_DOMAINS, WEAPON_PROPERTIES, PROPERTY_FILTER_STATES, normalizedClasses } from "../../expertise.mjs";
 import { aptitudeConditionStatus, conditionSummary } from "../../aptitude-conditions.mjs";
-import { characterEffectSources, conditionActor, effectRuleSummary, EFFECT_ACTIVATIONS } from "../../character-effects.mjs";
+import { characterEffectSources, conditionActor, effectRuleSummary } from "../../character-effects.mjs";
 import { openCharacterEffectsEditor, openCharacterEffectsManager } from "../character-effects-editor.mjs";
 import { bindConditionControls, conditionControls, readConditionControls, validateCondition } from "../effect-condition-controls.mjs";
 import { hotbarRollData } from "../../shortcuts.mjs";
@@ -214,7 +214,7 @@ export class ArcaneCharacterSheet
             addAptitude: this._onAddAptitude,
             editAptitudeOptions: this._onEditAptitudeOptions,
             editAptitudeCondition: this._onEditAptitudeCondition,
-            toggleManualAptitudeCondition: this._onToggleManualAptitudeCondition,
+            toggleManualCondition: this._onToggleManualCondition,
             editAptitudeRoll: this._onEditAptitudeRoll,
             rollAptitude: this._onRollAptitude,
             deleteAptitude: this._onDeleteStateItem,
@@ -286,7 +286,7 @@ export class ArcaneCharacterSheet
         body: {
             template:
                 "systems/arcane-advent/templates/actor/character-sheet.hbs",
-            templates: ["aptitudes", "conditions", "traits", "manual-modifiers", "sheet-mode"]
+            templates: ["aptitudes", "conditions", "traits", "effect-quick-view", "manual-modifiers", "sheet-mode"]
                 .map(name => `systems/arcane-advent/templates/actor/parts/${name}.hbs`),
             scrollable: [""]
         }
@@ -353,13 +353,13 @@ export class ArcaneCharacterSheet
             this.element?.querySelectorAll("details[data-aptitude-settings][open]") ?? [],
             panel => panel.dataset.aptitudeSettings
         ));
-        const openTraitEffects = new Set(Array.from(
-            this.element?.querySelectorAll("details[data-trait-effects][open]") ?? [],
-            panel => panel.dataset.traitEffects
+        const openEffects = new Set(Array.from(
+            this.element?.querySelectorAll("details[data-source-effects][open]") ?? [],
+            panel => panel.dataset.sourceEffects
         ));
-        const openTraitConditions = new Set(Array.from(
-            this.element?.querySelectorAll("details[data-trait-conditions][open]") ?? [],
-            panel => panel.dataset.traitConditions
+        const openConditions = new Set(Array.from(
+            this.element?.querySelectorAll("details[data-source-conditions][open]") ?? [],
+            panel => panel.dataset.sourceConditions
         ));
         const openTraitDescriptions = new Set(Array.from(
             this.element?.querySelectorAll("details[data-trait-description][open]") ?? [],
@@ -369,9 +369,30 @@ export class ArcaneCharacterSheet
         const aptitudeItems = sortableItems(this.actor.items.filter(item => item.type === "aptitude"));
         const traitsById = new Map(traitItems.map(item => [item.id, item]));
         const effectsById = new Map(characterEffectSources(this.actor).map(entry => [entry.source.id, entry]));
-        const effectContext = item => ({ effectCount: effectsById.get(item.id)?.rules.length ?? 0,
-            effectActive: effectsById.get(item.id)?.active ?? false,
-            effectManual: item.system.effectActivation?.mode === "manual" });
+        const conditionViewer = conditionActor(this.actor);
+        const effectContext = item => {
+            const source = effectsById.get(item.id);
+            return {
+                effectCount: source?.rules.length ?? 0,
+                effectActive: source?.active ?? false,
+                effectManual: item.system.effectActivation?.mode === "manual",
+                effectsOpen: openEffects.has(item.id),
+                conditionsOpen: openConditions.has(item.id),
+                effectEntries: (source?.rules ?? []).map(rule => ({
+                    id: rule.id,
+                    label: rule.label,
+                    summary: effectRuleSummary(rule),
+                    active: rule.enabled !== false && Boolean(source?.active),
+                    status: rule.enabled === false ? "Désactivé" : source?.active ? "Actif" : "Inactif"
+                })),
+                conditionEntries: Object.entries(item.system.conditions ?? {}).map(([id, condition]) => ({
+                    id,
+                    label: condition.label?.trim() || (condition.kind === "manual" ? "Condition manuelle" : "Condition automatique"),
+                    manual: condition.kind === "manual",
+                    satisfied: aptitudeConditionStatus(conditionViewer, condition)
+                }))
+            };
+        };
         context.resourceEffectTotals = [
             ["PdC", this.actor.system.consciousness], ["PdF", this.actor.system.fever], ["Dés de Conscience", this.actor.system.consciousnessDice]
         ].filter(([, pool]) => pool.effectiveMax !== pool.max).map(([label, pool]) => ({ label, base: pool.max, total: pool.effectiveMax }));
@@ -380,22 +401,6 @@ export class ArcaneCharacterSheet
             id: item.id,
             name: item.name,
             system: item.system,
-            effectsOpen: openTraitEffects.has(item.id),
-            conditionsOpen: openTraitConditions.has(item.id),
-            activationLabel: EFFECT_ACTIVATIONS[item.system.effectActivation?.mode ?? "always"],
-            conditionMatchLabel: item.system.conditionMatch === "any" ? "Au moins un critère" : "Tous les critères",
-            effectEntries: (effectsById.get(item.id)?.rules ?? []).map(rule => ({
-                id: rule.id,
-                label: rule.label,
-                summary: effectRuleSummary(rule),
-                status: rule.enabled === false ? "Désactivé" : effectsById.get(item.id)?.active ? "Actif" : "Inactif"
-            })),
-            conditionEntries: Object.entries(item.system.conditions ?? {}).map(([id, condition]) => ({
-                id,
-                label: condition.kind === "automatic" ? condition.label : "",
-                summary: conditionSummary(this.actor, condition),
-                satisfied: aptitudeConditionStatus(conditionActor(this.actor), condition)
-            })),
             descriptionOpen: openTraitDescriptions.has(item.id),
             linkedAptitudes: aptitudeItems
                 .filter(aptitude => aptitude.system.traitId === item.id)
@@ -418,14 +423,6 @@ export class ArcaneCharacterSheet
             categoryLabel: APTITUDE_CATEGORIES[item.system.category],
             isPassive: item.system.category === "passive",
             isTechnique: item.system.category === "technique",
-            conditions: Object.entries(item.system.conditions ?? {}).map(([id, condition]) => ({
-                id,
-                label: condition.kind === "automatic" ? `${condition.label ? condition.label + " — " : ""}${conditionSummary(this.actor, condition)}` : condition.label || "Condition manuelle",
-                summary: conditionSummary(this.actor, condition),
-                automatic: condition.kind === "automatic",
-                satisfied: aptitudeConditionStatus(conditionActor(this.actor), condition),
-                consumes: condition.consumes
-            })),
             effectDuration: {
                 active: item.system.effectDuration.enabled || isAptitudeOptionVisible(item.system, "duration"),
                 remaining: item.system.effectDuration.enabled ? item.system.effectDuration.remaining : item.system.durationTurns,
@@ -1022,9 +1019,6 @@ export class ArcaneCharacterSheet
                 shapes: list(APTITUDE_AREA_SHAPES),
                 origins: list({ caster: "Lanceur", target: "Point ciblé" }),
                 propagations: list({ projectile: "Projectile", beam: "Rayon", instant: "Instantané", wave: "Onde" }),
-                conditions: Object.entries(aptitude.system.conditions).map(([id, condition]) => ({
-                    id, label: conditionSummary(this.actor, condition), automatic: condition.kind === "automatic"
-                })),
                 rolls: Object.entries(aptitude.system.rolls).map(([id, roll]) => ({ id, name: roll.name }))
             }
         ); };
@@ -1050,9 +1044,7 @@ export class ArcaneCharacterSheet
                     callback: async (_event, button, app) => {
                         if (!button.form.reportValidity()) return;
                         const values = new FormData(button.form);
-                        const updates = { "system.requirements": String(values.get("requirements") ?? "").trim() };
-                        updates["system.requireConditions"] = values.has("requireConditions");
-                        updates["system.conditionMatch"] = values.get("conditionMatch") === "any" ? "any" : "all";
+                        const updates = {};
                         try {
                             if (system.category !== "technique") {
                                 for (const name of ["charge", "recovery", "casting"]) {
@@ -1133,30 +1125,19 @@ export class ArcaneCharacterSheet
             }, true);
             editor.addEventListener("click", async event => {
                 if (event.target.closest("[data-aa-effects]")) {
-                    const child = await openCharacterEffectsEditor(aptitude, { actor: this.actor, parent: dialog });
-                    child?.addEventListener("close", async () => {
-                        editor.querySelector('[name="requireConditions"]').checked = aptitude.system.requireConditions;
-                        editor.querySelector('[name="conditionMatch"]').value = aptitude.system.conditionMatch;
-                        editor.querySelector('[name="requirements"]').value = aptitude.system.requirements;
-                        const refreshed = document.createElement("div");
-                        refreshed.innerHTML = await renderOptions();
-                        editor.querySelector('[data-aa-options-list="conditions"]').replaceChildren(...refreshed.querySelector('[data-aa-options-list="conditions"]').childNodes);
-                    }, { once: true });
+                    await openCharacterEffectsEditor(aptitude, { actor: this.actor, parent: dialog });
                     return;
                 }
-                const control = event.target.closest("[data-aa-condition], [data-aa-roll], [data-aa-add-roll]");
+                const control = event.target.closest("[data-aa-roll], [data-aa-add-roll]");
                 if (!control) return;
                 const data = control.dataset;
-                const child = Object.hasOwn(data, "aaCondition")
-                    ? await this._openAptitudeConditionEditor(aptitude, data.aaCondition || null, data.kind, dialog)
-                    : await ArcaneCharacterSheet._onEditAptitudeRoll.call(this, null, {
-                        dataset: { itemId: aptitude.id, rollId: Object.hasOwn(data, "aaAddRoll") ? null : data.aaRoll }
-                    }, dialog);
+                const child = await ArcaneCharacterSheet._onEditAptitudeRoll.call(this, null, {
+                    dataset: { itemId: aptitude.id, rollId: Object.hasOwn(data, "aaAddRoll") ? null : data.aaRoll }
+                }, dialog);
                 child?.addEventListener("close", async () => {
                     const refreshed = editor.ownerDocument.createElement("div");
                     refreshed.innerHTML = await renderOptions();
-                    const section = Object.hasOwn(data, "aaCondition") ? "conditions" : "rolls";
-                    const selector = `[data-aa-options-list="${section}"]`;
+                    const selector = '[data-aa-options-list="rolls"]';
                     const list = editor.querySelector(selector);
                     const replacement = refreshed.querySelector(selector);
                     if (list.innerHTML !== replacement.innerHTML) {
@@ -1170,12 +1151,12 @@ export class ArcaneCharacterSheet
         await dialog.render({ force: true });
     }
 
-    static async _onToggleManualAptitudeCondition(event, target) {
+    static async _onToggleManualCondition(event, target) {
         if (!this.isEditable) return;
-        const aptitude = this.actor.items.get(target.dataset.itemId);
-        const condition = aptitude?.system.conditions?.[target.dataset.conditionId];
-        if (aptitude?.type !== "aptitude" || condition?.kind !== "manual") return;
-        await aptitude.update({
+        const source = this.actor.items.get(target.dataset.itemId);
+        const condition = source?.system.conditions?.[target.dataset.conditionId];
+        if (!["trait", "aptitude"].includes(source?.type) || condition?.kind !== "manual") return;
+        await source.update({
             [`system.conditions.${target.dataset.conditionId}.enabled`]: !condition.enabled
         });
     }

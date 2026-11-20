@@ -78,30 +78,6 @@
     </details>
 
     <details class="aa-options-section">
-        <summary>Conditions d'utilisation / d'application des effets</summary>
-        <div class="aa-options-section-body">
-            <label class="checkbox"><input type="checkbox" name="requireConditions" {{#if system.requireConditions}}checked{{/if}}>Exiger ces conditions pour lancer les jets de l'aptitude</label>
-            <label>Combinaison des critères<select name="conditionMatch"><option value="all" {{#if (eq system.conditionMatch "all")}}selected{{/if}}>Toutes (ET)</option><option value="any" {{#if (eq system.conditionMatch "any")}}selected{{/if}}>Au moins une (OU)</option></select></label>
-            <div class="aa-condition-chips" data-aa-options-list="conditions">
-                {{#each conditions}}
-                    <button type="button" class="aa-condition-chip" data-aa-condition="{{id}}" title="Modifier {{label}}">
-                        <i class="fa-solid {{#if automatic}}fa-gear{{else}}fa-check-square{{/if}}" aria-hidden="true"></i> {{label}}
-                    </button>
-                {{else}}
-                    <p class="hint">Aucune condition.</p>
-                {{/each}}
-            </div>
-            <div class="aa-aptitude-option-actions">
-                <button type="button" data-aa-condition data-kind="manual"><i class="fa-solid fa-plus" aria-hidden="true"></i> Condition manuelle</button>
-                <button type="button" data-aa-condition data-kind="automatic"><i class="fa-solid fa-plus" aria-hidden="true"></i> Condition automatique</button>
-            </div>
-            <label>Notes sur les conditions
-                <textarea name="requirements" rows="2">{{system.requirements}}</textarea>
-            </label>
-        </div>
-    </details>
-
-    <details class="aa-options-section">
         <summary>Jets</summary>
         <div class="aa-options-section-body">
             <div class="aa-condition-chips" data-aa-options-list="rolls">

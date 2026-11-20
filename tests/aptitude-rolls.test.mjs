@@ -224,3 +224,25 @@ test("aptitude options reject invalid range modes and long ranges before writing
         assert.deepEqual(writes, []);
     }
 });
+
+test("enregistrer les Options préserve les conditions gérées par leur éditeur dédié", async () => {
+    const { sheet, item, writes } = fixture();
+    Object.assign(item.system, {
+        requirements: "Note conservée", requireConditions: true, conditionMatch: "any",
+        conditions: { manual: { kind: "manual", label: "Météo", enabled: false } }
+    });
+    await ArcaneCharacterSheet._onEditAptitudeOptions.call(sheet, null, { dataset: { itemId: item.id } });
+    const parent = dialogs[0];
+    // Des modifications dans l’éditeur dédié pendant l’ouverture des Options restent intactes.
+    item.system.conditions.manual.enabled = true;
+    item.system.requirements = "Nouvelle précision";
+    const before = structuredClone(item.system);
+    await parent.options.buttons.find(button => button.action === "save").callback(null,
+        { form: { reportValidity: () => true, fields: {} } }, parent);
+    assert.equal(writes.length, 1);
+    for (const key of ["conditions", "requirements", "requireConditions", "conditionMatch"]) {
+        assert.deepEqual(item.system[key], before[key]);
+        assert.ok(!Object.keys(writes[0]).some(path => path === "system." + key || path.startsWith("system." + key + ".")));
+    }
+    assert.doesNotMatch(optionsTemplate, /name="(?:requirements|requireConditions|conditionMatch)"|data-aa-condition/);
+});

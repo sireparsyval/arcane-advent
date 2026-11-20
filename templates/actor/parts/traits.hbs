@@ -33,42 +33,7 @@
                 {{/if}}
             </div>
 
-            <div class="aa-trait-quick-view">
-                <details data-trait-effects="{{id}}" {{#if effectsOpen}}open{{/if}}>
-                    <summary>Effets ({{effectCount}}) · {{#if effectActive}}Actifs{{else}}Inactifs{{/if}}</summary>
-                    <ul class="aa-trait-summary-list">
-                        {{#each effectEntries}}
-                            <li>
-                                {{#if label}}<strong>{{label}}</strong>{{/if}}
-                                <span>{{summary}}</span>
-                                <small>{{status}}</small>
-                            </li>
-                        {{else}}
-                            <li>Aucun effet configuré.</li>
-                        {{/each}}
-                    </ul>
-                    {{#if effectManual}}
-                        <button type="button" data-action="toggleCharacterEffects" data-item-id="{{id}}"
-                            aria-pressed="{{system.effectActivation.active}}" {{#unless @root.canEditState}}disabled{{/unless}}>Activer / désactiver</button>
-                    {{/if}}
-                </details>
-                <details data-trait-conditions="{{id}}" {{#if conditionsOpen}}open{{/if}}>
-                    <summary>Critères / conditions ({{conditionEntries.length}})</summary>
-                    <p class="aa-trait-activation">{{activationLabel}}</p>
-                    {{#if conditionEntries.length}}<p>{{conditionMatchLabel}}</p>{{/if}}
-                    <ul class="aa-trait-summary-list">
-                        {{#each conditionEntries}}
-                            <li>
-                                {{#if label}}<strong>{{label}}</strong>{{/if}}
-                                <span>{{summary}}</span>
-                                <small>{{#if satisfied}}Validé{{else}}Non validé{{/if}}</small>
-                            </li>
-                        {{else}}
-                            <li>Aucun critère configuré.</li>
-                        {{/each}}
-                    </ul>
-                </details>
-            </div>
+            {{> "systems/arcane-advent/templates/actor/parts/effect-quick-view.hbs"}}
 
             {{#if linkedAptitudes.length}}
                 <div class="aa-trait-config">

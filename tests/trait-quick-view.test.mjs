@@ -48,8 +48,8 @@ function fixture(editable = true) {
         async createEmbeddedDocuments(type, documents) { return { type, documents }; }
     };
     const open = {
-        "details[data-trait-effects][open]": [{ dataset: { traitEffects: trait.id } }],
-        "details[data-trait-conditions][open]": [{ dataset: { traitConditions: trait.id } }]
+        "details[data-source-effects][open]": [{ dataset: { sourceEffects: trait.id } }],
+        "details[data-source-conditions][open]": [{ dataset: { sourceConditions: trait.id } }]
     };
     sheet.element = { querySelector: () => null, querySelectorAll: selector => open[selector] ?? [] };
     return { sheet, trait };
@@ -68,8 +68,12 @@ test("les Traits exposent leurs effets et critères avec leurs états et conserv
     assert.equal(view.effectEntries[0].status, "Actif");
     assert.equal(view.effectEntries[1].status, "Désactivé");
     assert.deepEqual(view.conditionEntries.map(entry => entry.satisfied), [true, false]);
-    assert.equal(view.conditionMatchLabel, "Au moins un critère");
-    assert.match(view.activationLabel, /conditions/);
+    assert.deepEqual(view.conditionEntries.map(({ label, manual }) => ({ label, manual })), [
+        { label: "Transformation", manual: true }, { label: "Condition automatique", manual: false }
+    ]);
+    assert.ok(view.conditionEntries.every(entry => !("summary" in entry)));
+    assert.equal(view.effectEntries[0].active, true);
+    assert.equal(view.effectEntries[1].active, false);
     assert.deepEqual(trait, before);
 });
 
@@ -129,5 +133,72 @@ for (const [actionName, itemType, dataKey, rowAttribute] of [
         item.type = itemType;
         sheet.element.querySelector = () => null;
         assert.doesNotThrow(() => action.call(sheet, null, { dataset: { [dataKey]: item.id } }));
+    });
+}
+
+function linkedAptitude(trait) {
+    return {
+        ...structuredClone(trait), id: "torrent", type: "aptitude", name: "Torrent Ailé",
+        system: {
+            ...structuredClone(trait.system), category: "technique", traitId: trait.id, level: 3, showOptions: {},
+            effectDuration: { enabled: false, remaining: 0, unit: "turns" },
+            recoveryCounter: { remaining: 0, max: 0, unit: "turns" },
+            castingCounter: { remaining: 0, max: 0, unit: "turns" },
+            chargeCounter: { remaining: 0, max: 0 }, rolls: {}, targeting: { mode: "self" }
+        }
+    };
+}
+
+test("Traits et Aptitudes partagent les mêmes récapitulatifs sans exposer les critères automatiques", async () => {
+    const { sheet, trait } = fixture();
+    trait.system.conditions.automatic.label = "Danger imminent";
+    const aptitude = linkedAptitude(trait);
+    sheet.actor.items.push(aptitude);
+    const before = structuredClone(sheet.actor.items);
+    sheet.element.querySelectorAll = selector => {
+        if (selector === "details[data-source-effects][open]") return [{ dataset: { sourceEffects: aptitude.id } }];
+        if (selector === "details[data-source-conditions][open]") return [{ dataset: { sourceConditions: trait.id } }];
+        return [];
+    };
+    const context = await sheet._prepareContext({});
+    const traitView = context.traits[0], aptitudeView = context.aptitudes[0];
+    assert.deepEqual(aptitudeView.effectEntries, traitView.effectEntries);
+    assert.deepEqual(aptitudeView.conditionEntries, traitView.conditionEntries);
+    assert.equal(aptitudeView.conditionEntries[1].label, "Danger imminent");
+    assert.equal(aptitudeView.effectsOpen, true);
+    assert.equal(traitView.effectsOpen, false);
+    assert.equal(aptitudeView.conditionsOpen, false);
+    assert.equal(traitView.conditionsOpen, true);
+    assert.deepEqual(sheet.actor.items, before);
+});
+
+for (const type of ["trait", "aptitude"]) {
+    test(`la bascule manuelle d’un ${type} met à jour seulement son critère et recalcule son état`, async () => {
+        const { sheet, trait } = fixture();
+        const source = type === "trait" ? trait : linkedAptitude(trait);
+        if (type === "aptitude") sheet.actor.items.push(source);
+        sheet.actor.items.get = id => sheet.actor.items.find(item => item.id === id);
+        const writes = [];
+        source.update = async changes => {
+            writes.push(changes);
+            source.system.conditions.manual.enabled = changes["system.conditions.manual.enabled"];
+        };
+        const action = ArcaneCharacterSheet.DEFAULT_OPTIONS.actions.toggleManualCondition;
+        const target = { dataset: { itemId: source.id, conditionId: "manual" } };
+        const view = context => (type === "trait" ? context.traits : context.aptitudes)[0];
+        for (const expected of [false, true]) {
+            await action.call(sheet, null, target);
+            assert.deepEqual(writes.at(-1), { "system.conditions.manual.enabled": expected });
+            const context = await sheet._prepareContext({});
+            assert.equal(view(context).conditionEntries[0].satisfied, expected);
+            assert.equal(view(context).effectActive, expected);
+        }
+        await action.call({ isEditable: false }, null, target);
+        await action.call(sheet, null, { dataset: { itemId: source.id, conditionId: "automatic" } });
+        await action.call(sheet, null, { dataset: { itemId: source.id, conditionId: "missing" } });
+        await action.call(sheet, null, { dataset: { itemId: "missing", conditionId: "manual" } });
+        source.type = "object";
+        await action.call(sheet, null, target);
+        assert.equal(writes.length, 2);
     });
 }

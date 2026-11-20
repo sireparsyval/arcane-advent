@@ -1662,13 +1662,38 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-trait-row details { min-width: 0; }
 .aa-trait-row details summary { cursor: pointer; padding-block: 4px; }
 .aa-trait-row details p { white-space: pre-wrap; overflow-wrap: anywhere; }
-.aa-trait-quick-view { display: flex; flex-wrap: wrap; align-items: start; gap: 6px; min-width: 0; }
-.aa-trait-quick-view > details { flex: 1 1 170px; padding: 4px 7px; border: 1px solid var(--aa-border); border-radius: 4px; }
-.aa-trait-quick-view summary { font-size: .85em; }
-.aa-trait-summary-list { display: grid; gap: 7px; padding: 0; margin: 6px 0; list-style: none; }
-.aa-trait-summary-list li { display: grid; gap: 3px; overflow-wrap: anywhere; font-size: .85em; }
-.aa-trait-summary-list small { opacity: .8; }
-.aa-trait-quick-view p { font-size: .85em; margin: 6px 0; }
+.aa-source-quick-view { display: flex; flex-wrap: wrap; align-items: start; gap: 6px; min-width: 0; }
+.aa-source-quick-view > details { flex: 1 1 170px; min-width: 0; padding: 4px 7px; border: 1px solid var(--aa-border); border-radius: 4px; }
+.aa-source-quick-view summary { cursor: pointer; padding-block: 4px; font-size: .85em; }
+.aa-source-summary-list { padding: 0; margin: 6px 0; list-style: none; }
+.aa-source-quick-view .aa-condition-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid var(--aa-border);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, .025);
+}
+.aa-source-quick-view .aa-condition-chip > span { min-width: 0; overflow-wrap: anywhere; }
+.aa-source-quick-view .aa-condition-chip.is-inactive { opacity: .65; }
+.aa-source-quick-view .aa-manual-condition-chip { padding-inline-start: 2px; }
+.arcane-advent .aa-source-quick-view button.aa-manual-condition-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 18px;
+    width: 18px;
+    min-width: 18px;
+    height: 18px;
+    min-height: 18px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    font-size: 1em;
+    line-height: 1;
+}
+.aa-summary-empty { font-size: .85em; opacity: .8; }
 .aa-requirements-note {
     padding: 5px 7px;
     border-left: 2px solid var(--aa-accent);

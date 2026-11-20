@@ -1,0 +1,42 @@
+<div class="aa-source-quick-view">
+    <details data-source-effects="{{id}}" {{#if effectsOpen}}open{{/if}}>
+        <summary>Effets ({{effectCount}}) · {{#if effectActive}}Actifs{{else}}Inactifs{{/if}}</summary>
+        <ul class="aa-condition-chips aa-source-summary-list" aria-label="Effets de {{name}}">
+            {{#each effectEntries}}
+                <li class="aa-condition-chip {{#if active}}is-satisfied{{else}}is-inactive{{/if}}"
+                    title="{{status}}">
+                    <span aria-hidden="true">{{#if active}}✓{{else}}✕{{/if}}</span>
+                    <span>{{#if label}}{{label}} : {{/if}}{{summary}}</span>
+                </li>
+            {{else}}
+                <li class="aa-summary-empty">Aucun effet configuré.</li>
+            {{/each}}
+        </ul>
+        {{#if effectManual}}
+            <button type="button" data-action="toggleCharacterEffects" data-item-id="{{id}}"
+                aria-pressed="{{system.effectActivation.active}}" {{#unless @root.canEditState}}disabled{{/unless}}>Activer / désactiver</button>
+        {{/if}}
+    </details>
+    <details data-source-conditions="{{id}}" {{#if conditionsOpen}}open{{/if}}>
+        <summary>Critères / conditions ({{conditionEntries.length}})</summary>
+        <ul class="aa-condition-chips aa-source-summary-list" aria-label="Conditions de {{name}}">
+            {{#each conditionEntries}}
+                <li class="aa-condition-chip {{#if satisfied}}is-satisfied{{else}}is-unmet{{/if}}{{#if manual}} aa-manual-condition-chip{{/if}}"
+                    title="{{#if satisfied}}Validée{{else}}Non validée{{/if}}">
+                    {{#if manual}}
+                        <button type="button" class="aa-manual-condition-toggle" data-action="toggleManualCondition"
+                            data-item-id="{{../id}}" data-condition-id="{{id}}"
+                            aria-pressed="{{satisfied}}" aria-label="{{#if satisfied}}Désactiver{{else}}Activer{{/if}} la condition {{label}}"
+                            title="{{#if satisfied}}Désactiver{{else}}Activer{{/if}} cette condition"
+                            {{#unless @root.canEditState}}disabled{{/unless}}><span aria-hidden="true">{{#if satisfied}}☑{{else}}☐{{/if}}</span></button>
+                    {{else}}
+                        <span aria-hidden="true">{{#if satisfied}}✓{{else}}✕{{/if}}</span>
+                    {{/if}}
+                    <span>{{label}}</span>
+                </li>
+            {{else}}
+                <li class="aa-summary-empty">Aucun critère configuré.</li>
+            {{/each}}
+        </ul>
+    </details>
+</div>
