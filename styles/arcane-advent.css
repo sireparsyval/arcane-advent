@@ -2970,3 +2970,19 @@ body.detached > .aa-detached-sheet .window-content {
     font-size: 0.8rem;
     line-height: 1;
 }
+
+/* Reusable scene models and their placed instances. */
+.aa-scene-object-editor { display: flex; flex-direction: column; gap: 12px; }
+.aa-scene-object-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+.aa-scene-object-grid > label { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.aa-scene-object-editor label.checkbox { display: flex; flex-direction: row; align-items: center; gap: 8px; }
+.aa-scene-object-editor .checkbox input { flex: 0 0 auto; }
+.aa-scene-object-editor .hint { color: var(--color-text-subtle); font-size: var(--font-size-12); }
+.aa-scene-objects-body { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.aa-scene-objects-list { flex: 1; overflow-y: auto; }
+.aa-scene-object-row { display: flex; align-items: center; gap: 10px; padding: 8px; border-bottom: 1px solid var(--aa-border); }
+.aa-scene-object-row > img { width: 40px; height: 40px; object-fit: contain; border: 0; }
+.aa-scene-object-row > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.aa-scene-object-row small { display: block; }
+.aa-scene-object-row > button { width: auto; flex: 0 0 auto; }
+.aa-scene-object-description { white-space: pre-wrap; }

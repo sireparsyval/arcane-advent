@@ -28,8 +28,10 @@ import { registerArcaneHotbar, runArcaneShortcut } from "./module/shortcuts.mjs"
 import { registerArcaneText } from "./module/arcane-text.mjs";
 import { GlyphData } from "./module/data/glyph-data.mjs";
 import { GlyphSheet } from "./module/applications/item/glyph-sheet.mjs";
-import { SceneryElementData, InteractiveElementData } from "./module/data/scenery-data.mjs";
+import { SceneryElementData, InteractiveElementData, VisualEffectData } from "./module/data/scenery-data.mjs";
 import { SceneryElementSheet } from "./module/applications/item/scenery-sheet.mjs";
+import { registerSceneObjects } from "./module/scene-objects.mjs";
+import { SceneObjectsPanel, openSceneObjectInteraction } from "./module/applications/scene-objects-panel.mjs";
 import { registerGlyphCatalog } from "./module/applications/glyph-catalog.mjs";
 import { registerTokenBars } from "./module/token-bars.mjs";
 import { CharacterEffectItemSheet } from "./module/applications/item/character-effect-sheet.mjs";
@@ -42,6 +44,8 @@ Hooks.once("init", () => {
     game.arcaneAdvent.openStorages = () => new StorageDirectory().render({ force: true });
     registerStorageService();
     registerStorageDirectory();
+    game.arcaneAdvent.openSceneObjects = () => new SceneObjectsPanel().render({ force: true });
+    registerSceneObjects({ openPanel: game.arcaneAdvent.openSceneObjects, openInteraction: openSceneObjectInteraction });
     registerArcaneHotbar();
     registerArcaneText();
     registerGlyphCatalog();
@@ -80,6 +84,7 @@ Hooks.once("init", () => {
     CONFIG.Item.dataModels.glyph = GlyphData;
     CONFIG.Item.dataModels.sceneryElement = SceneryElementData;
     CONFIG.Item.dataModels.interactiveElement = InteractiveElementData;
+    CONFIG.Item.dataModels.visualEffect = VisualEffectData;
 
     CONFIG.Actor.trackableAttributes = {
         character: {
@@ -132,7 +137,7 @@ Hooks.once("init", () => {
         types: ["glyph"], makeDefault: true, label: "Arcane Advent — Glyphe"
     });
     DocumentSheetConfig.registerSheet(foundry.documents.Item, "arcane-advent", SceneryElementSheet, {
-        types: ["sceneryElement", "interactiveElement"], makeDefault: true, label: "Arcane Advent — Décor"
+        types: ["sceneryElement", "interactiveElement", "visualEffect"], makeDefault: true, label: "Arcane Advent — Objets de scène"
     });
     DocumentSheetConfig.registerSheet(foundry.documents.Item, "arcane-advent", CharacterEffectItemSheet, {
         types: ["trait", "aptitude"], makeDefault: true, label: "Arcane Advent — Traits et Aptitudes"

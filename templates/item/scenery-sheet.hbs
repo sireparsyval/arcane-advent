@@ -1,32 +1,70 @@
-<section class="standard-form">
+<section class="standard-form scrollable aa-scene-object-editor">
     <fieldset {{#unless editable}}disabled{{/unless}}>
-        <legend>{{#if isInteractive}}Élément Interactif{{else}}Élément du Décor{{/if}}</legend>
-        <label class="form-group">
-            <span class="label">Nom</span>
-            <span class="form-fields">
-                <input type="text" name="name" value="{{document.name}}" required>
-            </span>
+        <legend>{{typeLabel}}</legend>
+        <label class="form-group"><span class="label">Nom</span><span class="form-fields">
+            <input type="text" name="name" value="{{document.name}}" required>
+        </span></label>
+        <label class="form-group"><span class="label">Icône dans le répertoire</span><span class="form-fields">
+            <file-picker name="img" type="image" value="{{document.img}}"></file-picker>
+        </span></label>
+        <label class="form-group"><span class="label">Image / vidéo sur la scène</span><span class="form-fields">
+            <file-picker name="system.placement.image" type="imagevideo" value="{{system.placement.image}}"></file-picker>
+        </span></label>
+        <p class="hint">{{#if isVisual}}Facultatif : l’animation peut suffire à représenter cet effet.{{else}}Si ce champ est vide, l’icône du répertoire sera utilisée.{{/if}}</p>
+        <label class="form-group stacked"><span class="label">Description</span>
+            <textarea name="system.description" rows="3">{{system.description}}</textarea>
         </label>
-        <label class="form-group">
-            <span class="label">Image</span>
-            <span class="form-fields">
-                <file-picker name="img" type="image" value="{{document.img}}"></file-picker>
-            </span>
-        </label>
-        <label class="form-group stacked">
-            <span class="label">Description</span>
-            <textarea name="system.description" rows="5">{{system.description}}</textarea>
-        </label>
-        {{#if isInteractive}}
-            <label class="form-group stacked">
-                <span class="label">Interactions</span>
-                <textarea name="system.interactions" rows="5">{{system.interactions}}</textarea>
-            </label>
-        {{/if}}
     </fieldset>
+    <fieldset {{#unless editable}}disabled{{/unless}}>
+        <legend>Placement</legend>
+        <p class="hint">Les dimensions utilisent l’unité de distance de la scène : des mètres si la scène est graduée en mètres.</p>
+        <div class="aa-scene-object-grid">
+            {{#if isVisual}}
+                <label>Rayon<input type="number" name="system.placement.radius" min="0.1" step="any" value="{{system.placement.radius}}" required></label>
+                <label class="checkbox"><input type="checkbox" name="system.showBoundary" {{#if system.showBoundary}}checked{{/if}}> Afficher les limites de la zone</label>
+            {{else}}
+                <label>Largeur<input type="number" name="system.placement.width" min="0.1" step="any" value="{{system.placement.width}}" required></label>
+                <label>Hauteur<input type="number" name="system.placement.height" min="0.1" step="any" value="{{system.placement.height}}" required></label>
+            {{/if}}
+            <label>Rotation (°)<input type="number" name="system.placement.rotation" min="0" max="360" step="any" value="{{system.placement.rotation}}" required></label>
+            <label>Élévation<input type="number" name="system.placement.elevation" step="any" value="{{system.placement.elevation}}" required></label>
+            <label>Opacité<input type="range" name="system.placement.opacity" min="0" max="1" step="0.05" value="{{system.placement.opacity}}"></label>
+        </div>
+    </fieldset>
+    <fieldset {{#unless editable}}disabled{{/unless}}>
+        <legend>{{#if isVisual}}Rendu animé{{else}}Lumière{{/if}}</legend>
+        <label class="checkbox"><input type="checkbox" name="system.light.enabled" {{#if system.light.enabled}}checked{{/if}}> {{#if isVisual}}Activer le rendu animé{{else}}Cet objet émet de la lumière{{/if}}</label>
+        <label class="checkbox"><input type="checkbox" name="system.light.initiallyOn" {{#if system.light.initiallyOn}}checked{{/if}}> Actif au moment du dépôt</label>
+        <div class="aa-scene-object-grid">
+            {{#unless isVisual}}
+                <label>Rayon tamisé<input type="number" name="system.light.dim" min="0" step="any" value="{{system.light.dim}}" required></label>
+                <label>Rayon lumineux<input type="number" name="system.light.bright" min="0" step="any" value="{{system.light.bright}}" required></label>
+            {{/unless}}
+            <label>Couleur<input type="color" name="system.light.color" value="{{system.light.color}}" required></label>
+            <label>Intensité de couleur<input type="range" name="system.light.alpha" min="0" max="1" step="0.05" value="{{system.light.alpha}}"></label>
+            <label>Luminosité<input type="range" name="system.light.luminosity" min="0" max="1" step="0.05" value="{{system.light.luminosity}}"></label>
+            <label>Animation<select name="system.light.animation">
+                {{#each animations}}<option value="{{key}}" {{#if (eq key ../system.light.animation)}}selected{{/if}}>{{label}}</option>{{/each}}
+            </select></label>
+            <label>Vitesse<input type="range" name="system.light.speed" min="0" max="10" step="1" value="{{system.light.speed}}"></label>
+            <label>Intensité de l’animation<input type="range" name="system.light.intensity" min="0" max="10" step="1" value="{{system.light.intensity}}"></label>
+        </div>
+        <label class="checkbox"><input type="checkbox" name="system.light.reverse" {{#if system.light.reverse}}checked{{/if}}> Inverser l’animation</label>
+        <label class="checkbox"><input type="checkbox" name="system.light.walls" {{#if system.light.walls}}checked{{/if}}> Limiter le rendu par les murs</label>
+        <p class="hint">Une luminosité à 0 conserve la couleur et l’animation sans rendre la zone plus lumineuse.</p>
+    </fieldset>
+    {{#if isInteractive}}
+        <fieldset {{#unless editable}}disabled{{/unless}}>
+            <legend>Actions des joueurs</legend>
+            <label class="checkbox"><input type="checkbox" name="system.interaction.movable" {{#if system.interaction.movable}}checked{{/if}}> Autoriser le déplacement et la rotation</label>
+            <label class="checkbox"><input type="checkbox" name="system.interaction.toggleLight" {{#if system.interaction.toggleLight}}checked{{/if}}> Autoriser l’allumage / extinction</label>
+            <label class="form-group stacked"><span class="label">Interactions</span><textarea name="system.interactions" rows="3">{{system.interactions}}</textarea></label>
+        </fieldset>
+    {{/if}}
     {{#if editable}}
         <footer class="form-footer">
             <button type="submit"><i class="fa-solid fa-save" aria-hidden="true"></i> Enregistrer</button>
+            {{#if canPlace}}<button type="button" data-action="placeSceneObject">Enregistrer et placer sur la scène</button>{{/if}}
         </footer>
     {{/if}}
 </section>

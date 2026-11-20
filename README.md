@@ -324,3 +324,39 @@ dans la configuration des rencontres sans qu’il soit réinitialisé au recharg
 
 > **Esprit de conception :** automatiser les calculs utiles et l'affichage,
 > jamais l'interprétation des actions, critiques, postures ou conséquences narratives.
+
+## Décors, objets interactifs et effets visuels
+
+Après la mise à jour, redémarrer le monde. Dans **Objets → Créer un objet** :
+
+- **Élément du Décor** : image ou vidéo, dimensions, rotation et élévation.
+- **Élément Interactif** : mêmes réglages, avec les autorisations de déplacement,
+  de rotation et d’allumage/extinction pour les joueurs.
+- **Effet Visuel** : zone circulaire avec rayon, couleur, animation native et,
+  si nécessaire, une image ou vidéo personnalisée.
+
+Le MJ glisse le modèle du répertoire ou d’un compendium sur la scène. Le bouton
+**Enregistrer et placer sur la scène** le dépose au centre de la vue.
+Chaque dépôt crée une copie indépendante : éteindre une torche, déplacer une chaise,
+modifier ou supprimer le modèle ne change pas les autres exemplaires.
+
+Pour une torche, activer **Cet objet émet de la lumière**, régler ses rayons et
+choisir une animation. Autoriser l’allumage/extinction dans **Actions des joueurs**.
+Pour une chaise ou une table, autoriser le déplacement et la rotation.
+En jeu, double-cliquer l’objet avec l’outil Jetons actif, ou ouvrir **Objets de scène**
+en bas du répertoire Objets. **Déplacer** demande de cliquer sur la destination ;
+Échap ou clic droit annule. Un MJ connecté traite les actions des joueurs.
+Un objet masqué ou placé sur un autre étage n’est pas proposé aux joueurs ;
+verrouiller la tuile interdit leurs interactions.
+
+Pour le gaz de Flaturgence, créer un **Effet Visuel** de rayon **3** sur une scène
+graduée en mètres : sa zone mesure **6 m de diamètre**. Choisir une couleur de gaz
+et l’animation de brouillard ; conserver **Luminosité = 0** pour ne pas éclairer
+la zone. Pour du feu ou une autre manifestation, changer la couleur et l’animation,
+ou utiliser un fichier vidéo. Les distances suivent toujours l’échelle de la scène.
+
+Le dépôt crée une tuile et, selon le modèle, une lumière et une région liées.
+Déplacer, redimensionner ou masquer la tuile met à jour ces éléments ; supprimer
+la tuile les supprime aussi. Le MJ peut utiliser le calque Tuiles pour ces opérations.
+Les effets visuels ne lancent pas automatiquement de jets et n’appliquent pas
+de conditions aux personnages ; la région sert ici à délimiter la zone.

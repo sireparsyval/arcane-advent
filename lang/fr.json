@@ -21,6 +21,7 @@
             "object": "Objet",
             "interactiveElement": "Élément Interactif",
             "sceneryElement": "Élément du Décor",
+            "visualEffect": "Effet Visuel",
             "container": "Contenant",
             "purse": "Bourse"
         }

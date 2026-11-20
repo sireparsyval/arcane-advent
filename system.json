@@ -58,7 +58,8 @@
             "trait": {},
             "glyph": {},
             "interactiveElement": {},
-            "sceneryElement": {}
+            "sceneryElement": {},
+            "visualEffect": {}
         }
     }
 }
