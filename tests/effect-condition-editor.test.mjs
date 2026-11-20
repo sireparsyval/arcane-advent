@@ -166,3 +166,24 @@ test("un Trait ou une Aptitude sans personnage conserve les références en atte
     assert.equal(writes[0]["system.effectRules"].second.amountFormula, "@abilities.strength.modifier");
     assert.equal(owner.system.effectRules.second.amountFormula, "");
 });
+
+test("les formules saisies sont prévisualisées et enregistrées sans modifier les valeurs du personnage", async () => {
+    const { owner, actor, writes } = await fixture();
+    actor.system.abilities = { dexterity: { modifier: 2 }, constitution: { modifier: 4 } };
+    const before = structuredClone(actor.system);
+    const dialog = await openCharacterEffectsEditor(owner, { actor });
+    assert.equal(owner.system.effectRules.second.amountFormula, "");
+    change(dialog, "second", { efield: "amount" }, "max(mod.dex, mod.con)");
+    click(dialog, { effectTab: "effects" });
+    assert.match(dialog.root.innerHTML, /Valeur actuelle : \+4/);
+    assert.match(dialog.root.innerHTML, /value="max\(mod.dex, mod.con\)"/);
+    await save(dialog);
+    assert.deepEqual(errors, []);
+    assert.equal(writes[0]["system.effectRules"].second.amountFormula, "max(mod.dex, mod.con)");
+    assert.deepEqual(actor.system, before);
+    const other = await openCharacterEffectsEditor(owner, { actor });
+    change(other, "second", { efield: "amount" }, "max(mod.dex,)");
+    await save(other);
+    assert.equal(writes.length, 1);
+    assert.ok(errors.length);
+});

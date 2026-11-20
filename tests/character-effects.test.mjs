@@ -169,3 +169,22 @@ test("numeric references feed statistics without feedback and rolls use the resu
     assert.equal(source.system.effectRules.strength.amount, 0);
     assert.equal(source.system.effectRules.strength.amountFormula, "@abilities.strength.modifier");
 });
+
+test("formula functions retain statistical baselines while roll bonuses use updated modifiers", () => {
+    const source = item("formules", "trait", {
+        dex: stat({ target: "dexterity", amount: 4 }),
+        strength: stat({ amountFormula: "max(mod.dex, mod.con)" }),
+        bonus: roll({ scope: "save", amountFormula: "max(mod.dex, mod.con)" })
+    });
+    const model = character([source]);
+    model.abilities.strength.value = 16;
+    model.abilities.dexterity.value = 14;
+    model.abilities.constitution.value = 16;
+    for (let i = 0; i < 3; i++) {
+        model.prepareDerivedData();
+        assert.equal(model.abilities.strength.effective, 19);
+        assert.equal(model.abilities.dexterity.effective, 18);
+        assert.equal(resolveRollEffects(activeCharacterEffects(model.parent), { type: "save" }).bonus, 4);
+    }
+    assert.equal(source.system.effectRules.strength.amountFormula, "max(mod.dex, mod.con)");
+});

@@ -21,7 +21,7 @@ function amountPreview(actor, rule) {
 
 function amountInput(actor, rule, label) {
     return `<label>${label}${input("amount", rule.amountFormula || rule.amount,
-        'type="text" required spellcheck="false" placeholder="2 ou @abilities.strength.modifier"')}
+        'type="text" required spellcheck="false" placeholder="2 ou max(mod.dex, mod.con)"')}
         <small data-amount-preview aria-live="polite">${escape(amountPreview(actor, rule))}</small></label>`;
 }
 
@@ -135,7 +135,7 @@ export async function openCharacterEffectsEditor(owner, { actor = owner.actor ??
                     <button type="button" data-remove-effect="${escape(id)}" title="Retirer cet effet">×</button></div>
                     ${rule.kind === "roll" ? rollRuleHTML(actor, rule) : statRuleHTML(actor, rule)}
                     ${ruleConditionsHTML(rule, draft.conditions)}</article>`).join("") || '<p class="hint">Aucun effet configuré.</p>'}
-                <p class="hint">Bonus / malus : nombre fixe ou référence à la fiche, par exemple @abilities.strength.value (score de Force), @abilities.strength.modifier (modificateur), ou -@abilities.strength.modifier pour un malus. Le préfixe @system. est aussi accepté. Pour un élément possédé : @items.ID.system.level, avec son identifiant réel.</p>
+                <p class="hint">Bonus / malus : nombre fixe ou référence à la fiche, par exemple @abilities.strength.value (score de Force), @abilities.strength.modifier (modificateur), ou -@abilities.strength.modifier pour un malus. Le préfixe @system. est aussi accepté. Formules : max(mod.dex, mod.con), min(mod.dex, mod.con), abs(...), floor(...), ceil(...) et round(...), avec +, −, *, / et des parenthèses. Raccourcis : mod.for, mod.dex, mod.con, mod.int, mod.sag, mod.cha. Les arguments sont séparés par des virgules ; les décimales utilisent un point dans les formules. Pour un élément possédé : @items.ID.system.level, avec son identifiant réel.</p>
                 <p class="hint">Un avantage et un désavantage s'annulent, même s'il y a plusieurs sources d'un côté. « Neutre » sur la fiche n'efface pas les effets permanents. Pour les formules d'aptitude autres que 1d20, seul le bonus fixe ciblant les jets d'aptitude s'applique ; la formule reste telle qu'elle a été écrite.</p>` : ""}
             ${tab === "activation" ? `<div class="aa-effect-grid"><label class="checkbox"><input data-source="enabled" type="checkbox" ${checked(draft.effectActivation.enabled)}>Activer les effets de cette source</label>
                 <label>Quand appliquer les effets ?<select data-source="mode">${options(activation, draft.effectActivation.mode)}</select></label>
