@@ -85,22 +85,23 @@ test("the tracker calls the combatant actor's live initiative check and records 
     assert.equal(await combat.rollInitiative("npc"), combat);
     assert.equal(calls.length, 1);
     assert.equal(calls[0].actor, synthetic);
-    assert.deepEqual(writes[0], { type: "Combatant", updates: [{ _id: "npc", initiative: 19 }], options: { turnEvents: false } });
+    assert.deepEqual(writes[0], { type: "Combatant", updates: [{ _id: "npc", initiative: 17 }], options: { turnEvents: false } });
     assert.equal(messages.length, 1);
-    assert.equal(messages[0].formula, "1d20 + 7");
+    assert.equal(messages[0].formula, "1d20 + 5");
     assert.match(messages[0].flavor, /Neutre/);
-    assert.match(messages[0].content, />19<\/h4>/);
+    assert.match(messages[0].content, />17<\/h4>/);
     assert.deepEqual(messages[0].speaker, { actor: synthetic.id, token: "token-npc", alias: "Token npc" });
     assert.equal(messages[0].flags["core.initiativeRoll"], true);
 });
 
-test("tracker initiative retains advantage, disadvantage, criticals and the minimum result from the sheet", async t => {
+test("tracker initiative uses raw totals including natural 1, natural 20, zero and negative results", async t => {
     for (const sample of [
-        { natural: 12, modifier: 2, mode: "advantage", formula: "2d20kh + 2", total: 14 },
-        { natural: 12, modifier: -3, mode: "disadvantage", formula: "2d20kl - 3", total: 9 },
-        { natural: 1, modifier: 8, mode: "normal", formula: "1d20 + 8", total: 1 },
-        { natural: 20, modifier: 8, mode: "normal", formula: "1d20 + 8", total: 20 },
-        { natural: 2, modifier: -8, mode: "normal", formula: "1d20 - 8", total: 1 }
+        { natural: 12, modifier: 2, mode: "advantage", formula: "1d20 + 2", total: 14 },
+        { natural: 12, modifier: -3, mode: "disadvantage", formula: "1d20 - 3", total: 9 },
+        { natural: 1, modifier: 8, mode: "normal", formula: "1d20 + 8", total: 9 },
+        { natural: 20, modifier: 8, mode: "normal", formula: "1d20 + 8", total: 28 },
+        { natural: 2, modifier: -8, mode: "normal", formula: "1d20 - 8", total: -6 },
+        { natural: 2, modifier: -2, mode: "normal", formula: "1d20 - 2", total: 0 }
     ]) await t.test(`${sample.natural} ${sample.mode} ${sample.modifier}`, async () => {
         const combat = encounter(combatant("pc", actor("character", sample)));
         natural = sample.natural;
@@ -108,6 +109,7 @@ test("tracker initiative retains advantage, disadvantage, criticals and the mini
         assert.equal(combat.combatants.get("pc").initiative, sample.total);
         assert.equal(messages[0].formula, sample.formula);
         assert.match(messages[0].content, new RegExp(`>${sample.total}</h4>`));
+        assert.doesNotMatch(messages[0].content, /aa-natural-(1|20)/);
     });
 });
 

@@ -227,12 +227,14 @@ export async function openCharacterEffectsManager(actor) {
         rows.push({ label: "Initiative", type: "initiative", ability: "dexterity" }, { label: "Garde", type: "guard", ability: "strength" });
         rows.push({ label: "Attaque (FOR)", type: "attack", ability: "strength" }, { label: "Attaque (DEX)", type: "attack", ability: "dexterity" }, { label: "Contre-la-Mort", type: "death" });
         for (const [key, label] of Object.entries(EFFECT_ABILITIES)) rows.push({ label: `Aptitude (${label})`, type: "aptitude", abilities: [key] });
-        root.innerHTML = `<div class="aa-effect-body"><p class="hint">Le mode manuel actuel de la fiche est pris en compte. Les sources opposées s'annulent : au moins un Avantage + au moins un Désavantage = Neutre.</p>
+        root.innerHTML = `<div class="aa-effect-body"><p class="hint">Le mode manuel actuel de la fiche est pris en compte. Les sources opposées s'annulent : au moins un Avantage + au moins un Désavantage = Neutre. L’initiative utilise toujours 1d20 + le score affiché sur la fiche.</p>
             <button type="button" data-manage-source="actor">Modifier les effets permanents du personnage</button>
             <details open><summary>Sources et activation</summary>${sources.map(({ source, active, rules, readOnly }) => `<article class="aa-effect-card"><div class="aa-effect-card-heading"><strong>${escape(source.name)}</strong><span>${active ? "● Actif" : "○ Inactif"}</span>${readOnly ? '<span class="hint">Gérée par les boutons de stance</span>' : `<button type="button" data-manage-source="${escape(source.id)}">Modifier</button>`}</div>
                 ${rules.map(rule => `<p class="hint">${rule.enabled === false ? "Désactivé — " : ""}${escape(effectRuleSummary(rule, { actor: summaryActor(actor) }))}</p>`).join("") || '<p class="hint">Aucun effet configuré.</p>'}</article>`).join("")}</details>
             <details open><summary>Résultat actuel par jet</summary><table class="aa-effect-roll-summary"><thead><tr><th>Jet</th><th>Avantage</th><th>Désavantage</th><th>Résultat</th><th>Bonus</th></tr></thead><tbody>${rows.map(row => {
-                const state = resolveRollEffects(rules, row, actor.system.rollMode);
+                const state = row.type === "initiative"
+                    ? resolveRollEffects([], row, "normal")
+                    : resolveRollEffects(rules, row, actor.system.rollMode);
                 return `<tr><td>${escape(row.label)}</td><td>${state.advantage ? "Oui" : "—"}</td><td>${state.disadvantage ? "Oui" : "—"}</td><td>${{ normal: "Neutre", advantage: "Avantage", disadvantage: "Désavantage" }[state.mode]}</td><td>${state.bonus > 0 ? "+" : ""}${state.bonus}</td></tr>`;
             }).join("")}</tbody></table></details></div>`;
         root.onclick = async event => {

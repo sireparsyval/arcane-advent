@@ -205,7 +205,10 @@ export class ArcaneActor extends Actor {
     }
 
     async _rollD20(modifier, mode, flavor, context = {}, { createMessage = true, messageMode, messageOptions = {} } = {}) {
-        const effects = resolveRollEffects(activeCharacterEffects(this), context, mode ?? this.system.rollMode);
+        const isInitiative = context.type === "initiative";
+        const effects = isInitiative
+            ? resolveRollEffects([], context, "normal")
+            : resolveRollEffects(activeCharacterEffects(this), context, mode ?? this.system.rollMode);
         mode = effects.mode;
         modifier += effects.bonus;
         if (effects.sources.length) {
@@ -248,23 +251,11 @@ export class ArcaneActor extends Actor {
         const natural = roll.dice[0].values[0];
 
 
-        let finalResult;
-
-
-        // 1 et 20 naturels :
-        // les modificateurs sont ignorés.
-        if (natural === 1 || natural === 20) {
-            finalResult = natural;
-        }
-
-        // Sinon : d20 + modificateur,
-        // avec un minimum absolu de 1.
-        else {
-            finalResult = Math.max(
-                1,
-                natural + modifier
-            );
-        }
+        // L'initiative garde la somme du dé et de son modificateur, même à zéro ou négative.
+        // Les autres jets conservent leurs critiques naturels et leur minimum de 1.
+        const finalResult = isInitiative
+            ? natural + modifier
+            : natural === 1 || natural === 20 ? natural : Math.max(1, natural + modifier);
 
 
         // On prépare le message Foundry sans encore le créer.
@@ -300,7 +291,7 @@ export class ArcaneActor extends Actor {
 
         // On ajoute une classe uniquement si
         // le d20 RETENU est naturellement 20.
-        if (natural === 20) {
+        if (!isInitiative && natural === 20) {
             content = content.replace(
                 'class="dice-total"',
                 'class="dice-total aa-natural-20"'
@@ -308,7 +299,7 @@ export class ArcaneActor extends Actor {
         }
 
         // Même chose pour un 1 naturel.
-        else if (natural === 1) {
+        else if (!isInitiative && natural === 1) {
             content = content.replace(
                 'class="dice-total"',
                 'class="dice-total aa-natural-1"'

@@ -263,3 +263,13 @@ test("le récapitulatif montre les avantages et désavantages de la stance puis 
     await dialog.close();
     assert.equal(actorHooks.size, beforeHooks);
 });
+
+test("le récapitulatif d'initiative reste neutre sans bonus de jet malgré le mode manuel et les effets", async () => {
+    const actor = { uuid: "Actor.hero", name: "Héros", isOwner: true, items: [],
+        system: { rollMode: "advantage", effectRules: {
+            alert: { ...newEffectRule("roll"), scope: "initiative", amount: 4, advantage: true }
+        } } };
+    const dialog = await openCharacterEffectsManager(actor);
+    assert.match(dialog.root.innerHTML, /<td>Initiative<\/td><td>—<\/td><td>—<\/td><td>Neutre<\/td><td>0<\/td>/);
+    await dialog.close();
+});

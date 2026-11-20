@@ -92,3 +92,33 @@ test("token HUD resource edits clamp to the effective maximum without changing t
     await actor.modifyTokenAttribute("consciousness", 5, true, true);
     assert.equal(writes.length, 0);
 });
+
+test("sheet initiative keeps modifiers on natural 1 and 20 and allows zero or negative totals", async () => {
+    const actor = fixture({});
+    for (const [die, modifier, total] of [[1, 4, 5], [20, 4, 24], [1, -1, 0], [3, -7, -4]]) {
+        natural = die;
+        actor.system.trackers.initiative = modifier;
+        const result = await actor.rollInitiativeCheck();
+        assert.equal(result.total, total);
+        assert.equal(result.modifier, modifier);
+        assert.match(result.chatData.content, new RegExp(`>${total}</h4>`));
+        assert.doesNotMatch(result.chatData.content, /aa-natural-(1|20)/);
+    }
+});
+
+test("initiative is strictly one d20 plus the displayed score, without mode or additional roll effects", async () => {
+    const actor = fixture({
+        all: rule({ scope: "all", advantage: true, amount: 10 }),
+        check: rule({ scope: "ability", ability: "dexterity", amount: 5 }),
+        initiative: rule({ scope: "initiative", disadvantage: true, amount: 7 })
+    });
+    actor.system.rollMode = "advantage";
+    actor.system.trackers.initiative = -2;
+    natural = 1;
+    const result = await actor.rollInitiativeCheck("disadvantage");
+    assert.equal(result.roll.formula, "1d20 - 2");
+    assert.equal(result.mode, "normal");
+    assert.equal(result.modifier, -2);
+    assert.equal(result.total, -1);
+    assert.doesNotMatch(result.chatData.flavor, /Effets :/);
+});
