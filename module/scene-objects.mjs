@@ -1,3 +1,5 @@
+import { sceneMist, sceneLightEnabled } from "./scene-visual-settings.mjs";
+
 export const SCENE_OBJECT_TYPES = Object.freeze(["sceneryElement", "interactiveElement", "visualEffect"]);
 export const SCENE_OBJECT_QUERY = "arcane-advent.sceneObjects";
 const SCOPE = "arcane-advent";
@@ -36,12 +38,14 @@ export function sceneObjectPlan(item, scene, position) {
     if (!SCENE_OBJECT_TYPES.includes(item?.type)) throw Error("Ce modèle ne peut pas être placé sur une scène.");
     const system = item.system.toObject ? item.system.toObject() : copy(item.system);
     const { placement, light, interaction } = system;
+    const mist = sceneMist({ ...system, kind: item.type });
+    light.enabled = sceneLightEnabled({ ...system, kind: item.type });
     const scale = sceneScale(scene);
     const visual = item.type === "visualEffect";
     const width = (visual ? 2 * placement.radius : placement.width) * scale;
     const height = (visual ? 2 * placement.radius : placement.height) * scale;
     if (![width, height].every(value => Number.isFinite(value) && value > 0)) throw Error("Les dimensions sont invalides.");
-    if (!/^#[0-9a-f]{6}$/i.test(light.color)) throw Error("La couleur du modèle est invalide.");
+    if (!/^#[0-9a-f]{6}$/i.test(light.color) || !/^#[0-9a-f]{6}$/i.test(mist.color)) throw Error("La couleur du modèle est invalide.");
     const point = boundedPosition(scene, position);
     return {
         name: item.name, ...point, width: Math.max(1, Math.round(width)), height: Math.max(1, Math.round(height)),
@@ -49,7 +53,7 @@ export function sceneObjectPlan(item, scene, position) {
         alpha: placement.opacity, rotation: placement.rotation, elevation: placement.elevation,
         flags: { [SCOPE]: { sceneObject: {
             kind: item.type, sourceUuid: item.uuid, sourceImage: item.img, name: item.name,
-            description: system.interactions || system.description || "", placement, light,
+            description: system.interactions || system.description || "", placement, light, mist,
             movable: item.type === "interactiveElement" && interaction.movable,
             toggleLight: item.type === "interactiveElement" && interaction.toggleLight,
             active: light.initiallyOn, showBoundary: system.showBoundary
@@ -73,21 +77,25 @@ export function sceneObjectChildData(tile) {
     const visual = model.kind === "visualEffect";
     const radius = visual ? Math.max(tile.width, tile.height) / 2 / scale : null;
     const flags = { [SCOPE]: { sceneObjectParent: tile.id } };
-    const light = model.light.enabled ? {
-        name: model.name + (visual ? " — Animation" : " — Lumière"),
+    const mist = sceneMist(model);
+    const light = sceneLightEnabled(model) ? {
+        name: model.name + (model.light.negative ? " — Obscurité" : " — Lumière"),
         x: tile.x, y: tile.y, elevation: tile.elevation, walls: model.light.walls, vision: false,
         hidden: tile.hidden || !model.active, flags, levels: [...(tile.levels ?? [])],
         config: {
+            negative: Boolean(model.light.negative), priority: model.light.priority ?? 0,
             dim: visual ? radius : model.light.dim, bright: visual ? 0 : model.light.bright,
             color: model.light.color, alpha: model.light.alpha, luminosity: model.light.luminosity,
             animation: {
-                type: Object.hasOwn(CONFIG.Canvas.lightAnimations, model.light.animation) ? model.light.animation : "",
-                speed: model.light.speed, intensity: model.light.intensity, reverse: model.light.reverse
+                type: Object.hasOwn((model.light.negative ? CONFIG.Canvas.darknessAnimations : CONFIG.Canvas.lightAnimations) ?? {},
+                    model.light.animation) ? model.light.animation : null,
+                speed: model.light.speed, intensity: Math.max(1, model.light.intensity), reverse: model.light.reverse
             }
         }
     } : null;
     const region = visual ? {
-        name: model.name, color: model.light.color, hidden: Boolean(tile.hidden), locked: true,
+        name: model.name, color: mist.enabled ? mist.color : model.light.color,
+        hidden: Boolean(tile.hidden || !model.active), locked: true,
         shapes: [{ type: "circle", x: tile.x, y: tile.y, radius: radius * scale, gridBased: false }],
         visibility: model.showBoundary ? CONST.REGION_VISIBILITY.ALWAYS : CONST.REGION_VISIBILITY.LAYER_UNLOCKED,
         highlightMode: "shapes", displayMeasurements: model.showBoundary, flags,
@@ -102,7 +110,10 @@ async function synchronize(tile) {
     if (!data) return;
     const children = sceneObjectChildren(tile);
     for (const [type, list, source] of [["AmbientLight", children.lights, data.light], ["Region", children.regions, data.region]]) {
-        if (!source) continue;
+        if (!source) {
+            if (list.length) await tile.parent.deleteEmbeddedDocuments(type, list.map(child => child.id), { sceneObjectSync: true });
+            continue;
+        }
         if (list.length) {
             await tile.parent.updateEmbeddedDocuments(type, list.map(child => ({ _id: child.id, ...copy(source) })), { sceneObjectSync: true });
         } else {
@@ -145,11 +156,12 @@ export function sceneObjectAccess(tile, user = game.user) {
     if (!model) return { visible: false, movable: false, toggleLight: false };
     const inLevel = !tile.levels?.size || tile.levels.has(user.viewedLevel);
     const visible = user.isGM || (!tile.hidden && inLevel && tile.parent.id === user.viewedScene
-        && (model.movable || (model.light.enabled && model.toggleLight)));
+        && (model.movable || (sceneLightEnabled(model) && model.toggleLight)));
     return {
         visible,
         movable: visible && (user.isGM || model.movable),
-        toggleLight: visible && model.light.enabled && (user.isGM || model.toggleLight)
+        toggleLight: visible && (sceneLightEnabled(model) || (user.isGM && sceneMist(model).enabled))
+            && (user.isGM || model.toggleLight)
     };
 }
 

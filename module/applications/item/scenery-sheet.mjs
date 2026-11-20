@@ -3,6 +3,12 @@ import { placeSceneObject } from "../../scene-objects.mjs";
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
+function animationsFor(negative) {
+    const choices = negative ? CONFIG.Canvas.darknessAnimations : CONFIG.Canvas.lightAnimations;
+    return [{ key: "", label: "Aucune" }, ...Object.entries(choices ?? {})
+        .map(([key, animation]) => ({ key, label: game.i18n.localize(animation.label) }))];
+}
+
 export class SceneryElementSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     static DEFAULT_OPTIONS = {
         classes: ["arcane-advent", "aa-scenery-sheet"],
@@ -16,8 +22,7 @@ export class SceneryElementSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     };
 
     async _prepareContext(options) {
-        const animations = [{ key: "", label: "Aucune" }, ...Object.entries(CONFIG.Canvas.lightAnimations)
-            .map(([key, animation]) => ({ key, label: game.i18n.localize(animation.label) }))];
+        const animations = animationsFor(this.document.system.light.negative);
         return {
             ...await super._prepareContext(options), system: this.document.system,
             isInteractive: this.document.type === "interactiveElement",
@@ -27,12 +32,25 @@ export class SceneryElementSheet extends HandlebarsApplicationMixin(ItemSheetV2)
         };
     }
 
+    async _onRender(context, options) {
+        await super._onRender(context, options);
+        const negative = this.element.querySelector('[name="system.light.negative"]');
+        negative?.addEventListener("change", () => {
+            const select = this.element.querySelector('[name="system.light.animation"]');
+            const previous = select.value;
+            const choices = animationsFor(negative.checked);
+            select.replaceChildren(...choices.map(({ key, label }) => new Option(label, key)));
+            select.value = choices.some(choice => choice.key === previous) ? previous : "";
+        });
+    }
+
     _processFormData(event, form, formData) {
         const data = super._processFormData(event, form, formData);
         data.name = data.name.trim();
         if (!data.name) throw new Error("Donnez un nom à cet élément.");
-        const color = data.system?.light?.color;
-        if (color && !/^#[0-9a-f]{6}$/i.test(color)) throw new Error("Utilisez une couleur au format #RRGGBB.");
+        for (const color of [data.system?.light?.color, data.system?.mist?.color]) {
+            if (color && !/^#[0-9a-f]{6}$/i.test(color)) throw new Error("Utilisez une couleur au format #RRGGBB.");
+        }
         return data;
     }
 

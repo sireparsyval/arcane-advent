@@ -10,7 +10,7 @@
         <label class="form-group"><span class="label">Image / vidéo sur la scène</span><span class="form-fields">
             <file-picker name="system.placement.image" type="imagevideo" value="{{system.placement.image}}"></file-picker>
         </span></label>
-        <p class="hint">{{#if isVisual}}Facultatif : l’animation peut suffire à représenter cet effet.{{else}}Si ce champ est vide, l’icône du répertoire sera utilisée.{{/if}}</p>
+        <p class="hint">{{#if isVisual}}Facultatif : la brume peut suffire à représenter cet effet.{{else}}Si ce champ est vide, l’icône du répertoire sera utilisée.{{/if}}</p>
         <label class="form-group stacked"><span class="label">Description</span>
             <textarea name="system.description" rows="3">{{system.description}}</textarea>
         </label>
@@ -18,6 +18,7 @@
     <fieldset {{#unless editable}}disabled{{/unless}}>
         <legend>Placement</legend>
         <p class="hint">Les dimensions utilisent l’unité de distance de la scène : des mètres si la scène est graduée en mètres.</p>
+        <label class="checkbox"><input type="checkbox" name="system.light.initiallyOn" {{#if system.light.initiallyOn}}checked{{/if}}> Actif au moment du dépôt</label>
         <div class="aa-scene-object-grid">
             {{#if isVisual}}
                 <label>Rayon<input type="number" name="system.placement.radius" min="0.1" step="any" value="{{system.placement.radius}}" required></label>
@@ -31,11 +32,27 @@
             <label>Opacité<input type="range" name="system.placement.opacity" min="0" max="1" step="0.05" value="{{system.placement.opacity}}"></label>
         </div>
     </fieldset>
+    {{#if isVisual}}
+        <fieldset {{#unless editable}}disabled{{/unless}}>
+            <legend>Brume</legend>
+            <label class="checkbox"><input type="checkbox" name="system.mist.enabled" {{#if system.mist.enabled}}checked{{/if}}> Afficher une brume animée</label>
+            <div class="aa-scene-object-grid">
+                <label>Couleur de la brume<input type="color" name="system.mist.color" value="{{system.mist.color}}" required></label>
+                <label>Densité<input type="range" name="system.mist.density" min="0" max="1" step="0.05" value="{{system.mist.density}}"></label>
+                <label>Vitesse du mouvement<input type="range" name="system.mist.speed" min="0" max="5" step="0.1" value="{{system.mist.speed}}"></label>
+                <label>Diffusion des bords<input type="range" name="system.mist.softness" min="0.01" max="1" step="0.01" value="{{system.mist.softness}}"></label>
+                <label>Taille des volutes<input type="range" name="system.mist.scale" min="0.25" max="4" step="0.05" value="{{system.mist.scale}}"></label>
+            </div>
+            <p class="hint">Une nappe de brume recouvre la zone sans émettre de lumière. Sa densité masque visuellement le décor ; pour bloquer la vision, ajoutez une source d’obscurité ci-dessous.</p>
+        </fieldset>
+    {{/if}}
     <fieldset {{#unless editable}}disabled{{/unless}}>
-        <legend>{{#if isVisual}}Rendu animé{{else}}Lumière{{/if}}</legend>
-        <label class="checkbox"><input type="checkbox" name="system.light.enabled" {{#if system.light.enabled}}checked{{/if}}> {{#if isVisual}}Activer le rendu animé{{else}}Cet objet émet de la lumière{{/if}}</label>
-        <label class="checkbox"><input type="checkbox" name="system.light.initiallyOn" {{#if system.light.initiallyOn}}checked{{/if}}> Actif au moment du dépôt</label>
+        <legend>Lumière / Zone d’ombre</legend>
+        <label class="checkbox"><input type="checkbox" name="system.light.enabled" {{#if system.light.enabled}}checked{{/if}}> {{#if isVisual}}Ajouter une source de lumière ou d’obscurité{{else}}Cet objet possède une source de lumière ou d’obscurité{{/if}}</label>
+        <label class="checkbox"><input type="checkbox" name="system.light.negative" {{#if system.light.negative}}checked{{/if}}> Source d’obscurité (bloque lumière et vision)</label>
+        <p class="hint">Les animations proposées suivent le type de source choisi. La priorité départage les sources qui se chevauchent.</p>
         <div class="aa-scene-object-grid">
+            <label>Priorité de la source<input type="number" name="system.light.priority" min="0" step="1" value="{{system.light.priority}}" required></label>
             {{#unless isVisual}}
                 <label>Rayon tamisé<input type="number" name="system.light.dim" min="0" step="any" value="{{system.light.dim}}" required></label>
                 <label>Rayon lumineux<input type="number" name="system.light.bright" min="0" step="any" value="{{system.light.bright}}" required></label>
@@ -47,7 +64,7 @@
                 {{#each animations}}<option value="{{key}}" {{#if (eq key ../system.light.animation)}}selected{{/if}}>{{label}}</option>{{/each}}
             </select></label>
             <label>Vitesse<input type="range" name="system.light.speed" min="0" max="10" step="1" value="{{system.light.speed}}"></label>
-            <label>Intensité de l’animation<input type="range" name="system.light.intensity" min="0" max="10" step="1" value="{{system.light.intensity}}"></label>
+            <label>Intensité de l’animation<input type="range" name="system.light.intensity" min="1" max="10" step="1" value="{{system.light.intensity}}"></label>
         </div>
         <label class="checkbox"><input type="checkbox" name="system.light.reverse" {{#if system.light.reverse}}checked{{/if}}> Inverser l’animation</label>
         <label class="checkbox"><input type="checkbox" name="system.light.walls" {{#if system.light.walls}}checked{{/if}}> Limiter le rendu par les murs</label>

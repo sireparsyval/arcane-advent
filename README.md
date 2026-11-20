@@ -332,8 +332,9 @@ Après la mise à jour, redémarrer le monde. Dans **Objets → Créer un objet*
 - **Élément du Décor** : image ou vidéo, dimensions, rotation et élévation.
 - **Élément Interactif** : mêmes réglages, avec les autorisations de déplacement,
   de rotation et d’allumage/extinction pour les joueurs.
-- **Effet Visuel** : zone circulaire avec rayon, couleur, animation native et,
-  si nécessaire, une image ou vidéo personnalisée.
+- **Effet Visuel** : zone circulaire de brume animée (couleur, densité, mouvement,
+  bords diffus et taille des volutes), avec image ou vidéo facultative. Une source
+  de lumière ou d’obscurité peut être ajoutée séparément.
 
 Le MJ glisse le modèle du répertoire ou d’un compendium sur la scène. Le bouton
 **Enregistrer et placer sur la scène** le dépose au centre de la vue.
@@ -350,10 +351,19 @@ Un objet masqué ou placé sur un autre étage n’est pas proposé aux joueurs 
 verrouiller la tuile interdit leurs interactions.
 
 Pour le gaz de Flaturgence, créer un **Effet Visuel** de rayon **3** sur une scène
-graduée en mètres : sa zone mesure **6 m de diamètre**. Choisir une couleur de gaz
-et l’animation de brouillard ; conserver **Luminosité = 0** pour ne pas éclairer
-la zone. Pour du feu ou une autre manifestation, changer la couleur et l’animation,
-ou utiliser un fichier vidéo. Les distances suivent toujours l’échelle de la scène.
+graduée en mètres : sa zone mesure **6 m de diamètre**. Dans **Brume**, choisir
+sa couleur, sa densité et sa vitesse. La brume est une nappe visuelle indépendante
+de l’éclairage : elle n’émet pas de lumière. La densité recouvre visuellement
+le décor, sans changer à elle seule les règles de vision des jetons.
+Les anciens modèles et exemplaires utilisant l’animation lumineuse de brouillard
+sont repris comme brume ; les animations de feu sont conservées.
+
+Pour une zone d’ombre qui bloque lumière et vision, activer la source dans
+**Lumière / Zone d’ombre** puis cocher **Source d’obscurité**. Sa priorité départage
+les sources qui se chevauchent. Les animations proposées correspondent au type de
+source choisi. Brume et obscurité peuvent être utilisées ensemble ou séparément.
+Pour du feu, désactiver la brume et utiliser une vidéo ou une animation lumineuse.
+Les distances suivent toujours l’échelle de la scène.
 
 Le dépôt crée une tuile et, selon le modèle, une lumière et une région liées.
 Déplacer, redimensionner ou masquer la tuile met à jour ces éléments ; supprimer

@@ -71,7 +71,7 @@ function model(type = "visualEffect", overrides = {}) {
             interaction: { movable: false, toggleLight: true },
             light: { enabled: true, initiallyOn: true, dim: 4, bright: 2, color: "#84952f",
                 alpha: 0.45, luminosity: 0, animation: "fog", speed: 2, intensity: 5, reverse: false, walls: true },
-            showBoundary: false, ...overrides
+            mist: { enabled: false }, showBoundary: false, ...overrides
         }
     };
 }

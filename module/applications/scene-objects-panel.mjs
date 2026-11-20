@@ -1,3 +1,4 @@
+import { sceneMist, sceneLightEnabled } from "../scene-visual-settings.mjs";
 import { chooseSceneObjectPosition, requestSceneObjectAction, sceneObject, sceneObjectAccess } from "../scene-objects.mjs";
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
 const escape = value => foundry.utils.escapeHTML(String(value ?? ""));
@@ -13,7 +14,8 @@ export async function openSceneObjectInteraction(tile) {
         catch (error) { ui.notifications.error(error.message); }
     };
     if (access.toggleLight && !locked) buttons.push({
-        action: "light", label: model.active ? "Éteindre" : "Allumer",
+        action: "light", label: model.kind === "visualEffect"
+            ? (model.active ? "Désactiver" : "Activer") : (model.active ? "Éteindre" : "Allumer"),
         callback: () => run("light", { active: !model.active })
     });
     if (access.movable && !locked) {
@@ -65,7 +67,8 @@ export class SceneObjectsPanel extends HandlebarsApplicationMixin(ApplicationV2)
                 return { id: tile.id, name: model.name, img: model.sourceImage,
                     type: game.i18n.localize("TYPES.Item." + model.kind),
                     status: tile.hidden ? "Masqué" : tile.locked ? "Verrouillé"
-                        : model.light.enabled ? (model.active ? "Allumé" : "Éteint") : "" };
+                        : sceneMist(model).enabled ? (model.active ? "Brume active" : "Brume inactive")
+                        : sceneLightEnabled(model) ? (model.active ? "Allumé" : "Éteint") : "" };
             });
         return { ...await super._prepareContext(options), objects, isGM: game.user.isGM, sceneName: canvas.scene?.name };
     }

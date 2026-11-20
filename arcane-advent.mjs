@@ -31,6 +31,7 @@ import { GlyphSheet } from "./module/applications/item/glyph-sheet.mjs";
 import { SceneryElementData, InteractiveElementData, VisualEffectData } from "./module/data/scenery-data.mjs";
 import { SceneryElementSheet } from "./module/applications/item/scenery-sheet.mjs";
 import { registerSceneObjects } from "./module/scene-objects.mjs";
+import { registerSceneMist } from "./module/scene-mist.mjs";
 import { SceneObjectsPanel, openSceneObjectInteraction } from "./module/applications/scene-objects-panel.mjs";
 import { registerGlyphCatalog } from "./module/applications/glyph-catalog.mjs";
 import { registerTokenBars } from "./module/token-bars.mjs";
@@ -46,6 +47,7 @@ Hooks.once("init", () => {
     registerStorageDirectory();
     game.arcaneAdvent.openSceneObjects = () => new SceneObjectsPanel().render({ force: true });
     registerSceneObjects({ openPanel: game.arcaneAdvent.openSceneObjects, openInteraction: openSceneObjectInteraction });
+    registerSceneMist();
     registerArcaneHotbar();
     registerArcaneText();
     registerGlyphCatalog();
