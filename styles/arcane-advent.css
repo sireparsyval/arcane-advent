@@ -1617,14 +1617,13 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-trait-actions button,
 .aa-trait-link-row button,
 .aa-trait-links-heading button { width: auto; min-width: 0; }
-.aa-trait-config:not([hidden]) {
+.aa-trait-config {
     display: grid;
     gap: 8px;
     padding: 8px;
     border: 1px solid var(--aa-border);
     border-radius: 5px;
 }
-.aa-trait-requirements-editor,
 .aa-aptitude-requirements-editor {
     display: grid;
     gap: 4px;
@@ -1657,6 +1656,13 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-trait-row details { min-width: 0; }
 .aa-trait-row details summary { cursor: pointer; padding-block: 4px; }
 .aa-trait-row details p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.aa-trait-quick-view { display: flex; flex-wrap: wrap; align-items: start; gap: 6px; min-width: 0; }
+.aa-trait-quick-view > details { flex: 1 1 170px; padding: 4px 7px; border: 1px solid var(--aa-border); border-radius: 4px; }
+.aa-trait-quick-view summary { font-size: .85em; }
+.aa-trait-summary-list { display: grid; gap: 7px; padding: 0; margin: 6px 0; list-style: none; }
+.aa-trait-summary-list li { display: grid; gap: 3px; overflow-wrap: anywhere; font-size: .85em; }
+.aa-trait-summary-list small { opacity: .8; }
+.aa-trait-quick-view p { font-size: .85em; margin: 6px 0; }
 .aa-requirements-note {
     padding: 5px 7px;
     border-left: 2px solid var(--aa-accent);
