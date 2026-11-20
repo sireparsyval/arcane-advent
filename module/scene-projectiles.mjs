@@ -1,0 +1,126 @@
+const SCOPE = "arcane-advent";
+const modelFor = tile => tile?.getFlag?.(SCOPE, "sceneObject") ?? tile?.flags?.[SCOPE]?.sceneObject;
+export const sceneClock = () => globalThis.game?.time?.serverTime ?? Date.now();
+
+export function projectileFrame(flight, now = sceneClock()) {
+    const finitePoint = point => point && Number.isFinite(point.x) && Number.isFinite(point.y);
+    if (!flight || !flight.id || !finitePoint(flight.from) || !finitePoint(flight.to)
+        || !Number.isFinite(flight.startedAt) || !Number.isFinite(flight.duration)
+        || flight.duration < 100 || flight.duration > 10000) return null;
+    if (now < flight.startedAt - 1000) return null;
+    const progress = Math.max(0, Math.min(1, (now - flight.startedAt) / flight.duration));
+    return {
+        x: flight.from.x + (flight.to.x - flight.from.x) * progress,
+        y: flight.from.y + (flight.to.y - flight.from.y) * progress,
+        progress, done: progress >= 1
+    };
+}
+
+export function sceneObjectFlight(tile) {
+    const model = modelFor(tile), flight = model?.flight;
+    // A regular move invalidates a previous trajectory even when imported flags remain.
+    return model?.kind === "visualEffect" && flight?.to?.x === tile.x && flight?.to?.y === tile.y ? flight : null;
+}
+
+export function sceneObjectPosition(tile, now = sceneClock()) {
+    const frame = projectileFrame(sceneObjectFlight(tile), now);
+    return frame ? { x: frame.x, y: frame.y } : { x: tile.x, y: tile.y };
+}
+
+export function registerSceneProjectiles() {
+    const running = new Map();
+    const related = (document, tile) => document.getFlag?.(SCOPE, "sceneObjectParent") === tile.id
+        || document.flags?.[SCOPE]?.sceneObjectParent === tile.id;
+    function paint(tile, point) {
+        const object = tile.object;
+        const display = object?.mesh ?? object?.bg;
+        if (display && !display.destroyed) display.position.set(point.x, point.y);
+        if (object?.controls && !object.destroyed && !object.controls.destroyed) {
+            object.controls.shape.updateSource({ x: point.x, y: point.y });
+            object.controls.refresh();
+        }
+        Hooks.callAll("arcaneAdventSceneObjectPosition", tile, point);
+    }
+    function forget(tile, flight) {
+        if (!flight || !game.users?.activeGM?.isSelf || !tile.parent.tiles.has(tile.id)
+            || modelFor(tile)?.flight?.id !== flight.id) return;
+        tile.update({ "flags.arcane-advent.sceneObject.flight": null }, { sceneObjectSync: true })
+            .catch(error => ui.notifications.error(error.message));
+    }
+    function start(tile) {
+        const key = tile.parent.id + "." + tile.id;
+        const flight = sceneObjectFlight(tile), frame = projectileFrame(flight);
+        const previous = running.get(key);
+        if (previous?.id === flight?.id) return;
+        previous?.stop();
+        if (!frame || frame.done) { forget(tile, flight); return; }
+        if (!canvas.ready || tile.parent.id !== canvas.scene?.id
+            || (tile.levels?.size && !tile.levels.has(canvas.level?.id)) || tile.hidden) return;
+        const ticker = canvas.app.ticker, lights = new Map(), regions = new Set();
+        let stopped = false, lastLight = -Infinity;
+        const state = { id: flight.id, stop };
+        function stop(completed = false) {
+            if (stopped) return;
+            stopped = true;
+            ticker.remove(tick);
+            if (running.get(key) === state) running.delete(key);
+            paint(tile, { x: tile.x, y: tile.y });
+            for (const [object, original] of lights) {
+                if (object._getLightSourceData === original.wrapper) {
+                    if (original.own) object._getLightSourceData = original.method;
+                    else delete object._getLightSourceData;
+                }
+                if (!object.destroyed) object.initializeLightSource();
+            }
+            for (const object of regions) if (!object.destroyed) object.position.set(0, 0);
+            if (completed) forget(tile, flight);
+        }
+        function tick() {
+            if (stopped) return;
+            if (!canvas.ready || canvas.scene?.id !== tile.parent.id || tile.hidden
+                || !tile.parent.tiles.has(tile.id) || sceneObjectFlight(tile)?.id !== flight.id) return stop();
+            const point = projectileFrame(flight);
+            if (!point) return stop();
+            paint(tile, point);
+            // Regions are purely visual boundaries here; no behavior is run along the trajectory.
+            for (const region of tile.parent.regions ?? []) {
+                const object = region.object, origin = region.shapes?.[0];
+                if (!related(region, tile) || !object || !origin) continue;
+                regions.add(object);
+                object.position.set(point.x - origin.x, point.y - origin.y);
+            }
+            const now = sceneClock();
+            if (now - lastLight >= 33 || point.done) {
+                lastLight = now;
+                for (const light of tile.parent.lights ?? []) {
+                    const object = light.object;
+                    if (!related(light, tile) || !object || object.destroyed) continue;
+                    if (!lights.has(object)) {
+                        const original = { own: Object.hasOwn(object, "_getLightSourceData"), method: object._getLightSourceData };
+                        // Keep the persisted document at B; native lighting reads the current visual position.
+                        original.wrapper = function () {
+                            return { ...original.method.call(this), ...sceneObjectPosition(tile) };
+                        };
+                        object._getLightSourceData = original.wrapper;
+                        lights.set(object, original);
+                    }
+                    object.initializeLightSource();
+                }
+            }
+            if (point.done) stop(true);
+        }
+        running.set(key, state);
+        // Apply motion after placeable render flags, before primary geometry and perception.
+        ticker.add(tick, undefined, (PIXI.UPDATE_PRIORITY.INTERFACE ?? (PIXI.UPDATE_PRIORITY.HIGH ?? 50) - 3) - 1);
+        tick();
+    }
+    function clear() { for (const state of [...running.values()]) state.stop(); }
+    Hooks.on("canvasReady", () => { clear(); for (const tile of canvas.scene.tiles) start(tile); });
+    Hooks.on("canvasTearDown", clear);
+    Hooks.on("updateTile", tile => {
+        const flight = sceneObjectFlight(tile), state = running.get(tile.parent.id + "." + tile.id);
+        if (state && (state.id !== flight?.id || tile.hidden)) state.stop();
+        start(tile);
+    });
+    Hooks.on("deleteTile", tile => running.get(tile.parent.id + "." + tile.id)?.stop());
+}

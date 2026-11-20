@@ -9,6 +9,7 @@ export async function openSceneObjectInteraction(tile) {
     if (!access.visible) return;
     const locked = tile.locked && !game.user.isGM;
     const buttons = [];
+    const canProject = game.user.isGM && model.kind === "visualEffect";
     const run = async (action, values) => {
         try { await requestSceneObjectAction(tile, action, values); }
         catch (error) { ui.notifications.error(error.message); }
@@ -27,11 +28,35 @@ export async function openSceneObjectInteraction(tile) {
         buttons.push({ action: "rotate", label: "Tourner de 90°",
             callback: () => run("rotate", { rotation: tile.rotation + 90 }) });
     }
+    if (canProject) buttons.push({
+        action: "project", label: "Projeter (A → B)", callback: (_event, _button, dialog) => {
+            const duration = Number(dialog.element.querySelector('[name="projectileDuration"]').value);
+            if (!Number.isFinite(duration) || duration < 0.1 || duration > 10) {
+                ui.notifications.error("La durée du trajet doit être comprise entre 0,1 et 10 secondes.");
+                return;
+            }
+            // Close the dialog before picking either point.
+            const sceneId = tile.parent.id, levelId = canvas.level?.id;
+            (async () => {
+                const from = await chooseSceneObjectPosition("Point A : cliquez sur le départ du projectile. Échap ou clic droit pour annuler.");
+                if (!from) return;
+                const to = await chooseSceneObjectPosition("Point B : cliquez sur la destination du projectile. Échap ou clic droit pour annuler.");
+                if (!to) return;
+                if (canvas.scene?.id !== sceneId || canvas.level?.id !== levelId) {
+                    throw Error("La scène ou l’étage a changé : choisissez à nouveau le trajet.");
+                }
+                await run("project", { from, to, duration });
+            })().catch(error => ui.notifications.error(error.message));
+        }
+    });
     buttons.push({ action: "close", label: "Fermer", default: true });
     return DialogV2.wait({
         window: { title: model.name },
         content: `<p class="aa-scene-object-description">${escape(model.description)}</p>`
-            + (locked ? "<p>Cet objet est verrouillé par le MJ.</p>" : ""),
+            + (locked ? "<p>Cet objet est verrouillé par le MJ.</p>" : "")
+            + (canProject ? `<label class="form-group">Durée du trajet (s)
+                <input name="projectileDuration" type="number" min="0.1" max="10" step="0.1" value="${escape(model.projectileDuration ?? 0.8)}">
+                </label><p>Projeter : choisissez le départ A, puis l’arrivée B sur la scène.</p>` : ""),
         buttons, rejectClose: false
     });
 }

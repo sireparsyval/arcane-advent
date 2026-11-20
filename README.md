@@ -370,3 +370,16 @@ Déplacer, redimensionner ou masquer la tuile met à jour ces éléments ; suppr
 la tuile les supprime aussi. Le MJ peut utiliser le calque Tuiles pour ces opérations.
 Les effets visuels ne lancent pas automatiquement de jets et n’appliquent pas
 de conditions aux personnages ; la région sert ici à délimiter la zone.
+
+### Projeter un effet sur la scène
+
+Dans **Objets de scène → Interagir**, le MJ dispose de **Projeter (A → B)** sur
+les effets visuels. Régler la durée du trajet (0,1 à 10 secondes), cliquer sur le
+départ puis sur la destination. Échap ou clic droit annule le choix des points.
+La durée par défaut (0,8 seconde) se règle dans le modèle de l’effet.
+
+L’effet parcourt le trajet chez tous les participants, avec sa brume et sa lumière
+éventuelles, puis reste à destination. Le trajet utilise une horloge commune ;
+une personne rejoignant la scène en cours de trajet voit la portion restante.
+Le modèle du répertoire reste réutilisable. La projection n’applique pas
+automatiquement de dégâts, d’explosion ou de collision avec les murs.

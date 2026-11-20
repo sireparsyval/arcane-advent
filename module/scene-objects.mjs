@@ -1,4 +1,5 @@
 import { sceneMist, sceneLightEnabled } from "./scene-visual-settings.mjs";
+import { sceneClock, sceneObjectPosition } from "./scene-projectiles.mjs";
 
 export const SCENE_OBJECT_TYPES = Object.freeze(["sceneryElement", "interactiveElement", "visualEffect"]);
 export const SCENE_OBJECT_QUERY = "arcane-advent.sceneObjects";
@@ -56,7 +57,8 @@ export function sceneObjectPlan(item, scene, position) {
             description: system.interactions || system.description || "", placement, light, mist,
             movable: item.type === "interactiveElement" && interaction.movable,
             toggleLight: item.type === "interactiveElement" && interaction.toggleLight,
-            active: light.initiallyOn, showBoundary: system.showBoundary
+            active: light.initiallyOn, showBoundary: system.showBoundary,
+            projectileDuration: system.projectileDuration ?? 0.8
         } } }
     };
 }
@@ -179,7 +181,18 @@ export async function processSceneObjectAction(data, user) {
         changes = boundedPosition(scene, { x: data.x, y: data.y });
     } else if (data.action === "rotate" && access.movable && Number.isFinite(data.rotation)) {
         changes = { rotation: ((data.rotation % 360) + 360) % 360 };
+    } else if (data.action === "project" && user.isGM && sceneObject(tile).kind === "visualEffect") {
+        if (typeof data.duration !== "number" || !Number.isFinite(data.duration)
+            || data.duration < 0.1 || data.duration > 10) throw Error("La durée du trajet doit être comprise entre 0,1 et 10 secondes.");
+        const from = boundedPosition(scene, data.from ?? {}), to = boundedPosition(scene, data.to ?? {});
+        if (from.x === to.x && from.y === to.y) throw Error("Choisissez deux points différents.");
+        changes = { ...to, hidden: false, "flags.arcane-advent.sceneObject.active": true,
+            "flags.arcane-advent.sceneObject.flight": {
+                id: foundry.utils.randomID(), from, to, startedAt: sceneClock() + 150,
+                duration: Math.round(data.duration * 1000)
+            } };
     } else throw Error("Cette action n’est pas autorisée pour cet objet.");
+    if (data.action !== "project" && sceneObject(tile).flight) changes["flags.arcane-advent.sceneObject.flight"] = null;
     await tile.update(changes, { sceneObjectSync: true });
     await syncSceneObject(tile);
     return { ok: true };
@@ -197,31 +210,48 @@ export async function requestSceneObjectAction(tile, action, values = {}) {
     return result;
 }
 
-export function chooseSceneObjectPosition() {
+export function chooseSceneObjectPosition(message = "Cliquez sur la destination. Échap ou clic droit pour annuler.") {
     if (!canvas.ready) return Promise.resolve(null);
-    ui.notifications.info("Cliquez sur la destination. Échap ou clic droit pour annuler.");
-    const stage = canvas.stage;
+    ui.notifications.info(message);
+    const stage = canvas.stage, view = canvas.app?.view;
+    const native = typeof view?.addEventListener === "function";
     return new Promise(resolve => {
+        let finished = false;
         const finish = point => {
-            stage.off("pointerdown", click);
-            document.removeEventListener("keydown", escape);
+            if (finished) return;
+            finished = true;
+            if (native) view.removeEventListener("pointerdown", click, true);
+            else stage.off("pointerdown", click);
+            document.removeEventListener("keydown", escape, true);
             Hooks.off("canvasTearDown", teardown);
             resolve(point);
         };
         const click = event => {
+            if (event.button !== 0 && event.button !== 2) return;
+            if (native) { event.preventDefault(); event.stopPropagation(); }
             if (event.button === 2) return finish(null);
-            if (event.button === 0) finish(event.getLocalPosition(stage));
+            const point = native
+                ? canvas.canvasCoordinatesFromClient({ x: event.clientX, y: event.clientY })
+                : event.getLocalPosition(stage);
+            finish({ x: point.x, y: point.y });
         };
-        const escape = event => { if (event.key === "Escape") finish(null); };
+        const escape = event => {
+            if (event.key !== "Escape") return;
+            event.preventDefault?.();
+            event.stopPropagation?.();
+            finish(null);
+        };
         const teardown = Hooks.on("canvasTearDown", () => finish(null));
-        stage.on("pointerdown", click);
-        document.addEventListener("keydown", escape);
+        if (native) view.addEventListener("pointerdown", click, true);
+        else stage.on("pointerdown", click);
+        document.addEventListener("keydown", escape, true);
     });
 }
 
 function pointInsideTile(tile, point) {
     const radians = -(tile.rotation ?? 0) * Math.PI / 180;
-    const dx = point.x - tile.x, dy = point.y - tile.y;
+    const position = sceneObjectPosition(tile);
+    const dx = point.x - position.x, dy = point.y - position.y;
     return Math.abs(dx * Math.cos(radians) - dy * Math.sin(radians)) <= tile.width / 2
         && Math.abs(dx * Math.sin(radians) + dy * Math.cos(radians)) <= tile.height / 2;
 }

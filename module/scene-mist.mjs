@@ -1,4 +1,5 @@
 import { sceneMist } from "./scene-visual-settings.mjs";
+import { sceneObjectPosition } from "./scene-projectiles.mjs";
 
 // Premultiplied alpha, rendered in the primary scene group before lighting and vision.
 // A normal alpha blend covers the map; it never adds light or reveals unexplored terrain.
@@ -45,7 +46,7 @@ export function mistAppearance(tile, levelId) {
     const color = /^#[0-9a-f]{6}$/i.test(mist.color) ? mist.color : "#b9c3ca";
     const value = Number.parseInt(color.slice(1), 16);
     return {
-        x: tile.x, y: tile.y, diameter: Math.max(tile.width, tile.height),
+        ...sceneObjectPosition(tile), diameter: Math.max(tile.width, tile.height),
         elevation: tile.elevation, rotation: tile.rotation ?? 0, opacity: tile.alpha ?? 1,
         density: mist.density, softness: mist.softness, scale: mist.scale, speed: mist.speed,
         color: [(value >> 16 & 255) / 255, (value >> 8 & 255) / 255, (value & 255) / 255]
@@ -114,6 +115,9 @@ export function registerSceneMist() {
         for (const tile of canvas.scene.tiles) refresh(tile);
     });
     Hooks.on("canvasTearDown", clear);
+    Hooks.on("arcaneAdventSceneObjectPosition", (tile, point) => {
+        if (tile.parent.id === canvas.scene?.id) views.get(tile.id)?.position.set(point.x, point.y);
+    });
     for (const event of ["createTile", "updateTile"]) Hooks.on(event, refresh);
     Hooks.on("deleteTile", tile => {
         if (tile.parent.id === canvas.scene?.id) remove(tile.id);

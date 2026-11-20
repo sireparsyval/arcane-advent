@@ -165,3 +165,14 @@ test("placing an older fog blueprint snapshots mist and removes emission without
     assert.equal(placed.mist.density, 0.6);
     assert.equal(item.system.light.enabled, true);
 });
+
+test("mist appearance follows the same synchronized trajectory as a video projectile", () => {
+    const anchor = tile();
+    anchor.x = 700; anchor.y = 500;
+    anchor.flags["arcane-advent"].sceneObject.flight = {
+        id: "flight", from: { x: 100, y: 100 }, to: { x: 700, y: 500 }, startedAt: 1000, duration: 800
+    };
+    globalThis.game = { time: { serverTime: 1400 } };
+    const appearance = mistAppearance(anchor, "floor");
+    assert.deepEqual([appearance.x, appearance.y], [400, 300]);
+});

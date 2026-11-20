@@ -32,6 +32,7 @@ import { SceneryElementData, InteractiveElementData, VisualEffectData } from "./
 import { SceneryElementSheet } from "./module/applications/item/scenery-sheet.mjs";
 import { registerSceneObjects } from "./module/scene-objects.mjs";
 import { registerSceneMist } from "./module/scene-mist.mjs";
+import { registerSceneProjectiles } from "./module/scene-projectiles.mjs";
 import { SceneObjectsPanel, openSceneObjectInteraction } from "./module/applications/scene-objects-panel.mjs";
 import { registerGlyphCatalog } from "./module/applications/glyph-catalog.mjs";
 import { registerTokenBars } from "./module/token-bars.mjs";
@@ -48,6 +49,7 @@ Hooks.once("init", () => {
     game.arcaneAdvent.openSceneObjects = () => new SceneObjectsPanel().render({ force: true });
     registerSceneObjects({ openPanel: game.arcaneAdvent.openSceneObjects, openInteraction: openSceneObjectInteraction });
     registerSceneMist();
+    registerSceneProjectiles();
     registerArcaneHotbar();
     registerArcaneText();
     registerGlyphCatalog();
