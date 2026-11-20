@@ -28,6 +28,8 @@ import { registerArcaneHotbar, runArcaneShortcut } from "./module/shortcuts.mjs"
 import { registerArcaneText } from "./module/arcane-text.mjs";
 import { GlyphData } from "./module/data/glyph-data.mjs";
 import { GlyphSheet } from "./module/applications/item/glyph-sheet.mjs";
+import { SceneryElementData, InteractiveElementData } from "./module/data/scenery-data.mjs";
+import { SceneryElementSheet } from "./module/applications/item/scenery-sheet.mjs";
 import { registerGlyphCatalog } from "./module/applications/glyph-catalog.mjs";
 import { registerTokenBars } from "./module/token-bars.mjs";
 import { CharacterEffectItemSheet } from "./module/applications/item/character-effect-sheet.mjs";
@@ -76,6 +78,8 @@ Hooks.once("init", () => {
     CONFIG.Item.dataModels.aptitude = AptitudeData;
     CONFIG.Item.dataModels.trait = TraitData;
     CONFIG.Item.dataModels.glyph = GlyphData;
+    CONFIG.Item.dataModels.sceneryElement = SceneryElementData;
+    CONFIG.Item.dataModels.interactiveElement = InteractiveElementData;
 
     CONFIG.Actor.trackableAttributes = {
         character: {
@@ -125,7 +129,10 @@ Hooks.once("init", () => {
         types: ["storage"], makeDefault: true, label: "Arcane Advent — Stockage"
     });
     DocumentSheetConfig.registerSheet(foundry.documents.Item, "arcane-advent", GlyphSheet, {
-        types: ["glyph"], makeDefault: true, label: "Arcane Advent — Référence de glyphe"
+        types: ["glyph"], makeDefault: true, label: "Arcane Advent — Glyphe"
+    });
+    DocumentSheetConfig.registerSheet(foundry.documents.Item, "arcane-advent", SceneryElementSheet, {
+        types: ["sceneryElement", "interactiveElement"], makeDefault: true, label: "Arcane Advent — Décor"
     });
     DocumentSheetConfig.registerSheet(foundry.documents.Item, "arcane-advent", CharacterEffectItemSheet, {
         types: ["trait", "aptitude"], makeDefault: true, label: "Arcane Advent — Traits et Aptitudes"

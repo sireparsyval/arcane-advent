@@ -1,0 +1,32 @@
+<section class="standard-form">
+    <fieldset {{#unless editable}}disabled{{/unless}}>
+        <legend>{{#if isInteractive}}Élément Interactif{{else}}Élément du Décor{{/if}}</legend>
+        <label class="form-group">
+            <span class="label">Nom</span>
+            <span class="form-fields">
+                <input type="text" name="name" value="{{document.name}}" required>
+            </span>
+        </label>
+        <label class="form-group">
+            <span class="label">Image</span>
+            <span class="form-fields">
+                <file-picker name="img" type="image" value="{{document.img}}"></file-picker>
+            </span>
+        </label>
+        <label class="form-group stacked">
+            <span class="label">Description</span>
+            <textarea name="system.description" rows="5">{{system.description}}</textarea>
+        </label>
+        {{#if isInteractive}}
+            <label class="form-group stacked">
+                <span class="label">Interactions</span>
+                <textarea name="system.interactions" rows="5">{{system.interactions}}</textarea>
+            </label>
+        {{/if}}
+    </fieldset>
+    {{#if editable}}
+        <footer class="form-footer">
+            <button type="submit"><i class="fa-solid fa-save" aria-hidden="true"></i> Enregistrer</button>
+        </footer>
+    {{/if}}
+</section>
