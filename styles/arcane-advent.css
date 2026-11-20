@@ -344,6 +344,10 @@ body.detached > .aa-detached-sheet .window-content {
     align-self: center;
 }
 
+.aa-aptitude-identity-editable {
+    flex-wrap: nowrap;
+}
+
 .aa-aptitude-rolls button,
 .aa-aptitude-config button {
     min-width: 0;
@@ -370,19 +374,33 @@ body.detached > .aa-detached-sheet .window-content {
 }
 
 .aa-aptitude-type {
-    flex: 0 1 6.25rem;
+    flex: 0 0 6.25rem;
 }
 
 .aa-aptitude-level {
-    flex: 0 1 4rem;
+    flex: 0 0 3rem;
 }
 
 .aa-aptitude-name {
-    flex: 1 1 11rem;
+    flex: 1 1 0;
 }
 
 .aa-aptitude-actions {
     margin-inline-start: auto;
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+}
+
+.aa-aptitude-actions > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--input-height, 2rem);
+    height: var(--input-height, 2rem);
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    line-height: 1;
 }
 
 .aa-aptitude-optional {
@@ -399,7 +417,15 @@ body.detached > .aa-detached-sheet .window-content {
     display: grid;
     gap: 2px;
     min-width: 0;
+    font-size: inherit;
+}
+
+.aa-aptitude-identity label > span {
     font-size: 0.85em;
+}
+
+.aa-aptitude-identity :is(input, select) {
+    font-size: inherit;
 }
 
 .aa-aptitude-row :is(input, select, textarea) {

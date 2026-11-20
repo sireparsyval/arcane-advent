@@ -11,7 +11,7 @@
     {{#each aptitudes}}
         <div class="aa-condition-row aa-aptitude-row" data-aptitude-row="{{id}}" data-sheet-sort-drop="{{id}}">
             {{#if @root.canEditState}}
-                <div class="aa-aptitude-identity">
+                <div class="aa-aptitude-identity aa-aptitude-identity-editable">
                     <span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}" aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>
                     <label class="aa-aptitude-name">
                         <span>Nom</span>
@@ -36,10 +36,13 @@
                     {{/unless}}
                     {{/unless}}
                     <div class="aa-aptitude-actions">
-                        <button type="button" data-action="editCharacterEffects" data-item-id="{{id}}" title="Configurer les conditions et les effets">Conditions et Effets</button>
+                        <button type="button" data-action="editCharacterEffects" data-item-id="{{id}}"
+                            aria-label="Conditions et effets de {{name}}" title="Configurer les conditions et les effets">
+                            <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                        </button>
                         <button type="button" data-action="editAptitudeOptions" data-item-id="{{id}}"
                             aria-label="Options de {{name}}" title="Configurer l’aptitude">
-                            <i class="fa-solid fa-gear" aria-hidden="true"></i> Options
+                            <i class="fa-solid fa-gear" aria-hidden="true"></i>
                         </button>
                         {{#if linkedTraitId}}
                             <button type="button" data-action="goToLinkedTrait" data-trait-id="{{linkedTraitId}}"
