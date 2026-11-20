@@ -6,15 +6,21 @@
             "storage": "Stockage"
         },
         "Item": {
-            "storage": "Stockage / dépôt au sol",
-            "alteration": "Altération d’état",
-            "injury": "Blessure ou maladie",
+            "storage": "Stockage / Dépôt au Sol",
+            "alteration": "Altération d’État",
+            "injury": "Blessure / Maladie",
             "aptitude": "Aptitude",
             "trait": "Trait",
-            "glyph": "Référence de glyphe",
-            "object": "Objet ordinaire",
+            "glyph": "Glyphe",
+            "object": "Objet",
             "container": "Contenant",
-            "purse": "Bourse"
+            "purse": "Bourse",
+            "weapon": "Arme",
+            "shield": "Bouclier",
+            "protection": "Protection",
+            "accessory": "Accessoire",
+            "skill": "Compétence",
+            "expertise": "Expertise"
         }
     }
 }

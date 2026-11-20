@@ -125,7 +125,7 @@ Hooks.once("init", () => {
         types: ["storage"], makeDefault: true, label: "Arcane Advent — Stockage"
     });
     DocumentSheetConfig.registerSheet(foundry.documents.Item, "arcane-advent", GlyphSheet, {
-        types: ["glyph"], makeDefault: true, label: "Arcane Advent — Référence de glyphe"
+        types: ["glyph"], makeDefault: true, label: "Arcane Advent — Glyphe"
     });
     DocumentSheetConfig.registerSheet(foundry.documents.Item, "arcane-advent", CharacterEffectItemSheet, {
         types: ["trait", "aptitude"], makeDefault: true, label: "Arcane Advent — Traits et Aptitudes"
