@@ -1,7 +1,20 @@
 <section class="aa-scene-objects-body">
-    <p>{{#if sceneName}}Scène : <strong>{{sceneName}}</strong>{{else}}Ouvrez une scène pour voir ses objets.{{/if}}</p>
-    <p>Double-cliquez un objet sur la scène pour interagir, ou utilisez cette liste.</p>
-    {{#if isGM}}<p>Créez vos modèles dans le répertoire Objets puis glissez-les sur la scène. Chaque dépôt crée un exemplaire indépendant.</p>{{/if}}
+    <p>{{#if sceneName}}Scène : <strong>{{sceneName}}</strong>{{else}}Ouvrez une scène pour préparer une animation.{{/if}}</p>
+    {{#if isGM}}
+        <fieldset class="standard-form">
+            <legend>Nouvelle animation</legend>
+            <label>Modèle d’effet<select name="animationModel">
+                {{#each models}}<option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
+            </select></label>
+            <p>Préparez le trajet et son arrivée. Rien n’apparaît sur la scène avant « Lancer l’animation ».</p>
+            <div class="form-footer">
+                <button type="button" data-action="prepare" {{#unless hasModels}}disabled{{/unless}}>Préparer une projection</button>
+                <button type="button" data-action="createModel">+ Modèle d’effet</button>
+            </div>
+        </fieldset>
+    {{/if}}
+    <h3>Effets et objets présents sur la scène</h3>
+    <p>Utilisez « Interagir » pour poursuivre un trajet, déclencher l’effet final ou manipuler un décor.</p>
     <div class="aa-scene-objects-list">
         {{#each objects}}
             <article class="aa-scene-object-row">
@@ -10,6 +23,6 @@
                 <button type="button" data-action="interact" data-tile-id="{{id}}">Interagir</button>
                 {{#if @root.isGM}}<button type="button" data-action="model" data-tile-id="{{id}}" title="Ouvrir le modèle"><i class="fa-solid fa-gear" aria-hidden="true"></i><span class="sr-only">Ouvrir le modèle</span></button>{{/if}}
             </article>
-        {{else}}<p>Aucun objet accessible sur cette scène.</p>{{/each}}
+        {{else}}<p>Aucun effet ou objet accessible sur cette scène.</p>{{/each}}
     </div>
 </section>

@@ -97,78 +97,35 @@ test("panel subscriptions refresh on scene and object updates and are removed on
     setup();
     const panel = new SceneObjectsPanel();
     await panel._onRender({}, {});
-    assert.equal(callbacks.size, 5);
+    assert.equal(callbacks.size, 8);
     await panel._onRender({}, {});
-    assert.equal(callbacks.size, 5);
+    assert.equal(callbacks.size, 8);
     for (const { callback } of callbacks.values()) callback();
-    assert.equal(panel.refreshes, 5);
+    assert.equal(panel.refreshes, 8);
     await panel._onClose({});
     assert.equal(callbacks.size, 0);
     await panel._onRender({}, {});
-    assert.equal(callbacks.size, 5);
+    assert.equal(callbacks.size, 8);
     await panel._onClose({});
 });
 
-function prepareProjectDialog() {
-    const events = new Map(), requests = [], errors = [];
-    setup();
-    game.user.isGM = true;
-    canvas.scene.id = "scene";
-    canvas.stage = { on(name, handler) { events.set(name, handler); }, off(name) { events.delete(name); } };
-    globalThis.document = { addEventListener() {}, removeEventListener() {} };
-    game.users.activeGM.query = async (_name, data) => { requests.push(data); return { ok: true }; };
-    ui.notifications.error = message => errors.push(message);
-    return { events, requests, errors };
-}
-const flushProject = () => new Promise(resolve => setImmediate(resolve));
-const clickProject = (events, point) => events.get("pointerdown")({ button: 0, getLocalPosition: () => point });
-
-test("GM projection dialog closes before picking A and B, and sends the selected duration", async () => {
-    const env = prepareProjectDialog();
-    await openSceneObjectInteraction(tile("Fireball", { kind: "visualEffect" }));
-    assert.match(dialog.content, /name="projectileDuration"/);
-    dialog.element = { querySelector: () => ({ value: "1.2" }) };
-    assert.equal(dialog.buttons.find(button => button.action === "project").callback(null, null, dialog), undefined);
-    clickProject(env.events, { x: 120, y: 160 });
-    await flushProject();
-    clickProject(env.events, { x: 500, y: 400 });
-    await flushProject();
-    assert.deepEqual(env.requests, [{ sceneId: "scene", tileId: "Fireball", action: "project",
-        from: { x: 120, y: 160 }, to: { x: 500, y: 400 }, duration: 1.2 }]);
-    assert.equal(env.events.size, 0);
+test("Animations lists reusable effect models even when none are placed", async () => {
+    setup(); game.user.isGM = true;
+    game.items = [{ type: "visualEffect", uuid: "Item.ball", name: "Fireball" }, { type: "weapon", uuid: "Item.sword", name: "Sword" }];
+    const context = await new SceneObjectsPanel()._prepareContext({});
+    assert.equal(context.objects.length, 0);
+    assert.equal(context.models.length, 1);
+    assert.equal(context.models[0].uuid, "Item.ball");
+    assert.equal(context.hasModels, true);
 });
 
-test("cancelling either projectile point leaves the scene unchanged", async () => {
-    for (const secondPoint of [false, true]) {
-        const env = prepareProjectDialog();
-        await openSceneObjectInteraction(tile("Fireball", { kind: "visualEffect" }));
-        dialog.element = { querySelector: () => ({ value: "0.8" }) };
-        dialog.buttons.find(button => button.action === "project").callback(null, null, dialog);
-        if (secondPoint) {
-            clickProject(env.events, { x: 100, y: 100 });
-            await flushProject();
-        }
-        env.events.get("pointerdown")({ button: 2 });
-        await flushProject();
-        assert.equal(env.requests.length, 0);
-        assert.equal(env.events.size, 0);
-    }
-});
-
-test("changing scene or an invalid duration prevents projection", async () => {
-    const env = prepareProjectDialog();
-    await openSceneObjectInteraction(tile("Fireball", { kind: "visualEffect" }));
-    dialog.element = { querySelector: () => ({ value: "50" }) };
-    dialog.buttons.find(button => button.action === "project").callback(null, null, dialog);
-    assert.equal(env.events.size, 0);
-    assert.equal(env.errors.length, 1);
-    dialog.element = { querySelector: () => ({ value: "0.8" }) };
-    dialog.buttons.find(button => button.action === "project").callback(null, null, dialog);
-    clickProject(env.events, { x: 100, y: 100 });
-    await flushProject();
-    canvas.scene = { id: "other" };
-    clickProject(env.events, { x: 200, y: 200 });
-    await flushProject();
-    assert.equal(env.requests.length, 0);
-    assert.match(env.errors.at(-1), /scène ou l’étage a changé/);
+test("a held effect exposes continuation, impact and deletion while a flying effect does not", async () => {
+    setup(); game.user.isGM = true;
+    const object = tile("Fireball", { kind: "visualEffect" });
+    await openSceneObjectInteraction(object);
+    for (const action of ["project", "transition", "remove"]) assert.ok(dialog.buttons.some(button => button.action === action));
+    object.flags["arcane-advent"].sceneObject.flight = { id: "flying" };
+    await openSceneObjectInteraction(object);
+    for (const action of ["project", "transition", "remove"]) assert.ok(!dialog.buttons.some(button => button.action === action));
+    assert.match(dialog.content, /trajet est en cours/);
 });

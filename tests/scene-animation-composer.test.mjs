@@ -1,0 +1,173 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { prepareSceneAnimation, prepareSceneTransition } from "../module/applications/scene-animation-composer.mjs";
+import { chooseAnimationPath } from "../module/scene-animation-path.mjs";
+
+const flush = () => new Promise(resolve => setImmediate(resolve));
+const draft = { duration: 1.2, arrival: "keep", finalEffectUuid: "", finalMode: "once-delete", finalDuration: 1, decision: "launch" };
+function setup() {
+    const dialogs = [], replies = [], requests = [], view = new Map(), keys = new Map(), hooks = new Map(), graphics = [];
+    class Graphics {
+        constructor() { this.destroyed = false; graphics.push(this); }
+        clear() { return this; } lineStyle() { return this; } moveTo() { return this; } lineTo() { return this; }
+        beginFill() { return this; } drawCircle() { return this; } endFill() { return this; }
+        destroy() { this.destroyed = true; }
+    }
+    globalThis.PIXI = { Graphics };
+    globalThis.Hooks = { on(name, fn) { hooks.set(name, fn); return name; }, off(name) { hooks.delete(name); } };
+    globalThis.document = { addEventListener(name, fn) { keys.set(name, fn); }, removeEventListener(name) { keys.delete(name); } };
+    globalThis.foundry = {
+        utils: { escapeHTML: value => value.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;") },
+        applications: { api: { DialogV2: { wait(options) { dialogs.push(options); return new Promise(resolve => replies.push(resolve)); } } } }
+    };
+    globalThis.canvas = { ready: true, scene: { id: "scene", grid: { size: 100, distance: 1, units: "m" } }, level: { id: "floor" },
+        stage: {}, interface: { addChild() {} }, app: { view: {
+            addEventListener(name, fn) { view.set(name, fn); }, removeEventListener(name) { view.delete(name); }
+        } }, canvasCoordinatesFromClient: p => p };
+    const item = { type: "visualEffect", uuid: "Item.ball", name: "Boule", system: { projectileDuration: 0.8 } };
+    globalThis.game = { user: { isGM: true }, items: [item, { type: "visualEffect", uuid: "Item.blast", name: "Explosion" }],
+        users: { activeGM: { isSelf: false, async query(_channel, data) { requests.push(data); return { ok: true, tileId: "placed" }; } } } };
+    globalThis.ui = { notifications: { info() {}, warn() {} } };
+    const click = (x, y, ctrlKey = false, button = 0) => view.get("pointerdown")({
+        clientX: x, clientY: y, ctrlKey, button, preventDefault() {}, stopPropagation() {}
+    });
+    const reply = value => replies.shift()(value);
+    const tile = { id: "held", x: 300, y: 400, parent: { id: "scene" },
+        flags: { "arcane-advent": { sceneObject: { kind: "visualEffect", name: "Boule", projectileDuration: 0.8 } } } };
+    return { dialogs, requests, view, keys, hooks, graphics, click, reply, item, tile };
+}
+async function trace(env) {
+    env.click(100, 100); env.click(200, 100, true); env.click(400, 300);
+    await flush();
+}
+
+test("arrival selection reveals and enables final-effect settings only when needed", async () => {
+    const env = setup(), pending = prepareSceneAnimation({ item: env.item });
+    assert.match(env.dialogs[0].content, /<fieldset data-final-options hidden disabled>/);
+    let onChange;
+    const arrival = { value: "keep", addEventListener(_name, fn) { onChange = fn; } };
+    const final = { hidden: true, disabled: true };
+    env.dialogs[0].render(null, { element: { querySelector(selector) {
+        return selector === '[name="arrival"]' ? arrival : selector === '[data-final-options]' ? final : null;
+    } } });
+    arrival.value = "replace"; onChange();
+    assert.equal(final.hidden, false); assert.equal(final.disabled, false);
+    arrival.value = "delete"; onChange();
+    assert.equal(final.hidden, true); assert.equal(final.disabled, true);
+    env.reply(null); await pending;
+    const impact = prepareSceneTransition(env.tile);
+    assert.match(env.dialogs.at(-1).content, /<fieldset data-final-options>/);
+    env.reply(null); await impact;
+});
+
+test("preparation creates nothing until the final confirmation and keeps Ctrl waypoints", async () => {
+    const env = setup(), pending = prepareSceneAnimation({ item: env.item });
+    assert.equal(env.requests.length, 0);
+    env.reply({ ...draft }); await flush();
+    await trace(env);
+    assert.equal(env.requests.length, 0);
+    assert.equal(env.dialogs.length, 2);
+    assert.match(env.dialogs[1].content, /3 points/);
+    env.reply({ ...draft, arrival: "replace", finalEffectUuid: "Item.blast" });
+    await pending;
+    assert.equal(env.requests.length, 1);
+    const request = env.requests[0];
+    assert.equal(request.action, "launch");
+    assert.equal(request.effectUuid, "Item.ball");
+    assert.equal(request.finalEffectUuid, "Item.blast");
+    assert.deepEqual(request.points, [{x:100,y:100},{x:200,y:100},{x:400,y:300}]);
+    assert.equal(env.graphics[0].destroyed, true);
+});
+
+test("cancel at configuration, during tracing, or at confirmation never places an effect", async () => {
+    for (const stage of ["configuration", "trace", "confirmation"]) {
+        const env = setup(), pending = prepareSceneAnimation({ item: env.item });
+        if (stage === "configuration") env.reply(null);
+        else {
+            env.reply({ ...draft }); await flush();
+            if (stage === "trace") env.keys.get("keydown")({ key: "Escape", preventDefault() {}, stopPropagation() {} });
+            else { await trace(env); env.reply(null); }
+        }
+        await pending;
+        assert.equal(env.requests.length, 0);
+        assert.equal(env.view.size, 0);
+        assert.ok(env.graphics.every(g => g.destroyed));
+    }
+});
+
+test("a confirmed route can be redrawn and edited before launching", async () => {
+    const env = setup(), pending = prepareSceneAnimation({ item: env.item });
+    env.reply({ ...draft }); await flush(); await trace(env);
+    env.reply({ ...draft, duration: 2, decision: "redraw" }); await flush();
+    assert.equal(env.graphics[0].destroyed, true);
+    env.click(10, 20); env.click(300, 400); await flush();
+    env.reply({ ...draft, duration: 2 }); await pending;
+    assert.equal(env.requests[0].duration, 2);
+    assert.deepEqual(env.requests[0].points, [{x:10,y:20},{x:300,y:400}]);
+});
+
+test("a held projectile starts its next route from its actual current position", async () => {
+    const env = setup(), pending = prepareSceneAnimation({ tile: env.tile });
+    env.reply({ ...draft }); await flush();
+    env.click(600, 500); await flush();
+    env.reply({ ...draft }); await pending;
+    assert.equal(env.requests[0].action, "continue");
+    assert.equal(env.requests[0].tileId, "held");
+    assert.deepEqual(env.requests[0].points, [{x:300,y:400},{x:600,y:500}]);
+});
+
+test("manual impact asks for a final effect and can cancel without changing the held projectile", async () => {
+    const env = setup(), pending = prepareSceneTransition(env.tile);
+    assert.match(env.dialogs[0].content, /Une lecture, puis supprimer/);
+    assert.match(env.dialogs[0].content, /Une lecture, puis conserver/);
+    assert.match(env.dialogs[0].content, /Lire en boucle et conserver/);
+    env.reply({ ...draft, finalEffectUuid: "Item.blast", finalMode: "once-delete" });
+    await pending;
+    assert.equal(env.requests[0].action, "transition");
+    assert.equal(env.requests[0].tileId, "held");
+    const cancelled = prepareSceneTransition(env.tile); env.reply(null); await cancelled;
+    assert.equal(env.requests.length, 1);
+});
+
+test("changing scene after tracing aborts launch and removes the preview", async () => {
+    const env = setup(), pending = prepareSceneAnimation({ item: env.item });
+    env.reply({ ...draft }); await flush(); await trace(env);
+    canvas.scene = { id: "other" };
+    env.reply({ ...draft });
+    await assert.rejects(pending, /scène ou l’étage a changé/);
+    assert.equal(env.requests.length, 0);
+    assert.equal(env.graphics[0].destroyed, true);
+});
+
+test("route controls allow undoing an intermediate step and cancel on right click", async () => {
+    const env = setup(), pending = chooseAnimationPath();
+    env.click(10, 20); env.click(50, 50, true);
+    env.keys.get("keydown")({ key: "Backspace", preventDefault() {}, stopPropagation() {} });
+    env.click(100, 200);
+    const route = await pending;
+    assert.deepEqual(route.points, [{x:10,y:20},{x:100,y:200}]);
+    assert.equal(env.view.size, 0);
+    route.cleanup(); assert.equal(env.graphics[0].destroyed, true);
+    const cancelled = chooseAnimationPath({ start: {x:10,y:20} });
+    env.click(0, 0, false, 2);
+    assert.equal(await cancelled, null);
+    assert.equal(env.graphics[1].destroyed, true);
+});
+
+test("scene teardown cancels an unfinished route", async () => {
+    const env = setup(), pending = chooseAnimationPath();
+    env.click(10, 10);
+    env.hooks.get("canvasTearDown")();
+    assert.equal(await pending, null);
+    assert.equal(env.view.size, 0);
+});
+
+test("the native Cancel button resolves falsy instead of falling back to its action name", async () => {
+    const env = setup(), pending = prepareSceneAnimation({ item: env.item });
+    const button = env.dialogs[0].buttons.find(button => button.action === "cancel");
+    const nativeResult = await button.callback() ?? button.action;
+    env.reply(nativeResult);
+    await pending;
+    assert.equal(env.view.size, 0);
+    assert.equal(env.requests.length, 0);
+});

@@ -3,17 +3,28 @@ const modelFor = tile => tile?.getFlag?.(SCOPE, "sceneObject") ?? tile?.flags?.[
 export const sceneClock = () => globalThis.game?.time?.serverTime ?? Date.now();
 
 export function projectileFrame(flight, now = sceneClock()) {
-    const finitePoint = point => point && Number.isFinite(point.x) && Number.isFinite(point.y);
-    if (!flight || !flight.id || !finitePoint(flight.from) || !finitePoint(flight.to)
+    const points = flight?.points ?? (flight ? [flight.from, flight.to] : []);
+    if (!flight?.id || points.length < 2 || points.length > 64
+        || points.some(point => !point || !Number.isFinite(point.x) || !Number.isFinite(point.y))
         || !Number.isFinite(flight.startedAt) || !Number.isFinite(flight.duration)
-        || flight.duration < 100 || flight.duration > 10000) return null;
+        || flight.duration < 100 || flight.duration > 60000 || !Number.isFinite(now)) return null;
     if (now < flight.startedAt - 1000) return null;
     const progress = Math.max(0, Math.min(1, (now - flight.startedAt) / flight.duration));
-    return {
-        x: flight.from.x + (flight.to.x - flight.from.x) * progress,
-        y: flight.from.y + (flight.to.y - flight.from.y) * progress,
-        progress, done: progress >= 1
-    };
+    const lengths = points.slice(1).map((point, i) => Math.hypot(point.x - points[i].x, point.y - points[i].y));
+    const total = lengths.reduce((sum, length) => sum + length, 0);
+    if (!total) return null;
+    let distance = progress * total;
+    for (let i = 0; i < lengths.length; i++) {
+        if (!lengths[i]) continue;
+        if (distance <= lengths[i] || i === lengths.length - 1) {
+            const t = lengths.length === 1 ? progress : Math.min(1, distance / lengths[i]);
+            return { x: points[i].x + (points[i + 1].x - points[i].x) * t,
+                y: points[i].y + (points[i + 1].y - points[i].y) * t,
+                progress, done: progress >= 1 };
+        }
+        distance -= lengths[i];
+    }
+    return { ...points.at(-1), progress, done: true };
 }
 
 export function sceneObjectFlight(tile) {
@@ -27,7 +38,7 @@ export function sceneObjectPosition(tile, now = sceneClock()) {
     return frame ? { x: frame.x, y: frame.y } : { x: tile.x, y: tile.y };
 }
 
-export function registerSceneProjectiles() {
+export function registerSceneProjectiles({ onComplete } = {}) {
     const running = new Map();
     const related = (document, tile) => document.getFlag?.(SCOPE, "sceneObjectParent") === tile.id
         || document.flags?.[SCOPE]?.sceneObjectParent === tile.id;
@@ -44,6 +55,7 @@ export function registerSceneProjectiles() {
     function forget(tile, flight) {
         if (!flight || !game.users?.activeGM?.isSelf || !tile.parent.tiles.has(tile.id)
             || modelFor(tile)?.flight?.id !== flight.id) return;
+        if (onComplete) { onComplete(tile, flight.id); return; }
         tile.update({ "flags.arcane-advent.sceneObject.flight": null }, { sceneObjectSync: true })
             .catch(error => ui.notifications.error(error.message));
     }
@@ -58,7 +70,7 @@ export function registerSceneProjectiles() {
             || (tile.levels?.size && !tile.levels.has(canvas.level?.id)) || tile.hidden) return;
         const ticker = canvas.app.ticker, lights = new Map(), regions = new Set();
         let stopped = false, lastLight = -Infinity;
-        const state = { id: flight.id, stop };
+        const state = { id: flight.id, stop, tick };
         function stop(completed = false) {
             if (stopped) return;
             stopped = true;
@@ -121,6 +133,11 @@ export function registerSceneProjectiles() {
         const flight = sceneObjectFlight(tile), state = running.get(tile.parent.id + "." + tile.id);
         if (state && (state.id !== flight?.id || tile.hidden)) state.stop();
         start(tile);
+    });
+    Hooks.on("createTile", start);
+    Hooks.on("drawTile", object => {
+        start(object.document);
+        running.get(object.document.parent.id + "." + object.document.id)?.tick();
     });
     Hooks.on("deleteTile", tile => running.get(tile.parent.id + "." + tile.id)?.stop());
 }

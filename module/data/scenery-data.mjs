@@ -33,7 +33,7 @@ function sceneFields({ interactive = false, visual = false } = {}) {
             density: number(MIST_DEFAULTS.density, 0, 1), speed: number(MIST_DEFAULTS.speed, 0, 5),
             softness: number(MIST_DEFAULTS.softness, 0.01, 1), scale: number(MIST_DEFAULTS.scale, 0.25, 4)
         }),
-        projectileDuration: number(0.8, 0.1, 10),
+        projectileDuration: number(0.8, 0.1, 60),
         showBoundary: new BooleanField({ initial: false })
     };
 }

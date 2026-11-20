@@ -30,7 +30,8 @@ import { GlyphData } from "./module/data/glyph-data.mjs";
 import { GlyphSheet } from "./module/applications/item/glyph-sheet.mjs";
 import { SceneryElementData, InteractiveElementData, VisualEffectData } from "./module/data/scenery-data.mjs";
 import { SceneryElementSheet } from "./module/applications/item/scenery-sheet.mjs";
-import { registerSceneObjects } from "./module/scene-objects.mjs";
+import { registerSceneObjects, sceneObjectPlan, createSceneObjectFromPlan, deleteSceneObject, syncSceneObject } from "./module/scene-objects.mjs";
+import { registerSceneAnimations } from "./module/scene-animation-service.mjs";
 import { registerSceneMist } from "./module/scene-mist.mjs";
 import { registerSceneProjectiles } from "./module/scene-projectiles.mjs";
 import { SceneObjectsPanel, openSceneObjectInteraction } from "./module/applications/scene-objects-panel.mjs";
@@ -47,9 +48,12 @@ Hooks.once("init", () => {
     registerStorageService();
     registerStorageDirectory();
     game.arcaneAdvent.openSceneObjects = () => new SceneObjectsPanel().render({ force: true });
+    game.arcaneAdvent.openAnimations = game.arcaneAdvent.openSceneObjects;
     registerSceneObjects({ openPanel: game.arcaneAdvent.openSceneObjects, openInteraction: openSceneObjectInteraction });
     registerSceneMist();
-    registerSceneProjectiles();
+    const animations = registerSceneAnimations({ planFor: sceneObjectPlan, create: createSceneObjectFromPlan,
+        remove: deleteSceneObject, sync: syncSceneObject });
+    registerSceneProjectiles({ onComplete: animations.complete });
     registerArcaneHotbar();
     registerArcaneText();
     registerGlyphCatalog();

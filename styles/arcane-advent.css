@@ -2986,3 +2986,10 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-scene-object-row small { display: block; }
 .aa-scene-object-row > button { width: auto; flex: 0 0 auto; }
 .aa-scene-object-description { white-space: pre-wrap; }
+
+.aa-animation-options { display: flex; flex-direction: column; gap: 12px; }
+.aa-animation-options label { display: flex; flex-direction: column; gap: 5px; }
+.aa-animation-options fieldset { display: flex; flex-direction: column; gap: 10px; }
+.aa-animation-options .hint { color: var(--color-text-subtle); font-size: var(--font-size-12); }
+
+.aa-animation-options [hidden] { display: none; }

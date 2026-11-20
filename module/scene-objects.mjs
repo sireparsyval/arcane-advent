@@ -141,6 +141,11 @@ export async function placeSceneObject(item, scene = canvas.scene, position) {
     position ??= center ? { x: center.x, y: center.y } : { x: scene.width / 2, y: scene.height / 2 };
     const source = sceneObjectPlan(item, scene, position);
     if (canvas.scene?.id === scene.id && canvas.level?.id) source.levels = [canvas.level.id];
+    return createSceneObjectFromPlan(scene, source);
+}
+
+export async function createSceneObjectFromPlan(scene, source) {
+    if (!game.user.isGM || !scene) throw Error("Le MJ doit choisir une scène.");
     const [tile] = await scene.createEmbeddedDocuments("Tile", [source], { sceneObjectSync: true });
     if (!tile) throw Error("L’objet n’a pas pu être déposé.");
     try {
@@ -151,6 +156,11 @@ export async function placeSceneObject(item, scene = canvas.scene, position) {
         await scene.deleteEmbeddedDocuments("Tile", [tile.id], { sceneObjectSync: true });
         throw error;
     }
+}
+
+export async function deleteSceneObject(tile) {
+    await removeSceneObjectChildren(tile);
+    await tile.parent.deleteEmbeddedDocuments("Tile", [tile.id], { sceneObjectSync: true });
 }
 
 export function sceneObjectAccess(tile, user = game.user) {
@@ -288,7 +298,7 @@ export function registerSceneObjects({ openPanel, openInteraction }) {
         if (!footer || footer.querySelector("[data-open-scene-objects]")) return;
         const button = document.createElement("button");
         button.type = "button"; button.dataset.openSceneObjects = "";
-        button.textContent = "Objets de scène";
+        button.textContent = "Animations";
         button.addEventListener("click", openPanel);
         footer.append(button);
     });

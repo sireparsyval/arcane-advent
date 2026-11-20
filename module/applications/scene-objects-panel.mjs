@@ -1,3 +1,5 @@
+import { prepareSceneAnimation, prepareSceneTransition, animationModels } from "./scene-animation-composer.mjs";
+import { requestSceneAnimation } from "../scene-animation-service.mjs";
 import { sceneMist, sceneLightEnabled } from "../scene-visual-settings.mjs";
 import { chooseSceneObjectPosition, requestSceneObjectAction, sceneObject, sceneObjectAccess } from "../scene-objects.mjs";
 const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
@@ -28,35 +30,25 @@ export async function openSceneObjectInteraction(tile) {
         buttons.push({ action: "rotate", label: "Tourner de 90°",
             callback: () => run("rotate", { rotation: tile.rotation + 90 }) });
     }
-    if (canProject) buttons.push({
-        action: "project", label: "Projeter (A → B)", callback: (_event, _button, dialog) => {
-            const duration = Number(dialog.element.querySelector('[name="projectileDuration"]').value);
-            if (!Number.isFinite(duration) || duration < 0.1 || duration > 10) {
-                ui.notifications.error("La durée du trajet doit être comprise entre 0,1 et 10 secondes.");
-                return;
-            }
-            // Close the dialog before picking either point.
-            const sceneId = tile.parent.id, levelId = canvas.level?.id;
-            (async () => {
-                const from = await chooseSceneObjectPosition("Point A : cliquez sur le départ du projectile. Échap ou clic droit pour annuler.");
-                if (!from) return;
-                const to = await chooseSceneObjectPosition("Point B : cliquez sur la destination du projectile. Échap ou clic droit pour annuler.");
-                if (!to) return;
-                if (canvas.scene?.id !== sceneId || canvas.level?.id !== levelId) {
-                    throw Error("La scène ou l’étage a changé : choisissez à nouveau le trajet.");
-                }
-                await run("project", { from, to, duration });
-            })().catch(error => ui.notifications.error(error.message));
+    if (canProject) {
+        if (!model.flight) {
+            buttons.push({ action: "project", label: "Continuer / préparer un trajet", callback: () => {
+                prepareSceneAnimation({ tile }).catch(error => ui.notifications.error(error.message));
+            } });
+            buttons.push({ action: "transition", label: "Déclencher l’effet final", callback: () => {
+                prepareSceneTransition(tile).catch(error => ui.notifications.error(error.message));
+            } });
+            buttons.push({ action: "remove", label: "Supprimer cet effet", callback: () =>
+                requestSceneAnimation({ action: "remove", sceneId: tile.parent.id, tileId: tile.id })
+                    .catch(error => ui.notifications.error(error.message)) });
         }
-    });
+    }
     buttons.push({ action: "close", label: "Fermer", default: true });
     return DialogV2.wait({
         window: { title: model.name },
         content: `<p class="aa-scene-object-description">${escape(model.description)}</p>`
             + (locked ? "<p>Cet objet est verrouillé par le MJ.</p>" : "")
-            + (canProject ? `<label class="form-group">Durée du trajet (s)
-                <input name="projectileDuration" type="number" min="0.1" max="10" step="0.1" value="${escape(model.projectileDuration ?? 0.8)}">
-                </label><p>Projeter : choisissez le départ A, puis l’arrivée B sur la scène.</p>` : ""),
+            + (canProject && model.flight ? "<p>Le trajet est en cours.</p>" : ""),
         buttons, rejectClose: false
     });
 }
@@ -64,8 +56,20 @@ export async function openSceneObjectInteraction(tile) {
 export class SceneObjectsPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     static DEFAULT_OPTIONS = {
         id: "aa-scene-objects", classes: ["arcane-advent", "aa-scene-objects"],
-        position: { width: 560, height: 460 }, window: { title: "Objets de scène", resizable: true },
+        position: { width: 680, height: 640 }, window: { title: "Animations", resizable: true },
         actions: {
+            prepare: async function () {
+                try {
+                    const uuid = this.element.querySelector('[name="animationModel"]')?.value;
+                    const item = uuid && await fromUuid(uuid);
+                    await prepareSceneAnimation({ item });
+                } catch (error) { ui.notifications.error(error.message); }
+            },
+            createModel: async function () {
+                if (!game.user.isGM) return;
+                const item = await Item.create({ name: "Nouvelle animation", type: "visualEffect" });
+                item?.sheet.render({ force: true });
+            },
             interact: function (_event, target) {
                 const tile = canvas.scene?.tiles.get(target.dataset.tileId);
                 if (tile) return openSceneObjectInteraction(tile);
@@ -85,22 +89,29 @@ export class SceneObjectsPanel extends HandlebarsApplicationMixin(ApplicationV2)
         body: { template: "systems/arcane-advent/templates/scene-objects-panel.hbs", scrollable: [".aa-scene-objects-list"] }
     };
     _hooks = [];
+    _selectedModel = "";
     async _prepareContext(options) {
         const objects = [...(canvas.scene?.tiles ?? [])].filter(tile => sceneObjectAccess(tile).visible
             && (!tile.levels?.size || tile.levels.has(canvas.level?.id))).map(tile => {
                 const model = sceneObject(tile);
                 return { id: tile.id, name: model.name, img: model.sourceImage,
                     type: game.i18n.localize("TYPES.Item." + model.kind),
-                    status: tile.hidden ? "Masqué" : tile.locked ? "Verrouillé"
+                    status: model.flight ? "Trajet en cours" : model.playback?.state === "ended" ? "Lecture terminée"
+                        : tile.hidden ? "Masqué" : tile.locked ? "Verrouillé"
                         : sceneMist(model).enabled ? (model.active ? "Brume active" : "Brume inactive")
                         : sceneLightEnabled(model) ? (model.active ? "Allumé" : "Éteint") : "" };
             });
-        return { ...await super._prepareContext(options), objects, isGM: game.user.isGM, sceneName: canvas.scene?.name };
+        const models = game.user.isGM ? animationModels().map(item => ({
+            uuid: item.uuid, name: item.name, selected: item.uuid === this._selectedModel
+        })) : [];
+        return { ...await super._prepareContext(options), objects, models, hasModels: models.length > 0,
+            isGM: game.user.isGM, sceneName: canvas.scene?.name };
     }
     async _onRender(context, options) {
         await super._onRender(context, options);
+        this.element?.querySelector('[name="animationModel"]')?.addEventListener("change", event => { this._selectedModel = event.target.value; });
         if (this._hooks.length) return;
-        for (const event of ["createTile", "updateTile", "deleteTile", "canvasReady", "canvasTearDown"]) {
+        for (const event of ["createTile", "updateTile", "deleteTile", "createItem", "updateItem", "deleteItem", "canvasReady", "canvasTearDown"]) {
             this._hooks.push([event, Hooks.on(event, () => this.render({ force: false }))]);
         }
     }

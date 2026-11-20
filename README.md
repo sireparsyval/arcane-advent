@@ -344,7 +344,7 @@ modifier ou supprimer le modèle ne change pas les autres exemplaires.
 Pour une torche, activer **Cet objet émet de la lumière**, régler ses rayons et
 choisir une animation. Autoriser l’allumage/extinction dans **Actions des joueurs**.
 Pour une chaise ou une table, autoriser le déplacement et la rotation.
-En jeu, double-cliquer l’objet avec l’outil Jetons actif, ou ouvrir **Objets de scène**
+En jeu, double-cliquer l’objet avec l’outil Jetons actif, ou ouvrir **Animations**
 en bas du répertoire Objets. **Déplacer** demande de cliquer sur la destination ;
 Échap ou clic droit annule. Un MJ connecté traite les actions des joueurs.
 Un objet masqué ou placé sur un autre étage n’est pas proposé aux joueurs ;
@@ -371,15 +371,30 @@ la tuile les supprime aussi. Le MJ peut utiliser le calque Tuiles pour ces opér
 Les effets visuels ne lancent pas automatiquement de jets et n’appliquent pas
 de conditions aux personnages ; la région sert ici à délimiter la zone.
 
-### Projeter un effet sur la scène
+### Animations : préparer, projeter et déclencher un impact
 
-Dans **Objets de scène → Interagir**, le MJ dispose de **Projeter (A → B)** sur
-les effets visuels. Régler la durée du trajet (0,1 à 10 secondes), cliquer sur le
-départ puis sur la destination. Échap ou clic droit annule le choix des points.
-La durée par défaut (0,8 seconde) se règle dans le modèle de l’effet.
+Le bouton **Animations**, en bas du répertoire **Objets**, propose les modèles
+d’**Effet Visuel** du monde avant même qu’un exemplaire soit placé.
+Choisir un modèle et **Préparer une projection**. Régler la durée totale du
+trajet (0,1 à 60 secondes), puis tracer : clic sur A, **Ctrl + clic** pour chaque
+étape intermédiaire, clic sans Ctrl sur B. Retour arrière retire la dernière
+étape ; Échap ou clic droit annule. Le tracé est une prévisualisation locale.
 
-L’effet parcourt le trajet chez tous les participants, avec sa brume et sa lumière
-éventuelles, puis reste à destination. Le trajet utilise une horloge commune ;
-une personne rejoignant la scène en cours de trajet voit la portion restante.
-Le modèle du répertoire reste réutilisable. La projection n’applique pas
-automatiquement de dégâts, d’explosion ou de collision avec les murs.
+La confirmation permet d’ajuster les réglages ou de retracer. Aucun effet
+n’apparaît sur la scène avant **Lancer l’animation**. Le déplacement suit
+les segments à vitesse constante et se synchronise chez les participants.
+
+À l’arrivée, choisir de garder le projectile, de le supprimer ou de déclencher
+un autre modèle d’effet. L’effet final peut être lu **une fois puis supprimé**,
+**une fois puis conservé** (dernière image d’une vidéo), ou **en boucle**.
+La durée réelle d’une vidéo est utilisée ; pour une image ou une brume,
+renseigner la durée prévue. Les vidéos démarrent au début, sans point de départ
+aléatoire. La suppression est pilotée par le MJ actif, même s’il change de scène.
+
+Pour attendre un jet de sauvegarde, garder la boule à l’arrivée. Dans la liste
+des effets présents, **Interagir → Continuer / préparer un trajet** repart de
+sa position actuelle ; **Déclencher l’effet final** la remplace immédiatement
+par l’explosion choisie. Les modèles du répertoire restent réutilisables.
+
+Les jets, dégâts, esquives et collisions sont décidés par le MJ. La préparation
+et l’animation ne modifient pas les caractéristiques des personnages.
