@@ -21,7 +21,7 @@
         {{/if}}
     </details>
     <details data-source-conditions="{{id}}" {{#if conditionsOpen}}open{{/if}}>
-        <summary>Critères / conditions ({{conditionEntries.length}})</summary>
+        <summary>Conditions ({{conditionEntries.length}})</summary>
         <ul class="aa-condition-chips aa-source-summary-list" aria-label="Conditions de {{name}}">
             {{#each conditionEntries}}
                 <li class="aa-condition-chip {{#if satisfied}}is-satisfied{{else}}is-unmet{{/if}}{{#if manual}} aa-manual-condition-chip{{/if}}"
