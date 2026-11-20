@@ -149,3 +149,23 @@ test("selected automatic conditions inspect the baseline and update statistics i
     assert.equal(model.abilities.strength.effective, 13);
     assert.equal(model.trackers.effectiveSpeed, 12);
 });
+
+test("numeric references feed statistics without feedback and rolls use the resulting modifier", () => {
+    const source = item("référence", "trait", {
+        strength: stat({ amountFormula: "@abilities.strength.modifier" }),
+        roll: roll({ scope: "save", amountFormula: "@abilities.strength.modifier" })
+    });
+    const model = character([source]);
+    model.abilities.strength.value = 16;
+    for (let i = 0; i < 4; i++) {
+        model.prepareDerivedData();
+        assert.equal(model.abilities.strength.effective, 19);
+        assert.equal(resolveRollEffects(activeCharacterEffects(model.parent), { type: "save" }).bonus, 4);
+    }
+    model.abilities.strength.value = 18;
+    model.prepareDerivedData();
+    assert.equal(model.abilities.strength.effective, 22);
+    assert.equal(resolveRollEffects(activeCharacterEffects(model.parent), { type: "save" }).bonus, 6);
+    assert.equal(source.system.effectRules.strength.amount, 0);
+    assert.equal(source.system.effectRules.strength.amountFormula, "@abilities.strength.modifier");
+});

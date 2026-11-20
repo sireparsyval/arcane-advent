@@ -124,3 +124,45 @@ test("un utilisateur sans droit de modification ne peut pas ouvrir l’éditeur"
     assert.equal(latest, previous);
     assert.match(notices[0], /droit de modifier/);
 });
+
+test("l’éditeur conserve la référence, affiche sa valeur et refuse une valeur introuvable ou non entière", async () => {
+    const { actor, owner, writes } = await fixture();
+    actor.system.abilities = { strength: { value: 16, modifier: 3 } };
+    const dialog = await openCharacterEffectsEditor(owner, { actor });
+    change(dialog, "second", { efield: "amount" }, "@abilities.strength.modifier");
+    click(dialog, { effectTab: "preview" });
+    assert.match(dialog.root.innerHTML, /\+3/);
+    click(dialog, { effectTab: "effects" });
+    assert.match(dialog.root.innerHTML, /value="@abilities.strength.modifier"/);
+    assert.match(dialog.root.innerHTML, /Valeur actuelle : \+3/);
+    await save(dialog);
+    assert.deepEqual(errors, []);
+    assert.equal(writes[0]["system.effectRules"].second.amountFormula, "@abilities.strength.modifier");
+    assert.equal(writes[0]["system.effectRules"].second.amount, 0);
+
+    const other = await openCharacterEffectsEditor(owner, { actor });
+    change(other, "second", { efield: "amount" }, "@abilities.missing.value");
+    await save(other);
+    assert.equal(writes.length, 1);
+    assert.match(errors.at(-1), /introuvable/);
+    change(other, "second", { efield: "amount" }, "1.5");
+    await save(other);
+    assert.equal(writes.length, 1);
+    assert.match(errors.at(-1), /entier/);
+    change(other, "second", { efield: "amount" }, "-2");
+    await save(other);
+    assert.equal(writes.length, 2);
+    assert.equal(writes[1]["system.effectRules"].second.amount, -2);
+    assert.equal(writes[1]["system.effectRules"].second.amountFormula, "");
+});
+
+test("un Trait ou une Aptitude sans personnage conserve les références en attente de leur futur propriétaire", async () => {
+    const { owner, dialog, writes } = await fixture();
+    change(dialog, "second", { efield: "amount" }, "@abilities.strength.modifier");
+    click(dialog, { effectTab: "effects" });
+    assert.match(dialog.root.innerHTML, /Valeur calculée une fois/);
+    await save(dialog);
+    assert.deepEqual(errors, []);
+    assert.equal(writes[0]["system.effectRules"].second.amountFormula, "@abilities.strength.modifier");
+    assert.equal(owner.system.effectRules.second.amountFormula, "");
+});

@@ -385,7 +385,7 @@ export class ArcaneCharacterSheet
                     summary: effectRuleSummary(rule, { compact: true }),
                     enabled: rule.enabled !== false,
                     active: rule.active,
-                    status: rule.enabled === false ? "Désactivé" : rule.active ? "Actif" : "Inactif"
+                    status: rule.enabled === false ? "Désactivé" : rule.amountError ? "Référence invalide" : rule.active ? "Actif" : "Inactif"
                 })),
                 conditionEntries: Object.entries(item.system.conditions ?? {}).map(([id, condition]) => ({
                     id,

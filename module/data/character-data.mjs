@@ -397,7 +397,7 @@ export class CharacterData extends foundry.abstract.TypeDataModel {
         // oscillating every time Foundry prepares the actor.
         this.effectSnapshot = Object.fromEntries([
             "abilities", "savingThrows", "consciousness", "fever", "consciousnessDice",
-            "deathSaves", "barrier", "mercy", "defense", "trackers", "encumbrance", "identity"
+            "deathSaves", "barrier", "mercy", "defense", "trackers", "encumbrance", "identity", "modifierTotals"
         ].map(key => [key, JSON.parse(JSON.stringify(this[key]))]));
         this._prepareCoreStatistics(totals, activeCharacterEffects(this.parent));
     }

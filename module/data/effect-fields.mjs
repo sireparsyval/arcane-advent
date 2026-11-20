@@ -32,6 +32,7 @@ export function effectFields({ aptitude = false, withConditions = true } = {}) {
             kind: new StringField({ choices: ["stat", "roll"], initial: "stat" }),
             target: new StringField({ choices: Object.keys(EFFECT_STAT_TARGETS), initial: "strength" }),
             amount: new NumberField({ initial: 0 }),
+            amountFormula: new StringField({ blank: true, initial: "" }),
             coefficient: new NumberField({ min: 0, initial: 1 }),
             addBefore: new BooleanField({ initial: false }),
             scope: new StringField({ choices: Object.keys(EFFECT_ROLL_SCOPES), initial: "all" }),

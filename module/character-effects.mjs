@@ -1,5 +1,6 @@
 import { MODIFIER_TARGETS } from "./modifiers.mjs";
 import { aptitudeConditionStatus } from "./aptitude-conditions.mjs";
+import { resolveEffectAmount } from "./effect-amounts.mjs";
 
 export const EFFECT_ROLL_SCOPES = Object.freeze({
     all: "Tous les jets de d20", ability: "Tests de caractéristique", save: "Jets de sauvegarde",
@@ -19,7 +20,7 @@ export const EFFECT_STAT_TARGETS = Object.freeze({ ...MODIFIER_TARGETS,
     feverMax: "PdF — maximum", consciousnessDiceMax: "Dés de Conscience — maximum" });
 
 export function newEffectRule(kind = "stat") {
-    return { label: "", enabled: true, kind, target: "strength", amount: 0, coefficient: 1,
+    return { label: "", enabled: true, kind, target: "strength", amount: 0, amountFormula: "", coefficient: 1,
         addBefore: false, scope: "all", ability: "", skill: "", advantage: false, disadvantage: false,
         conditionMode: "source", conditionIds: [], conditionMatch: "all" };
 }
@@ -76,9 +77,11 @@ export function characterEffectSources(actor) {
     return [{ id: "actor", name: "Effets permanents du personnage", type: "character", system: actor.system },
         ...[...(actor.items ?? [])].filter(item => ["trait", "aptitude"].includes(item.type))]
         .map(source => ({ source, active: effectSourceActive(viewer, source),
-            rules: Object.entries(source.system.effectRules ?? {}).map(([id, rule]) => ({
-                id, ...rule, active: effectRuleActive(viewer, source, rule)
-            })) }));
+            rules: Object.entries(source.system.effectRules ?? {}).map(([id, rule]) => {
+                const amount = resolveEffectAmount(actor, rule);
+                return { id, ...rule, amount: amount.value, amountResolved: true, amountError: amount.error,
+                    active: !amount.error && effectRuleActive(viewer, source, rule) };
+            }) }));
 }
 
 export function activeCharacterEffects(actor) {
@@ -136,20 +139,26 @@ export function resolveRollEffects(rules = [], context = {}, mode = "normal") {
         mode: advantage === disadvantage ? "normal" : advantage ? "advantage" : "disadvantage" };
 }
 
-export function effectRuleSummary(rule, { compact = false } = {}) {
+export function effectRuleSummary(rule, { compact = false, actor = null } = {}) {
+    const resolved = actor ? resolveEffectAmount(actor, rule) : null;
+    const error = resolved?.error || rule.amountError;
+    if (error) return "Bonus / malus indisponible : " + error;
+    const value = resolved?.value ?? rule.amount;
+    const reference = rule.amountFormula && !actor && !rule.amountResolved ? rule.amountFormula : "";
     const signed = value => Number(value) > 0 ? `+${Number(value)}` : String(Number(value) || 0);
     if (rule.kind === "roll") {
         const namedSkill = compact && rule.scope === "skill" && rule.skill?.trim();
         const pieces = namedSkill ? [] : [EFFECT_ROLL_SCOPES[rule.scope] ?? EFFECT_ROLL_SCOPES.all];
         if (rule.ability) pieces.push(EFFECT_ABILITIES[rule.ability]);
         if (rule.skill) pieces.push(rule.skill);
-        if (rule.amount) pieces.push(signed(rule.amount));
+        if (reference) pieces.push(reference);
+        else if (value) pieces.push(signed(value));
         if (rule.advantage) pieces.push("Avantage");
         if (rule.disadvantage) pieces.push("Désavantage");
         if (rule.advantage && rule.disadvantage) pieces.push("→ Neutre");
         return pieces.join(" · ");
     }
-    const amount = signed(rule.amount), factor = Number(rule.coefficient ?? 1);
+    const amount = reference ? `+ (${reference})` : signed(value), factor = Number(rule.coefficient ?? 1);
     const formula = rule.addBefore ? `(base ${amount}) × ${factor}` : `base × ${factor} ${amount}`;
     return `${EFFECT_STAT_TARGETS[rule.target] ?? rule.target} : ${formula}`;
 }
