@@ -21,7 +21,8 @@
                             aria-label="Configurer {{name}}" title="Description, effets et conditions du Trait">
                             <i class="fa-solid fa-gear" aria-hidden="true"></i>
                         </button>
-                        <button type="button" data-action="toggleTraitConfig" aria-expanded="{{configOpen}}" title="Aptitudes liées">↳ Aptitudes</button>
+                        <button type="button" data-action="createLinkedAptitude" data-trait-id="{{id}}"
+                            aria-label="Créer une Aptitude liée à {{name}}" title="Créer une Aptitude liée à ce Trait">+ Aptitude</button>
                         <button type="button" data-action="deleteTrait" data-trait-id="{{id}}"
                             aria-label="Retirer {{name}}" title="Retirer le Trait">
                             <i class="fa-solid fa-trash" aria-hidden="true"></i>
@@ -32,38 +33,58 @@
                 {{/if}}
             </div>
 
-            {{#if system.requirements}}
-                <div class="aa-requirements-note"><strong>Conditions requises :</strong> {{system.requirements}}</div>
-            {{/if}}
-            {{#if effectCount}}
-                <div class="aa-effect-source-line"><span>{{effectCount}} effet(s) · {{#if effectActive}}Actifs{{else}}Inactifs{{/if}}</span>
-                {{#if effectManual}}<button type="button" data-action="toggleCharacterEffects" data-item-id="{{id}}" aria-pressed="{{system.effectActivation.active}}" {{#unless @root.canEditState}}disabled{{/unless}}>Activer / désactiver</button>{{/if}}</div>
-            {{/if}}
+            <div class="aa-trait-quick-view">
+                <details data-trait-effects="{{id}}" {{#if effectsOpen}}open{{/if}}>
+                    <summary>Effets ({{effectCount}}) · {{#if effectActive}}Actifs{{else}}Inactifs{{/if}}</summary>
+                    <ul class="aa-trait-summary-list">
+                        {{#each effectEntries}}
+                            <li>
+                                {{#if label}}<strong>{{label}}</strong>{{/if}}
+                                <span>{{summary}}</span>
+                                <small>{{status}}</small>
+                            </li>
+                        {{else}}
+                            <li>Aucun effet configuré.</li>
+                        {{/each}}
+                    </ul>
+                    {{#if effectManual}}
+                        <button type="button" data-action="toggleCharacterEffects" data-item-id="{{id}}"
+                            aria-pressed="{{system.effectActivation.active}}" {{#unless @root.canEditState}}disabled{{/unless}}>Activer / désactiver</button>
+                    {{/if}}
+                </details>
+                <details data-trait-conditions="{{id}}" {{#if conditionsOpen}}open{{/if}}>
+                    <summary>Critères / conditions ({{conditionEntries.length}})</summary>
+                    <p class="aa-trait-activation">{{activationLabel}}</p>
+                    {{#if conditionEntries.length}}<p>{{conditionMatchLabel}}</p>{{/if}}
+                    <ul class="aa-trait-summary-list">
+                        {{#each conditionEntries}}
+                            <li>
+                                {{#if label}}<strong>{{label}}</strong>{{/if}}
+                                <span>{{summary}}</span>
+                                <small>{{#if satisfied}}Validé{{else}}Non validé{{/if}}</small>
+                            </li>
+                        {{else}}
+                            <li>Aucun critère configuré.</li>
+                        {{/each}}
+                    </ul>
+                </details>
+            </div>
 
-            {{#if @root.canEditState}}
-                <div class="aa-trait-config" data-trait-config="{{id}}" {{#unless configOpen}}hidden{{/unless}}>
-                    <label class="aa-trait-requirements-editor">
-                        <span>Conditions requises (facultatives)</span>
-                        <textarea rows="2" data-trait-field="requirements" data-trait-id="{{id}}"
-                            placeholder="Circonstances dans lesquelles ce Trait s'applique…">{{system.requirements}}</textarea>
-                    </label>
+            {{#if linkedAptitudes.length}}
+                <div class="aa-trait-config">
                     <div class="aa-trait-links-heading">
                         <strong>Aptitudes liées</strong>
-                        <button type="button" data-action="createLinkedAptitude" data-trait-id="{{id}}"
-                            title="Créer une aptitude associée à ce Trait">+ Aptitude</button>
                     </div>
                     <div class="aa-trait-links">
                         {{#each linkedAptitudes}}
                             <div class="aa-trait-link-row">
                                 <span>{{name}} <small>· {{categoryLabel}}</small></span>
-                                <button type="button" data-action="deleteLinkedAptitude"
+                                {{#if @root.canEditState}}<button type="button" data-action="deleteLinkedAptitude"
                                     data-trait-id="{{../id}}" data-item-id="{{id}}"
                                     aria-label="Supprimer l'aptitude {{name}}" title="Supprimer cette aptitude liée">
                                     <i class="fa-solid fa-trash" aria-hidden="true"></i>
-                                </button>
+                                </button>{{/if}}
                             </div>
-                        {{else}}
-                            <small>Aucune Aptitude liée à ce Trait.</small>
                         {{/each}}
                     </div>
                 </div>

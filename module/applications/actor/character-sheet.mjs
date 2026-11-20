@@ -8,7 +8,7 @@ import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedM
 import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
 import { EXPERTISE_DOMAINS, WEAPON_PROPERTIES, PROPERTY_FILTER_STATES, normalizedClasses } from "../../expertise.mjs";
 import { aptitudeConditionStatus, conditionSummary } from "../../aptitude-conditions.mjs";
-import { characterEffectSources, conditionActor } from "../../character-effects.mjs";
+import { characterEffectSources, conditionActor, effectRuleSummary, EFFECT_ACTIVATIONS } from "../../character-effects.mjs";
 import { openCharacterEffectsEditor, openCharacterEffectsManager } from "../character-effects-editor.mjs";
 import { bindConditionControls, conditionControls, readConditionControls, validateCondition } from "../effect-condition-controls.mjs";
 import { hotbarRollData } from "../../shortcuts.mjs";
@@ -220,7 +220,6 @@ export class ArcaneCharacterSheet
             deleteAptitude: this._onDeleteStateItem,
             goToLinkedTrait: this._onGoToLinkedTrait,
             addTrait: this._onAddTrait,
-            toggleTraitConfig: this._onToggleTraitConfig,
             createLinkedAptitude: this._onCreateLinkedAptitude,
             deleteLinkedAptitude: this._onDeleteLinkedAptitude,
             deleteTrait: this._onDeleteTrait,
@@ -353,9 +352,13 @@ export class ArcaneCharacterSheet
             this.element?.querySelectorAll("details[data-aptitude-settings][open]") ?? [],
             panel => panel.dataset.aptitudeSettings
         ));
-        const openTraitConfigs = new Set(Array.from(
-            this.element?.querySelectorAll("[data-trait-config]:not([hidden])") ?? [],
-            panel => panel.dataset.traitConfig
+        const openTraitEffects = new Set(Array.from(
+            this.element?.querySelectorAll("details[data-trait-effects][open]") ?? [],
+            panel => panel.dataset.traitEffects
+        ));
+        const openTraitConditions = new Set(Array.from(
+            this.element?.querySelectorAll("details[data-trait-conditions][open]") ?? [],
+            panel => panel.dataset.traitConditions
         ));
         const openTraitDescriptions = new Set(Array.from(
             this.element?.querySelectorAll("details[data-trait-description][open]") ?? [],
@@ -376,7 +379,22 @@ export class ArcaneCharacterSheet
             id: item.id,
             name: item.name,
             system: item.system,
-            configOpen: openTraitConfigs.has(item.id),
+            effectsOpen: openTraitEffects.has(item.id),
+            conditionsOpen: openTraitConditions.has(item.id),
+            activationLabel: EFFECT_ACTIVATIONS[item.system.effectActivation?.mode ?? "always"],
+            conditionMatchLabel: item.system.conditionMatch === "any" ? "Au moins un critère" : "Tous les critères",
+            effectEntries: (effectsById.get(item.id)?.rules ?? []).map(rule => ({
+                id: rule.id,
+                label: rule.label,
+                summary: effectRuleSummary(rule),
+                status: rule.enabled === false ? "Désactivé" : effectsById.get(item.id)?.active ? "Actif" : "Inactif"
+            })),
+            conditionEntries: Object.entries(item.system.conditions ?? {}).map(([id, condition]) => ({
+                id,
+                label: condition.kind === "automatic" ? condition.label : "",
+                summary: conditionSummary(this.actor, condition),
+                satisfied: aptitudeConditionStatus(conditionActor(this.actor), condition)
+            })),
             descriptionOpen: openTraitDescriptions.has(item.id),
             linkedAptitudes: aptitudeItems
                 .filter(aptitude => aptitude.system.traitId === item.id)
@@ -805,13 +823,6 @@ export class ArcaneCharacterSheet
         if (trait) await openCharacterEffectsEditor(trait, { actor: this.actor });
     }
 
-    static _onToggleTraitConfig(event, target) {
-        const config = target.closest(".aa-trait-row")?.querySelector("[data-trait-config]");
-        if (!config) return;
-        config.hidden = !config.hidden;
-        target.setAttribute("aria-expanded", String(!config.hidden));
-    }
-
     static async _onCreateLinkedAptitude(event, target) {
         if (!this.isEditable) return;
         const trait = this.actor.items.get(target.dataset.traitId);
@@ -946,12 +957,6 @@ export class ArcaneCharacterSheet
         if (trait?.type !== "trait") return;
         const row = this.element.querySelector(`[data-trait-row="${trait.id}"]`);
         if (!row) return;
-        const config = row.querySelector("[data-trait-config]");
-        const toggle = row.querySelector('[data-action="toggleTraitConfig"]');
-        if (config && toggle) {
-            config.hidden = false;
-            toggle.setAttribute("aria-expanded", "true");
-        }
         row.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
@@ -961,7 +966,7 @@ export class ArcaneCharacterSheet
         const field = event.currentTarget;
         const trait = this.actor.items.get(field.dataset.traitId);
         const key = field.dataset.traitField;
-        if (trait?.type !== "trait" || !["name", "description", "requirements"].includes(key)
+        if (trait?.type !== "trait" || !["name", "description"].includes(key)
             || !field.reportValidity()) return;
 
         const value = field.value.trim();
