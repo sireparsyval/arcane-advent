@@ -143,10 +143,10 @@
                 </div>
             {{/if}}
             <details data-aptitude-description="{{id}}" {{#if descriptionOpen}}open{{/if}}>
-                <summary>Description et effets conditionnels</summary>
+                <summary>Description</summary>
                 {{#if @root.canEditState}}
                     <textarea rows="4" data-aptitude-field="description" data-item-id="{{id}}"
-                        aria-label="Effets et utilisation de {{name}}">{{system.description}}</textarea>
+                        aria-label="Description de {{name}}">{{system.description}}</textarea>
                 {{else}}
                     <p>{{#if system.description}}{{system.description}}{{else}}Aucune description.{{/if}}</p>
                 {{/if}}

@@ -70,10 +70,10 @@
             {{/if}}
 
             <details data-trait-description="{{id}}" {{#if descriptionOpen}}open{{/if}}>
-                <summary>Exceptions et particularités</summary>
+                <summary>Description</summary>
                 {{#if @root.canEditState}}
                     <textarea rows="4" data-trait-field="description" data-trait-id="{{id}}"
-                        aria-label="Description et exceptions de {{name}}"
+                        aria-label="Description de {{name}}"
                         placeholder="Particularités, exceptions aux règles et effets du Trait…">{{system.description}}</textarea>
                 {{else}}
                     <p>{{#if system.description}}{{system.description}}{{else}}Aucune description.{{/if}}</p>
