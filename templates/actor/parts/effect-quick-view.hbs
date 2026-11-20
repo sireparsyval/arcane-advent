@@ -6,10 +6,10 @@
                 <li class="aa-condition-chip {{#if active}}is-satisfied{{else}}is-inactive{{/if}}"
                     title="{{status}}">
                     <button type="button" class="aa-effect-rule-toggle" data-action="toggleEffectRule"
-                        data-item-id="{{../id}}" data-effect-id="{{id}}" aria-pressed="{{enabled}}"
+                        data-item-id="{{../id}}" data-effect-id="{{id}}" aria-pressed="{{active}}"
                         aria-label="{{#if enabled}}Désactiver{{else}}Activer{{/if}} l’effet {{#if label}}{{label}}{{else}}{{summary}}{{/if}}"
                         title="{{#if enabled}}Désactiver{{else}}Activer{{/if}} cet effet · {{status}}"
-                        {{#unless @root.canEditState}}disabled{{/unless}}><span aria-hidden="true">{{#if enabled}}☑{{else}}☐{{/if}}</span></button>
+                        {{#unless @root.canEditState}}disabled{{/unless}}><span aria-hidden="true">{{#if active}}☑{{else}}☐{{/if}}</span></button>
                     <span class="aa-source-summary-text">
                         {{#if label}}<strong>{{label}}</strong>{{/if}}
                         <span>{{summary}}</span>
