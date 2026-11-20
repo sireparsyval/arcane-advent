@@ -137,12 +137,6 @@
                             <button type="button" data-action="rollAptitude" data-item-id="{{../id}}" data-roll-id="{{id}}">
                                 <i class="fa-solid fa-dice-d20" aria-hidden="true"></i> {{name}}
                             </button>
-                            {{#if @root.canEditState}}
-                                <button type="button" class="aa-aptitude-edit-roll" data-action="editAptitudeRoll"
-                                    data-item-id="{{../id}}" data-roll-id="{{id}}" aria-label="Modifier {{name}}" title="Modifier {{name}}">
-                                    <i class="fa-solid fa-pen" aria-hidden="true"></i>
-                                </button>
-                            {{/if}}
                         </div>
                     {{/each}}
                 </div>
