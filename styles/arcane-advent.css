@@ -3026,6 +3026,8 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-effect-tabs { display: flex; flex-wrap: wrap; gap: 6px; position: sticky; top: 0; z-index: 1; background: var(--background-color, #201d25); padding: 6px; border-radius: 6px; }
 .aa-effect-tabs button { flex: 1 1 130px; }
 .aa-effect-tabs button[aria-pressed="true"] { border-color: #d3af79; box-shadow: inset 0 0 0 1px #d3af79; }
+.aa-trait-clipboard { display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 6px; }
+.aa-trait-clipboard > button { width: auto; margin: 0; padding-inline: 10px; }
 .aa-effect-body { display: flex; flex-direction: column; gap: 12px; min-height: 180px; max-height: min(58vh, 560px); overflow-y: auto; padding-right: 5px; }
 .aa-effect-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .aa-effect-toolbar, .aa-effect-roll-flags, .aa-effect-source-line { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }

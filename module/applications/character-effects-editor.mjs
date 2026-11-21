@@ -4,6 +4,7 @@ import { EFFECT_ABILITIES, EFFECT_ROLL_SCOPES, EFFECT_STAT_TARGETS, EFFECT_DAMAG
 import { conditionSummary } from "../aptitude-conditions.mjs";
 import { COMBAT_STANCES, combatStanceEffects } from "../combat-stances.mjs";
 import { fixedEffectAmount, resolveEffectAmount } from "../effect-amounts.mjs";
+import { traitParameterClipboard } from "../trait-clipboard.mjs";
 import { bindConditionControls, conditionControls, escape, newCondition, options, validateCondition } from "./effect-condition-controls.mjs";
 
 const copy = value => JSON.parse(JSON.stringify(value ?? {}));
@@ -94,13 +95,14 @@ function replacementWithDeletions(before, after) {
 export async function openCharacterEffectsEditor(owner, { actor = owner.actor ?? owner, parent = null } = {}) {
     if (!owner.isOwner) return ui.notifications.warn("Vous n'avez pas le droit de modifier cette source.");
     const draft = sourceData(owner), isItem = ["trait", "aptitude"].includes(owner.type);
-    let tab = "effects";
+    let tab = "effects", traitParametersPasted = false, traitClipboardBusy = false;
     const content = document.createElement("div"); // DialogV2 requires an unadorned outer div.
     content.innerHTML = '<section class="aa-effects-editor" data-effect-editor></section>';
     const dialog = new foundry.applications.api.DialogV2({
         window: { title: `${isItem ? owner.type === "trait" ? "Trait" : "Aptitude" : "Effets permanents"} — ${owner.name}`, resizable: true },
         position: { width: 850, height: 760 }, content, modal: true, form: { closeOnSubmit: false },
         buttons: [{ action: "save", label: "Enregistrer", callback: async (_event, button, app) => {
+            if (traitClipboardBusy) return;
             button.form.querySelector(":focus")?.blur();
             if (!button.form.reportValidity()) return;
             try {
@@ -124,6 +126,7 @@ export async function openCharacterEffectsEditor(owner, { actor = owner.actor ??
                     "system.effectRules": replacementWithDeletions(owner.system.effectRules, draft.effectRules),
                     "system.conditions": replacementWithDeletions(owner.system.conditions, draft.conditions) };
                 if (isItem) Object.assign(updates, { name: draft.name.trim() || owner.name, "system.description": draft.description, "system.requirements": draft.requirements });
+                if (owner.type === "trait" && traitParametersPasted) updates["system.conditionMatch"] = draft.conditionMatch;
                 if (owner.type === "aptitude") Object.assign(updates, {
                     "system.category": draft.category, "system.requireConditions": draft.requireConditions,
                     "system.conditionMatch": draft.conditionMatch
@@ -137,7 +140,8 @@ export async function openCharacterEffectsEditor(owner, { actor = owner.actor ??
     const render = () => {
         const root = dialog.element.querySelector("[data-effect-editor]");
         const rules = Object.entries(draft.effectRules);
-        root.innerHTML = `<nav class="aa-effect-tabs" aria-label="Éditeur d'effets">${Object.entries({ effects: "Effets", activation: "Conditions", identity: isItem ? "Description" : "Aide", preview: "Récapitulatif" }).map(([key, label]) => `<button type="button" data-effect-tab="${key}" aria-pressed="${tab === key}">${label}</button>`).join("")}</nav>
+        root.innerHTML = `${owner.type === "trait" ? `<div class="aa-trait-clipboard"><button type="button" data-trait-clipboard="copy" title="Copier le nom, la description, les effets et les conditions du Trait">⧉ Copier</button><button type="button" data-trait-clipboard="paste" title="Remplacer les paramètres de ce brouillon par ceux du Trait copié">📋 Coller</button></div>` : ""}
+            <nav class="aa-effect-tabs" aria-label="Éditeur d'effets">${Object.entries({ effects: "Effets", activation: "Conditions", identity: isItem ? "Description" : "Aide", preview: "Récapitulatif" }).map(([key, label]) => `<button type="button" data-effect-tab="${key}" aria-pressed="${tab === key}">${label}</button>`).join("")}</nav>
             <datalist id="aa-effect-skills">${[...(actor.items ?? [])].filter(item => item.type === "skill").map(item => `<option value="${escape(item.name)}"></option>`).join("")}</datalist>
             <div class="aa-effect-body">
             ${tab === "effects" ? `<p class="hint">Les effets s'appliquent au personnage qui possède cette source. Ajoutez autant de règles que nécessaire.</p>
@@ -201,10 +205,30 @@ export async function openCharacterEffectsEditor(owner, { actor = owner.actor ??
             rule.conditionIds = [...ids];
         } else if (field.dataset.draft) draft[field.dataset.draft] = value;
     };
-    const click = event => {
+    const click = async event => {
         const button = event.target.closest("button");
         if (!button) return;
-        if (button.dataset.effectTab) { tab = button.dataset.effectTab; render(); }
+        if (button.dataset.traitClipboard && owner.type === "trait") {
+            if (!owner.isOwner || traitClipboardBusy) return;
+            traitClipboardBusy = true;
+            const controls = [button, ...dialog.element.querySelector("[data-effect-editor]").querySelectorAll("[data-trait-clipboard]")];
+            for (const control of controls) control.disabled = true;
+            try {
+                if (button.dataset.traitClipboard === "copy") {
+                    const result = await traitParameterClipboard.copy(draft);
+                    ui.notifications.info(result.sessionOnly ? "Paramètres du Trait copiés pour cette session." : "Paramètres du Trait copiés.");
+                } else {
+                    const imported = await traitParameterClipboard.paste();
+                    if (!dialog.element || !owner.isOwner) return;
+                    Object.assign(draft, imported);
+                    traitParametersPasted = true;
+                    render();
+                    ui.notifications.info("Paramètres collés. Enregistrez pour les appliquer au Trait.");
+                }
+            } catch (error) { ui.notifications.error(error.message); }
+            finally { traitClipboardBusy = false; for (const control of controls) control.disabled = false; }
+        }
+        else if (button.dataset.effectTab) { tab = button.dataset.effectTab; render(); }
         else if (button.dataset.addEffect) { draft.effectRules[foundry.utils.randomID()] = newEffectRule(button.dataset.addEffect); render(); }
         else if (button.dataset.removeEffect) { delete draft.effectRules[button.dataset.removeEffect]; render(); }
         else if (button.dataset.duplicateEffect) { draft.effectRules[foundry.utils.randomID()] = copy(draft.effectRules[button.dataset.duplicateEffect]); render(); }

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { newEffectRule } from "../module/character-effects.mjs";
 import { openCharacterEffectsEditor, openCharacterEffectsManager } from "../module/applications/character-effects-editor.mjs";
+import { traitParameterClipboard } from "../module/trait-clipboard.mjs";
 
 const errors = [], notices = [];
 let latest, serial = 0;
@@ -26,7 +27,7 @@ globalThis.Hooks = {
     on(name, listener) { const id = ++hookId; actorHooks.set(id, { name, listener }); return id; },
     off(_name, id) { actorHooks.delete(id); }
 };
-globalThis.ui = { notifications: { error: text => errors.push(text), warn: text => notices.push(text) } };
+globalThis.ui = { notifications: { error: text => errors.push(text), warn: text => notices.push(text), info: text => notices.push(text) } };
 
 async function fixture(type = "trait") {
     errors.length = notices.length = 0; serial = 0;
@@ -51,6 +52,81 @@ function change(dialog, ruleId, dataset, value, checkbox = false) {
 const click = (dialog, dataset) => dialog.root.listeners.get("click")({ target: { closest: () => ({ dataset, hasAttribute: () => false }) } });
 const save = dialog => dialog.config.buttons.find(button => button.action === "save").callback(null,
     { form: { querySelector: () => null, reportValidity: () => true } }, dialog);
+
+test("les commandes Copier/Coller sont en haut des Traits et absentes des autres éditeurs", async () => {
+    for (const type of ["trait", "aptitude", "character"]) {
+        const { dialog } = await fixture(type);
+        const html = dialog.root.innerHTML;
+        if (type === "trait") {
+            assert.match(html, /data-trait-clipboard="copy"/);
+            assert.match(html, /data-trait-clipboard="paste"/);
+            assert.ok(html.indexOf("aa-trait-clipboard") < html.indexOf("aa-effect-tabs"));
+        } else assert.doesNotMatch(html, /data-trait-clipboard/);
+    }
+});
+
+test("copier le brouillon puis coller remplace toute la configuration seulement à l’enregistrement", async () => {
+    const source = await fixture();
+    change(source.dialog, null, { draft: "name" }, "Trait modèle");
+    change(source.dialog, null, { draft: "description" }, "Description copiée");
+    change(source.dialog, null, { draft: "requirements" }, "Précisions copiées");
+    change(source.dialog, null, { draft: "conditionMatch" }, "any");
+    change(source.dialog, "first", { efield: "activationMode" }, "conditions");
+    change(source.dialog, "first", { ruleConditionId: "ready" }, true, true);
+    change(source.dialog, "first", { efield: "conditionMatch" }, "any");
+    change(source.dialog, "first", { efield: "amount" }, "max(@abilities.dexterity.modifier, @abilities.constitution.modifier)");
+    await click(source.dialog, { removeEffect: "second" });
+    await click(source.dialog, { removeCondition: "weather" });
+    await click(source.dialog, { traitClipboard: "copy" });
+    change(source.dialog, "first", { efield: "amount" }, "99");
+    assert.equal(source.writes.length, 0);
+    const target = await fixture();
+    const before = { name: target.owner.name, system: structuredClone(target.owner.system) };
+    await click(target.dialog, { traitClipboard: "paste" });
+    assert.deepEqual(errors, []);
+    assert.equal(target.writes.length, 0);
+    assert.equal(target.owner.name, before.name);
+    assert.deepEqual(target.owner.system, before.system);
+    await click(target.dialog, { effectTab: "identity" });
+    assert.match(target.dialog.root.innerHTML, /value="Trait modèle"/);
+    assert.match(target.dialog.root.innerHTML, /Description copiée/);
+    await save(target.dialog);
+    assert.deepEqual(errors, []);
+    const update = target.writes[0];
+    assert.equal(update.name, "Trait modèle");
+    assert.equal(update["system.description"], "Description copiée");
+    assert.equal(update["system.requirements"], "Précisions copiées");
+    assert.equal(update["system.conditionMatch"], "any");
+    assert.deepEqual(update["system.effectRules"].first.conditionIds, ["ready"]);
+    assert.equal(update["system.effectRules"].first.conditionMatch, "any");
+    assert.match(update["system.effectRules"].first.amountFormula, /^max\(@abilities/);
+    assert.ok(update["system.effectRules"].second instanceof foundry.data.operators.ForcedDeletion);
+    assert.ok(update["system.conditions"].weather instanceof foundry.data.operators.ForcedDeletion);
+    assert.equal(update["system.conditions"].ready.label, "Prêt <ici>");
+});
+
+test("Annuler après un collage ne modifie aucun Trait", async () => {
+    const source = await fixture();
+    await click(source.dialog, { traitClipboard: "copy" });
+    const target = await fixture();
+    const before = structuredClone(target.owner.system);
+    await click(target.dialog, { traitClipboard: "paste" });
+    await target.dialog.config.buttons.find(button => button.action === "cancel").callback(null, null, target.dialog);
+    assert.equal(target.writes.length, 0);
+    assert.deepEqual(target.owner.system, before);
+});
+
+test("un collage refusé conserve le brouillon existant", async () => {
+    const { dialog, writes } = await fixture();
+    const before = dialog.root.innerHTML, original = traitParameterClipboard.paste;
+    traitParameterClipboard.paste = async () => { throw Error("Paramètres de Trait invalides"); };
+    try {
+        await click(dialog, { traitClipboard: "paste" });
+        assert.match(errors[0], /Paramètres de Trait invalides/);
+        assert.equal(dialog.root.innerHTML, before);
+        assert.equal(writes.length, 0);
+    } finally { traitParameterClipboard.paste = original; }
+});
 
 for (const type of ["trait", "aptitude"]) {
     test(`l’éditeur d’un ${type} enregistre plusieurs conditions et une combinaison propre à chaque effet`, async () => {
