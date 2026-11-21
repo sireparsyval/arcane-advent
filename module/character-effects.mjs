@@ -19,7 +19,7 @@ export const EFFECT_ABILITIES = Object.freeze({ strength: "Force", dexterity: "D
 export const EFFECT_STAT_TARGETS = Object.freeze({ ...MODIFIER_TARGETS,
     carryingCapacity: "Charge maximale (kg)", consciousnessMax: "PdC — maximum",
     feverMax: "PdF — maximum", consciousnessDiceMax: "Dés de Conscience — maximum" });
-export const EFFECT_DAMAGE_ZONES = Object.freeze({ all: "Globale — toutes les zones", head: "Tête", torso: "Torse", arms: "Bras", legs: "Jambes" });
+export const EFFECT_DAMAGE_ZONES = Object.freeze({ all: "Globale", head: "Tête", torso: "Torse", arms: "Bras", legs: "Jambes" });
 
 export function newEffectRule(kind = "stat") {
     return { label: "", enabled: true, kind, target: "strength", amount: 0, amountFormula: "", coefficient: 1,
