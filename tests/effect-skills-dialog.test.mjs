@@ -49,7 +49,7 @@ test("the read-only skill dialog rolls without closing and refreshes mode and na
     assert.doesNotMatch(dialog.root.innerHTML, /✔️/);
     a.system.effectRules.named.enabled = false;
     emit("updateItem", { parent: a });
-    assert.match(dialog.root.innerHTML, /Aucun effet actif/);
+    assert.match(dialog.root.innerHTML, /Aucune compétence sans maîtrise/);
     dialog.close();
     assert.equal(hooks.size, 0);
 });
@@ -67,5 +67,22 @@ test("an actor has one dialog, unresolved rolls stay disabled, and deletion remo
     await dialog.root.onclick({ target: { closest: () => ({ disabled: true }) } });
     emit("deleteActor", a);
     assert.equal(dialog.rendered, false);
+    assert.equal(hooks.size, 0);
+});
+
+test("adding a skill removes its automatic duplicate immediately and deleting it restores the untrained test", async () => {
+    const a = actor();
+    const dialog = await openEffectSkillsDialog(a);
+    assert.match(dialog.root.innerHTML, /data-effect-skill=/);
+    const skill = { id: "owned", type: "skill", name: "DISCRETION <test>", parent: a,
+        system: { ability: "dexterity", mastery: 2 } };
+    a.items.push(skill);
+    emit("createItem", skill);
+    assert.match(dialog.root.innerHTML, /Aucune compétence sans maîtrise/);
+    assert.doesNotMatch(dialog.root.innerHTML, /data-effect-skill=/);
+    a.items.pop();
+    emit("deleteItem", skill);
+    assert.match(dialog.root.innerHTML, /data-effect-skill=/);
+    dialog.close();
     assert.equal(hooks.size, 0);
 });

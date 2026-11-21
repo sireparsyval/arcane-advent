@@ -27,7 +27,7 @@ export async function openEffectSkillsDialog(actor) {
                 <span class="aa-effect-skill-indicator" title="${row.status}" aria-label="${row.status}">${row.indicator}</span>
             </div>`).join("")}</div>
             ${rows.some(row => !row.canRoll) ? '<p class="hint">Une caractéristique manquante doit être renseignée dans l’effet correspondant.</p>' : ""}`
-            : '<p class="hint">Aucun effet actif ne vise une compétence nommée.</p>';
+            : '<p class="hint">Aucune compétence sans maîtrise concernée par un effet actif.</p>';
         root.onclick = async event => {
             const button = event.target.closest("button[data-effect-skill]");
             if (!button || button.disabled) return;

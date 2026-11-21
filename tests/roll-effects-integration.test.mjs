@@ -67,7 +67,7 @@ test("skill and aptitude rolls receive their targeted bonuses once", async () =>
     assert.equal(custom.formula, "2d6 + 6");
 });
 
-test("automatic skill rolls match their displayed totals without adding bonuses or mastery twice", async () => {
+test("automatic skills match their totals and disappear as soon as a mastery is added without losing its effects", async () => {
     const actor = fixture({ named: rule({ scope: "skill", skill: "Discrétion", ability: "dexterity", amount: 3, advantage: true }),
         generic: rule({ scope: "all", amount: 2 }) });
     let row = effectSkillRows(actor)[0];
@@ -76,18 +76,22 @@ test("automatic skill rolls match their displayed totals without adding bonuses 
     assert.equal(result.modifier, row.total);
     assert.equal(result.mode, "advantage");
     assert.equal(actor.items.size, 0);
-    actor.items.set("s", { id: "s", name: "Discrétion", type: "skill", system: { ability: "dexterity", mastery: 9 } });
-    row = effectSkillRows(actor)[0];
-    result = await actor.rollEffectSkill(row.key);
-    assert.equal(result.modifier, 6);
-    assert.equal((await actor.rollSkill("s")).modifier, 15);
     actor.system.rollMode = "disadvantage";
     assert.equal((await actor.rollEffectSkill(row.key)).mode, "normal");
-    actor.system.effectRules.named.enabled = false;
-    const before = messages.length;
+    actor.items.set("s", { id: "s", name: "Discrétion", type: "skill", system: { ability: "dexterity", mastery: 9 } });
+    assert.deepEqual(effectSkillRows(actor), []);
+    let before = messages.length;
     assert.equal(await actor.rollEffectSkill(row.key), undefined);
     assert.equal(messages.length, before);
-    assert.equal(warnings.length, 1);
+    assert.equal((await actor.rollSkill("s")).modifier, 15);
+    actor.items.delete("s");
+    row = effectSkillRows(actor)[0];
+    assert.equal(row.total, 6);
+    actor.system.effectRules.named.enabled = false;
+    before = messages.length;
+    assert.equal(await actor.rollEffectSkill(row.key), undefined);
+    assert.equal(messages.length, before);
+    assert.equal(warnings.length, 2);
 });
 
 test("automatic skills with an unspecified ability cannot roll", async () => {

@@ -37,14 +37,14 @@ test("equivalent names merge bonuses and opposed sources cancel, including the m
     assert.equal(rows[0].total, 7);
 });
 
-test("skill IDs and names reuse an existing ability but ignore its mastery", () => {
-    const a = actor({ id: rule({ skill: "owned", amount: 1 }), name: rule({ skill: "Discrétion", amount: 2 }) });
+test("skills already listed under masteries are excluded by ID or normalized name regardless of ability or mastery bonus", () => {
+    const a = actor({ id: rule({ skill: "owned", amount: 1 }),
+        name: rule({ skill: " DISCRETION ", ability: "strength", amount: 2 }),
+        other: rule({ skill: "Athlétisme", ability: "strength" }) });
     a.items.push({ id: "owned", type: "skill", name: "Discrétion", system: { ability: "dexterity", mastery: 20 } });
-    const rows = effectSkillRows(a);
-    assert.equal(rows.length, 1);
-    assert.equal(rows[0].skillId, "owned");
-    assert.equal(rows[0].total, 5);
-    assert.equal(rows[0].abilityLabel, "DEX");
+    assert.deepEqual(effectSkillRows(a).map(row => row.name), ["Athlétisme"]);
+    a.items[0].system.mastery = 0;
+    assert.deepEqual(effectSkillRows(a).map(row => row.name), ["Athlétisme"]);
 });
 
 test("different associated abilities stay distinct and unknown abilities never default to Force", () => {

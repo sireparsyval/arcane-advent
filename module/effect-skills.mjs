@@ -13,12 +13,12 @@ export function effectSkillRows(actor, { mode = actor.system.rollMode ?? "normal
     for (const rule of rules) {
         if (rule.kind !== "roll" || !["skill", "all"].includes(rule.scope) || !rule.skill?.trim()) continue;
         const reference = rule.skill.trim();
-        const skill = skills.find(item => item.id === reference)
-            ?? skills.find(item => normalized(item.name) === normalized(reference));
-        const name = skill?.name ?? reference, key = normalized(name);
-        if (!groups.has(key)) groups.set(key, { name, skillId: skill?.id, abilities: new Set() });
+        const key = normalized(reference);
+        // Every Skill Item is already listed under masteries, even with a zero bonus.
+        if (skills.some(item => item.id === reference || normalized(item.name) === key)) continue;
+        if (!groups.has(key)) groups.set(key, { name: reference, abilities: new Set() });
         const group = groups.get(key);
-        const ability = Object.hasOwn(EFFECT_ABILITIES, rule.ability) ? rule.ability : skill?.system.ability;
+        const ability = rule.ability;
         if (Object.hasOwn(EFFECT_ABILITIES, ability)) group.abilities.add(ability);
     }
     const rows = [];
