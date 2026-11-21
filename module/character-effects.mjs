@@ -176,6 +176,7 @@ export function effectRuleSummary(rule, { compact = false, actor = null } = {}) 
         return pieces.join(" · ");
     }
     const amount = reference ? `+ (${reference})` : signed(value), factor = Number(rule.coefficient ?? 1);
-    const formula = rule.addBefore ? `(base ${amount}) × ${factor}` : `base × ${factor} ${amount}`;
+    const formula = factor === 1 ? `base ${amount}`
+        : rule.addBefore ? `(base ${amount}) × ${factor}` : `base × ${factor} ${amount}`;
     return `${EFFECT_STAT_TARGETS[rule.target] ?? rule.target} : ${formula}`;
 }
