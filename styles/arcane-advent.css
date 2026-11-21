@@ -1138,6 +1138,7 @@ body.detached > .aa-detached-sheet .window-content {
 
 .aa-inventory-container {
     border-inline-start: 2px solid var(--aa-accent);
+    padding-inline-start: 5px;
 }
 
 .aa-inventory-row.aa-inventory-drop-active {
@@ -1151,14 +1152,27 @@ body.detached > .aa-detached-sheet .window-content {
     cursor: grab;
 }
 
+.aa-inventory-disclosure,
+.aa-inventory-quantity,
+.aa-inventory-equipment-icon,
+.aa-inventory-purse-icon {
+    box-sizing: border-box;
+    flex: 0 0 calc(3ch + 8px);
+    width: calc(3ch + 8px);
+    min-width: calc(3ch + 8px);
+    font: inherit;
+    text-align: center;
+}
+
 .aa-inventory-disclosure {
     padding-inline: 6px;
 }
 
-.aa-inventory-quantity {
-    flex: 0 0 auto;
-    width: calc(3ch + 8px);
-    text-align: center;
+.aa-inventory-equipment-icon,
+.aa-inventory-purse-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .aa-inventory-name {
