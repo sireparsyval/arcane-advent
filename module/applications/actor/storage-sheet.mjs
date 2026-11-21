@@ -2,7 +2,7 @@ import { buildInventory, canPlaceInContainer, isInventoryContainer, isInventoryI
 import { storageAccess, placeStorage, isGroundTemplate, isGroundDeposit, looseGroundItem } from "../../storage.mjs";
 import { inventoryActionDialog } from "../inventory-transfer.mjs";
 import { inventoryForDocument, inventoryForToken } from "../../storage-inventory.mjs";
-import { transferLooseGroundItem } from "../ground-item-transfer.mjs";
+import { runQuickInventoryAction } from "../ground-item-transfer.mjs";
 
 const { ActorSheetV2, ItemSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -13,15 +13,7 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
         position: { width: 720, height: 570 },
         window: { resizable: true },
         actions: {
-            transferLoose: async function (_event, target) {
-                if (this._groundTransferBusy) return;
-                this._groundTransferBusy = true;
-                this._groundTransferAbort = new AbortController();
-                target.disabled = true;
-                try { await transferLooseGroundItem(this.inventoryHost, { signal: this._groundTransferAbort.signal }); }
-                catch (error) { ui.notifications.error(error.message); }
-                finally { this._groundTransferBusy = false; this._groundTransferAbort = null; target.disabled = false; }
-            },
+            quickInventory: function (_event, target) { return runQuickInventoryAction(this, this.inventoryHost, target); },
             transfer: function () { return inventoryActionDialog(this.inventoryHost, "transfer"); },
             dropGround: function () { return inventoryActionDialog(this.inventoryHost, "drop"); },
             place: async function () { try { await placeStorage(this.inventoryHost); } catch (error) { ui.notifications.error(error.message); } },
@@ -102,7 +94,7 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
         visit(inventory.roots);
         const loose = looseGroundItem(this.inventoryHost);
         return { ...context, actor: this.inventoryHost, rows, isGM: game.user.isGM,
-            looseItem: loose ? { name: loose.name, img: loose.img || this.inventoryHost.img,
+            looseItem: loose ? { id: loose.id, name: loose.name, img: loose.img || this.inventoryHost.img,
                 quantity: loose.type === "object" ? loose.system.quantity : 1 } : null,
             ground: isGroundDeposit(this.inventoryHost), canPlace: game.user.isGM && !isGroundDeposit(this.inventoryHost),
             locked: this.inventoryHost.system.locked, canTransfer: storageAccess(this.inventoryHost),
@@ -124,11 +116,8 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
                 if (item.uuid === storageUuid) this.close();
             })]);
         }
-        if (context.looseItem) {
-            const transfer = this.element.querySelector('[data-action="transferLoose"]');
-            if (transfer && this._groundTransferBusy) transfer.disabled = true;
-            return;
-        }
+        if (this._inventoryQuickBusy) for (const button of this.element.querySelectorAll('[data-action="quickInventory"]')) button.disabled = true;
+        if (context.looseItem) return;
         for (const input of this.element.querySelectorAll("[data-storage-field]")) {
             input.addEventListener("change", async () => {
                 if (!game.user.isGM) return;
@@ -174,7 +163,7 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
     }
 
     async _onClose(options) {
-        this._groundTransferAbort?.abort();
+        this._inventoryQuickAbort?.abort();
         for (const [name, id] of this._storageHooks) Hooks.off(name, id);
         this._storageHooks = [];
         return super._onClose(options);

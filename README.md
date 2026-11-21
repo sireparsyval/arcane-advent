@@ -110,6 +110,12 @@ Dans l’onglet **Équipement**, les boutons **Transférer…** et **Déposer au
 ouvrent la sélection des objets, équipements et quantités à déplacer.
 Sélectionner un contenant emporte tout son contenu, y compris ses sous-contenants.
 Les équipements transférés arrivent non équipés. Les bourses gardent leurs Luqa.
+Chaque ligne d’objet, d’équipement, de bourse ou de contenant propose aussi les
+raccourcis **⇄** (transférer) et une **flèche vers une ligne** (déposer au sol),
+sans ouvrir la sélection de masse. Seule la quantité est demandée pour une pile,
+avec le maximum présélectionné. Le transfert utilise une cible explicite ou attend
+un clic sur le destinataire, comme pour un objet libre au sol. Les armes
+corporelles restent verrouillées et n’affichent pas ces raccourcis.
 
 Pour donner ou récupérer des objets, cibler **un seul jeton destinataire** sur la
 scène, ouvrir l’inventaire source et cliquer sur **Transférer…**. Le destinataire

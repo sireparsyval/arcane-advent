@@ -59,10 +59,17 @@
         <span class="aa-inventory-weight-suffix">{{#if perUnit}}/u{{/if}}</span>
     </span>
 {{/inline}}
+{{#*inline "quickInventoryControls"}}
+    <button type="button" data-action="quickInventory" data-inventory-action="transfer" data-item-id="{{id}}"
+        aria-label="Transférer {{name}}" title="Transférer"><i class="fa-solid fa-right-left" aria-hidden="true"></i></button>
+    <button type="button" data-action="quickInventory" data-inventory-action="drop" data-item-id="{{id}}"
+        aria-label="Déposer {{name}} au sol" title="Déposer au sol"><i class="fa-solid fa-arrow-down-to-line" aria-hidden="true"></i></button>
+{{/inline}}
 {{#*inline "equippedInventoryControls"}}
     <div class="aa-equipment-actions">
         {{#if @root.canEditState}}
             {{#unless system.corporeal}}
+            {{> quickInventoryControls}}
             <button type="button" data-action="toggleEquipment" data-item-id="{{id}}"
                 aria-label="Déséquiper" title="Déséquiper">{{#if unequipText}}{{unequipText}}{{else}}↓{{/if}}</button>
             <button type="button" data-action="moveInventoryItem" data-item-id="{{id}}"
@@ -1349,7 +1356,7 @@
                     {{#if canEditState}}
                         <div class="aa-storage-toolbar">
                             <button type="button" data-action="transferInventory" title="Cibler le destinataire sur la scène avant de transférer">⇄ Transférer…</button>
-                            <button type="button" data-action="dropInventoryGround">↓ Déposer au sol…</button>
+                            <button type="button" data-action="dropInventoryGround"><i class="fa-solid fa-arrow-down-to-line" aria-hidden="true"></i> Déposer au sol…</button>
                         </div>
                     {{/if}}
                     {{#if inventory.rows.length}}
@@ -1387,6 +1394,7 @@
                                     {{/if}}
                                     {{#if @root.canEditState}}
                                         <div class="aa-equipment-actions">
+                                            {{> quickInventoryControls}}
                                             {{#if canEquip}}
                                                 <button type="button" data-action="toggleEquipment" data-item-id="{{id}}">↑ Équiper</button>
                                             {{/if}}

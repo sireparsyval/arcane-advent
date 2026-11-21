@@ -4,7 +4,7 @@
         <img src="{{looseItem.img}}" alt="{{looseItem.name}}">
         <div><strong>{{looseItem.name}}</strong><span>× {{looseItem.quantity}}</span></div>
     </header>
-    <button type="button" data-action="transferLoose" {{#unless canTransfer}}disabled{{/unless}}><i class="fa-solid fa-right-left"></i> Transférer</button>
+    <button type="button" data-action="quickInventory" data-inventory-action="transfer" data-item-id="{{looseItem.id}}" {{#unless canTransfer}}disabled{{/unless}}><i class="fa-solid fa-right-left"></i> Transférer</button>
     {{else}}
     <header class="aa-storage-header">
         <img src="{{actor.img}}" alt="{{actor.name}}">
@@ -23,7 +23,7 @@
     <div class="aa-storage-toolbar">
         {{#if canTransfer}}
             <button type="button" data-action="transfer"><i class="fa-solid fa-right-left"></i> Transférer…</button>
-            <button type="button" data-action="dropGround"><i class="fa-solid fa-sack"></i> Déposer au sol…</button>
+            <button type="button" data-action="dropGround"><i class="fa-solid fa-arrow-down-to-line" aria-hidden="true"></i> Déposer au sol…</button>
         {{/if}}
         {{#if canPlace}}<button type="button" data-action="place">Placer sur la scène</button>{{/if}}
     </div>
@@ -33,6 +33,12 @@
             <div class="aa-storage-row" style="--aa-inventory-depth: {{depth}}">
                 <span>{{#if container}}📦 {{/if}}{{name}}</span>
                 <span>× {{quantity}}</span><span>{{weight}} kg</span>
+                {{#if @root.canTransfer}}
+                    <button type="button" data-action="quickInventory" data-inventory-action="transfer" data-item-id="{{id}}"
+                        title="Transférer" aria-label="Transférer {{name}}"><i class="fa-solid fa-right-left" aria-hidden="true"></i></button>
+                    <button type="button" data-action="quickInventory" data-inventory-action="drop" data-item-id="{{id}}"
+                        title="Déposer au sol" aria-label="Déposer {{name}} au sol"><i class="fa-solid fa-arrow-down-to-line" aria-hidden="true"></i></button>
+                {{/if}}
                 {{#if @root.isGM}}
                     <button type="button" data-action="moveItem" data-item-id="{{id}}" title="Déplacer vers un contenant" aria-label="Déplacer {{name}}">↪</button>
                     <button type="button" data-action="editItem" data-item-id="{{id}}" title="Modifier {{name}}" aria-label="Modifier {{name}}">⚙</button>

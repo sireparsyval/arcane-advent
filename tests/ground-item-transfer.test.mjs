@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { looseGroundItem } from "../module/storage.mjs";
-import { targetedInventoryRecipient, chooseInventoryRecipient, transferLooseGroundItem } from "../module/applications/ground-item-transfer.mjs";
+import { targetedInventoryRecipient, chooseInventoryRecipient, transferLooseGroundItem, quickInventoryAction, runQuickInventoryAction } from "../module/applications/ground-item-transfer.mjs";
 
 class Surface {
     events = new Map();
@@ -148,4 +148,66 @@ test("an invalid click keeps the picker open, and invisible tokens or tokens on 
     canvas.tokens.placeables.push({ document: env.selected, visible: false, bounds: { contains: () => true } });
     env.view.emit("pointerdown");
     assert.equal(await choice, env.target);
+});
+
+test("a character's per-item transfer only sends that object and uses the same targetless picker", async () => {
+    const env = environment();
+    env.source.type = "character"; env.source.isOwner = true;
+    env.source.items.set("other", { id: "other", type: "object", system: { quantity: 8 } });
+    game.user.targets.clear();
+    const transfer = quickInventoryAction(env.source, "apple", "transfer");
+    assert.equal(env.requests.length, 0);
+    env.view.emit("pointerdown"); await transfer;
+    assert.deepEqual(env.requests[0].selections, [{ id: "apple", quantity: 1 }]);
+    assert.equal(env.requests[0].targetToken, env.target.uuid);
+});
+
+test("single equipment, purses and containers transfer without the bulk item-selection menu", async () => {
+    for (const type of ["weapon", "shield", "protection", "accessory", "purse", "container"]) {
+        const env = environment(); env.source.items.get("apple").type = type;
+        await quickInventoryAction(env.source, "apple", "transfer");
+        assert.equal(env.prompts(), 0);
+        assert.deepEqual(env.requests[0].selections, [{ id: "apple", quantity: 1 }]);
+    }
+});
+
+test("per-item ground drops ask only the stack quantity and resolve the source token independently of targets", async () => {
+    const env = environment(5); env.dialog.value = 2;
+    env.source.type = "character"; env.source.isOwner = true;
+    canvas.tokens.placeables.unshift({ document: { ...env.selected, actor: env.source }, controlled: true });
+    game.user.targets.add({ document: env.selected });
+    await quickInventoryAction(env.source, "apple", "drop");
+    assert.equal(env.prompts(), 1);
+    assert.equal(env.requests[0].sourceToken, env.selected.uuid);
+    assert.equal(env.requests[0].targetToken, undefined);
+    assert.equal(env.requests[0].action, "drop");
+    assert.deepEqual(env.requests[0].selections, [{ id: "apple", quantity: 2 }]);
+    assert.equal(env.view.events.size, 0);
+});
+
+test("per-item actions reject a missing source token, inaccessible inventory and corporeal weapons", async () => {
+    const env = environment();
+    await assert.rejects(quickInventoryAction(env.source, "apple", "drop"), /Placez/);
+    env.source.type = "character"; env.source.isOwner = false;
+    await assert.rejects(quickInventoryAction(env.source, "apple", "transfer"), /inaccessible/);
+    env.source.isOwner = true;
+    Object.assign(env.source.items.get("apple"), { type: "weapon", system: { corporeal: true } });
+    await assert.rejects(quickInventoryAction(env.source, "apple", "transfer"), /corporelle/);
+    assert.equal(env.requests.length, 0);
+});
+
+test("quick-action buttons prevent double submission, cancel on close and re-enable buttons from a concurrent render", async () => {
+    const env = environment(); game.user.targets.clear();
+    const old = { dataset: { itemId: "apple", inventoryAction: "transfer" }, disabled: false };
+    let buttons = [old];
+    const sheet = { element: { querySelectorAll: () => buttons } };
+    const operation = runQuickInventoryAction(sheet, env.source, old);
+    assert.equal(old.disabled, true);
+    assert.equal(await runQuickInventoryAction(sheet, env.source, old), undefined);
+    const replacement = { disabled: true }; buttons = [replacement];
+    sheet._inventoryQuickAbort.abort(); await operation;
+    assert.equal(env.requests.length, 0);
+    assert.equal(old.disabled, false); assert.equal(replacement.disabled, false);
+    assert.equal(sheet._inventoryQuickBusy, false);
+    assert.equal(env.view.events.size, 0);
 });

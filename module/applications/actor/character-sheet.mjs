@@ -8,6 +8,7 @@ import { throwInventoryWeapon } from "../scene-object-motion-controls.mjs";
 import { APTITUDE_RANGE_MODES, aptitudeRangeMode, aptitudeRangeSummary,
     bindAptitudeRangeToggle, refreshAptitudeTargetingFields } from "../../aptitude-targeting.mjs";
 import { inventoryActionDialog } from "../inventory-transfer.mjs";
+import { runQuickInventoryAction } from "../ground-item-transfer.mjs";
 import { VOLUME_LABELS, ENCUMBRANCE_STAGES } from "../../encumbrance.mjs";
 import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedModifier } from "../../modifiers.mjs";
 import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
@@ -248,6 +249,7 @@ export class ArcaneCharacterSheet
             addInventoryItem: this._onAddInventoryItem,
             transferInventory: function () { if (this.isEditable) return inventoryActionDialog(this.actor, "transfer"); },
             dropInventoryGround: function () { if (this.isEditable) return inventoryActionDialog(this.actor, "drop"); },
+            quickInventory: function (_event, target) { if (this.isEditable) return runQuickInventoryAction(this, this.actor, target); },
             editInventoryItem: this._onEditInventoryItem,
             moveInventoryItem: this._onMoveInventoryItem,
             moveInventoryItemToRoot: this._onMoveInventoryItemToRoot,
@@ -1601,6 +1603,7 @@ export class ArcaneCharacterSheet
 
 
     _onClose(options) {
+        this._inventoryQuickAbort?.abort();
         super._onClose(options);
         // Foundry réutilise la même instance de fiche à sa réouverture.
         this.position.width = this.options.position.width;
@@ -1624,6 +1627,7 @@ export class ArcaneCharacterSheet
 
     async _onRender(context, options) {
         await super._onRender(context, options);
+        if (this._inventoryQuickBusy) for (const button of this.element.querySelectorAll('[data-action="quickInventory"]')) button.disabled = true;
         bindDefenseReductionTooltips(this.element, this.actor.items, activeCharacterEffects(this.actor));
         this._arcanology.bind(this.element.querySelector(".aa-arcanology"));
         const isDetached = this.window.windowId === this.id;
