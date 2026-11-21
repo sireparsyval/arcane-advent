@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { bindFieldEnter, formDialog } from "../module/applications/form-interactions.mjs";
+import { bindFieldEnter, formDialog, orderDialogButtons } from "../module/applications/form-interactions.mjs";
 
 class Surface {
     listeners = [];
@@ -14,6 +14,46 @@ class Surface {
 }
 const input = (type = "text") => ({ tagName: "INPUT", type, commits: 0,
     reportValidity: () => true, blur() { this.commits++; } });
+
+function footerFixture(buttons) {
+    const document = { activeElement: null };
+    const footer = { children: [...buttons], append(button) {
+        this.children.splice(this.children.indexOf(button), 1); this.children.push(button);
+        if (document.activeElement === button) document.activeElement = null;
+    } };
+    for (const button of buttons) {
+        button.tagName = "BUTTON";
+        button.focus = () => { document.activeElement = button; };
+    }
+    return { document, footer, root: { ownerDocument: document, querySelectorAll: () => [footer] } };
+}
+
+test("dialog footers put dismissals on the left and Save on the right without changing callbacks, defaults or focus", () => {
+    const callback = () => 42;
+    const save = { dataset: { action: "save" }, textContent: "Enregistrer", autofocus: true, disabled: true, callback };
+    const remove = { dataset: { action: "delete" }, textContent: "Supprimer" };
+    const cancel = { dataset: { action: "cancel" }, textContent: "Annuler" };
+    const { root, footer, document } = footerFixture([save, remove, cancel]);
+    document.activeElement = save;
+    orderDialogButtons(root);
+    assert.deepEqual(footer.children, [cancel, remove, save]);
+    assert.equal(document.activeElement, save);
+    assert.equal(save.autofocus, true); assert.equal(save.disabled, true); assert.equal(save.callback, callback);
+    orderDialogButtons(root);
+    assert.deepEqual(footer.children, [cancel, remove, save]);
+});
+
+test("prompt factories order the actual generated OK/Cancel buttons while keeping the original result", async () => {
+    const ok = { dataset: { action: "ok" }, textContent: "Appliquer" };
+    const cancel = { dataset: { action: "back" }, textContent: "Retour" };
+    const { root, footer } = footerFixture([ok, cancel]);
+    globalThis.foundry = { applications: { api: { DialogV2: { prompt(options) {
+        options.render(null, { element: root });
+        return Promise.resolve("confirmed");
+    } } } } };
+    assert.equal(await formDialog.prompt({}), "confirmed");
+    assert.deepEqual(footer.children, [cancel, ok]);
+});
 
 test("Enter commits text and number fields once without invoking the form's default action", () => {
     const root = new Surface();

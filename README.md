@@ -18,6 +18,8 @@ boutons restent activables au clavier lorsqu’ils ont le focus. **Enregistrer**
 ou **Appliquer** ferme l’éditeur après réussite ; une validation ou une écriture
 échouée laisse la fenêtre et sa saisie ouvertes. Les fiches d’objets, d’équipements,
 de glyphes et d’éléments de scène suivent également cette règle.
+Les boutons de pied de menu suivent un ordre commun : **Annuler / Retour à
+gauche**, les actions secondaires au milieu, **Enregistrer / Appliquer à droite**.
 
 - **Bonus / malus / coefficient** : caractéristiques, JS, Défense de base,
   chacune des quatre Défenses partielles, Perception passive, Initiative,

@@ -98,12 +98,12 @@
                 {{/if}}
                 {{#if canEdit}}
                     <div class="aa-arc-actions">
-                        <button type="button" data-notebook-command="save" {{#if busy}}disabled{{/if}} {{#if deleted}}disabled{{/if}}>Enregistrer</button>
                         <button type="button" data-notebook-command="cancel" {{#if busy}}disabled{{/if}}>Annuler</button>
                         {{#unless isGlyphs}}
                             <button type="button" data-notebook-command="chat" {{#if busy}}disabled{{/if}}>Envoyer au chat</button>
                         {{/unless}}
                         <button type="button" class="aa-arc-delete" data-notebook-command="delete" {{#if busy}}disabled{{/if}}>Supprimer</button>
+                        <button type="button" data-notebook-command="save" {{#if busy}}disabled{{/if}} {{#if deleted}}disabled{{/if}}>Enregistrer</button>
                     </div>
                 {{/if}}
                 <p class="aa-arc-message" data-notebook-status role="status">{{#if dirty}}Modifications à enregistrer{{/if}}</p>
