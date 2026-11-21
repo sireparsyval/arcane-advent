@@ -27,3 +27,26 @@ test("equipped shortcuts follow equipment order, show the full attack bonus and 
     assert.equal(rows[0].attack,"+7"); assert.equal(rows[0].versatile,"1d6"); assert.equal(rows[0].light,true);
     assert.equal(rows[0].formula,"1d4");
 });
+
+test("conditional unarmed effects update normal and bonus damage and resolve sheet references", () => {
+    const rule = { ...newEffectRule(), target:"unarmedDamage", amountFormula:"@abilities.dexterity.modifier",
+        activationMode:"conditions", conditionIds:["ready"] };
+    const trait = { id:"trait",type:"trait",name:"Poings",system:{conditions:{ready:{kind:"manual",enabled:true}},effectRules:{damage:rule}} };
+    const a = actor([trait,{id:"e",type:"expertise",system:{bonus:2}}],{expertiseIds:["e"],bonusAction:true});
+    assert.equal(unarmedDamage(a).damage,9); assert.equal(unarmedDamage(a).bonusDamage,7);
+    trait.system.conditions.ready.enabled=false;
+    assert.equal(unarmedDamage(a).damage,5); assert.equal(unarmedDamage(a).bonusDamage,3);
+    trait.system.conditions.ready.enabled=true; rule.enabled=false;
+    assert.equal(unarmedDamage(a).damage,5); assert.equal(unarmedDamage(a).bonusDamage,3);
+});
+
+test("unarmed bonuses before and after multiplication follow the standard effect calculation", () => {
+    const a = actor();
+    a.system.effectRules = {
+        before:{...newEffectRule(),target:"unarmedDamage",amount:1,addBefore:true,coefficient:2},
+        after:{...newEffectRule(),target:"unarmedDamage",amount:3},
+        unrelated:{...newEffectRule(),target:"defense",amount:100}
+    };
+    assert.equal(unarmedDamage(a).damage,11);
+    assert.equal(unarmedDamage(a).bonusDamage,7);
+});

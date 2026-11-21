@@ -17,6 +17,7 @@ export const EFFECT_ACTIVATIONS = Object.freeze({
 export const EFFECT_ABILITIES = Object.freeze({ strength: "Force", dexterity: "Dextérité",
     constitution: "Constitution", intelligence: "Intelligence", wisdom: "Sagesse", charisma: "Charisme" });
 export const EFFECT_STAT_TARGETS = Object.freeze({ ...MODIFIER_TARGETS,
+    unarmedDamage: "Dégâts sans arme",
     carryingCapacity: "Charge maximale (kg)", consciousnessMax: "PdC — maximum",
     feverMax: "PdF — maximum", consciousnessDiceMax: "Dés de Conscience — maximum" });
 export const EFFECT_DAMAGE_ZONES = Object.freeze({ all: "Globale", head: "Tête", torso: "Torse", arms: "Bras", legs: "Jambes" });

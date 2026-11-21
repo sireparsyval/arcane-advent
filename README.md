@@ -15,7 +15,7 @@ Les changements restent un brouillon jusqu'à **Enregistrer**.
 
 - **Bonus / malus / coefficient** : caractéristiques, JS, Défense de base,
   chacune des quatre Défenses partielles, Perception passive, Initiative,
-  Vitesse, charge maximale et maxima de PdC/PdF/Dés de Conscience.
+  Vitesse, dégâts sans arme, charge maximale et maxima de PdC/PdF/Dés de Conscience.
 - **Effet sur les jets** : bonus fixe et indicateurs indépendants Avantage et
   Désavantage. Filtrer par famille de jet, caractéristique associée et compétence.
 - **Réduction de dégâts** : montant fixe positif, pour tous les dégâts (type vide)
@@ -271,6 +271,9 @@ nues et les jets des armes équipées, dans leur ordre d’équipement. **👊**
 Force, Dextérité ou le meilleur des deux, les Expertises ajoutées aux dégâts et
 l’affichage du bonus : dégâts normaux = 1 + modificateur + Expertises ; dégâts en
 action bonus = 1 + Expertises. Le bouton bonus à mains nues est un simple repère.
+La cible d’effet **Dégâts sans arme** ajuste ces deux valeurs selon les conditions
+et les règles habituelles de bonus/malus avant ou après multiplication. L’action
+bonus ignore toujours le modificateur de caractéristique dans son calcul de base.
 Les attaques d’arme affichent leur bonus total ; les dégâts affichent seulement
 leur formule de base. **Légère + Polyvalente** propose aussi les dégâts polyvalents
 en action bonus, sur la barre et dans l’équipement.
