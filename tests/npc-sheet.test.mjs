@@ -8,6 +8,7 @@ globalThis.foundry = {
     applications: {
         sheets: { ActorSheetV2: class {
             _configureRenderParts() { return structuredClone(this.constructor.PARTS); }
+            _onClose(options) { this.parentCloseOptions=options; }
         } },
         api: { HandlebarsApplicationMixin: Base => Base }
     }
@@ -80,4 +81,25 @@ test("une fiche en lecture seule ne peut pas changer le mode", async () => {
     await sheet._onCompactNPCChange({ currentTarget: { checked: true }, stopPropagation() {} });
     assert.deepEqual(writes, []);
     assert.equal(sheet.compactNPC, false);
+});
+
+test("la fermeture réinitialise la taille redimensionnée et le cache du mode compact sans écrire sur l’acteur", () => {
+    assert.equal(ArcaneCharacterSheet.DEFAULT_OPTIONS.window.resizable,true);
+    for(const compact of [false,true]) {
+        const {sheet,writes}=fixture();
+        sheet.options={position:{...ArcaneCharacterSheet.DEFAULT_OPTIONS.position}};
+        sheet.position={width:1360,height:940,left:45,top:30};
+        sheet._fullSheetWidth=1280;
+        sheet._renderedCompactNPC=compact;
+        const options={animate:false};
+        sheet._onClose(options);
+        assert.deepEqual(sheet.position,{width:1000,height:750,left:45,top:30});
+        assert.equal(sheet.parentCloseOptions,options);
+        assert.equal(sheet._fullSheetWidth,undefined);
+        assert.equal(sheet._renderedCompactNPC,undefined);
+        assert.deepEqual(writes,[]);
+        sheet.position.width=1500;
+        sheet._onClose(options);
+        assert.equal(sheet.position.width,1000);
+    }
 });

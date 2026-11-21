@@ -1,6 +1,6 @@
 import { ARCANE_ALIGNMENTS, ARCANE_NEEDS } from "../../config.mjs";
 import { bindDefenseReductionTooltips } from "../../defense-reductions.mjs";
-import { unarmedDamage, equippedAttackShortcuts } from "../../combat-shortcuts.mjs";
+import { unarmedDamage, equippedAttackShortcuts, weaponAttackIcon } from "../../combat-shortcuts.mjs";
 import { ammunitionItems } from "../../weapon-ammunition.mjs";
 import { weaponAttackRestrictions } from "../../weapon-usage.mjs";
 import { throwInventoryWeapon } from "../scene-object-motion-controls.mjs";
@@ -187,6 +187,10 @@ export class ArcaneCharacterSheet
         position: {
             width: 1000,
             height: 750
+        },
+
+        window: {
+            resizable: true
         },
 
         form: {
@@ -626,6 +630,7 @@ export class ArcaneCharacterSheet
 
                     return {
                         ...equipmentView(item),
+                        attackIcon: weaponAttackIcon(item),
                         attackPenalty: weaponAttackRestrictions(this.actor,item).reasons.join(" · "),
                         ammunitionChoices: ammunitionItems(this.actor).map(ammo => ({ id: ammo.id, name: ammo.name,
                             quantity: ammo.system.quantity, selected: ammo.id === item.system.ammunition.itemId })),
@@ -1588,6 +1593,16 @@ export class ArcaneCharacterSheet
             skillId,
             rollMode
         );
+    }
+
+
+    _onClose(options) {
+        super._onClose(options);
+        // Foundry réutilise la même instance de fiche à sa réouverture.
+        this.position.width = this.options.position.width;
+        this.position.height = this.options.position.height;
+        this._fullSheetWidth = undefined;
+        this._renderedCompactNPC = undefined;
     }
 
 

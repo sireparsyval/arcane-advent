@@ -1139,7 +1139,7 @@
                                     <span class="aa-equipment-stat" title="Caractéristique utilisée">{{attackAbility}}</span>
                                     {{#if properties.heavy}}<label class="aa-equipment-inline"><input class="aa-weapon-minimum" type="number" min="0" step="1" value="{{system.heavy.strengthRequirement}}" data-equipment-edit data-item-id="{{id}}" data-item-field="system.heavy.strengthRequirement" aria-label="Valeur minimale de la caractéristique utilisée">min.</label>{{/if}}
                                     <span class="aa-equipment-stat">Exp. {{expertiseBonus}}</span>
-                                    <button type="button" data-action="rollWeaponAttack" data-item-id="{{id}}" title="{{attackPenalty}}">⚔️{{attackModifierLabel}}</button>
+                                    <button type="button" data-action="rollWeaponAttack" data-item-id="{{id}}" title="Attaque — {{name}}{{#if attackPenalty}} · {{attackPenalty}}{{/if}}">{{attackIcon}}{{attackModifierLabel}}</button>
                                     <label class="aa-equipment-inline">Dégâts<input class="aa-weapon-formula" type="text" value="{{system.damageFormula}}" placeholder="1d6" data-equipment-edit data-item-id="{{id}}" data-item-field="system.damageFormula"></label>
                                     <button type="button" data-action="rollWeaponDamage" data-item-id="{{id}}" title="Dégâts">💥</button>
                                     {{#if properties.light}}<button type="button" data-action="rollWeaponBonusDamage" data-item-id="{{id}}" title="Dégâts d’action bonus">➕</button>{{/if}}

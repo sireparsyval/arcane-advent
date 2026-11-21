@@ -21,3 +21,17 @@ test("light versatile bonus damage uses the secondary die and retains only negat
     modifier=3;
     assert.equal((await rollDamage.call(actor,"w",{versatile:true})).formula,"1d6 + 3");
 });
+
+test("missing normal or versatile damage warns instead of silently ignoring a damage shortcut", async () => {
+    const warnings=[];
+    globalThis.ui={notifications:{warn:message=>warnings.push(message)}};
+    globalThis.foundry={dice:{Roll:class{constructor(){assert.fail("No roll should be created without a formula");}}}};
+    const weapon={id:"knife",type:"weapon",name:"Couteau",system:{damageFormula:"",versatile:{damageFormula:"  "}}};
+    const actor={items:new Map([["knife",weapon]])};
+    for(const options of [{},{bonusAction:true},{versatile:true},{versatile:true,bonusAction:true}]) {
+        assert.equal(await rollDamage.call(actor,"knife",options),undefined);
+        assert.match(warnings.at(-1),/formule.*Couteau.*Équipement/);
+        assert.equal(warnings.at(-1).includes("polyvalents"),Boolean(options.versatile));
+    }
+    assert.equal(warnings.length,4);
+});

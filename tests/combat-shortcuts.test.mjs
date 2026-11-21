@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { unarmedDamage, equippedAttackShortcuts } from "../module/combat-shortcuts.mjs";
+import { unarmedDamage, equippedAttackShortcuts, weaponAttackIcon } from "../module/combat-shortcuts.mjs";
 import { newEffectRule } from "../module/character-effects.mjs";
 function actor(items = [], settings = {}) {
     return { items, getFlag: () => settings, system: { abilities: { strength: {modifier:2}, dexterity:{modifier:4} }, effectRules: {} },
@@ -23,6 +23,26 @@ test("equipped shortcuts follow equipment order, show the full attack bonus and 
     assert.deepEqual(rows.map(r=>r.icon),["⚔️","🗡️","🏹"]);
     assert.equal(rows[0].attack,"+7"); assert.equal(rows[0].versatile,"1d6"); assert.equal(rows[0].light,true);
     assert.equal(rows[0].formula,"1d4");
+});
+
+test("two corporeal weapons do not hide a third light weapon, including unconfigured damage", () => {
+    const weapon=(id,corporeal,properties,formula)=>({id,name:id,type:"weapon",system:{equipped:true,corporeal,properties:new Set(properties),damageFormula:formula,versatile:{damageFormula:""}}});
+    const items=[weapon("martial",true,["light"],"1d3"),weapon("tail",true,[],"1d4"),weapon("knife",false,["light","thrown","versatile"],"  ")];
+    const rows=equippedAttackShortcuts(actor(items));
+    assert.deepEqual(rows.map(row=>row.id),["martial","tail","knife"]);
+    assert.equal(rows[2].light,true);
+    assert.equal(rows[2].hasVersatile,true);
+    assert.equal(rows[2].formula,"");
+    assert.equal(rows[2].versatile,"");
+    assert.equal(rows[2].icon,"🗡️");
+    items[2].system.damageFormula="1d6";
+    assert.equal(equippedAttackShortcuts(actor(items))[2].formula,"1d6");
+});
+
+test("shared attack icons cover melee, thrown and ranged weapons with the same priority", () => {
+    for(const [properties,icon] of [[[],"⚔️"],[["thrown"],"🗡️"],[["ammunition"],"🏹"],[["thrown","ammunition"],"🗡️"]]) {
+        assert.equal(weaponAttackIcon({system:{properties:new Set(properties)}}),icon);
+    }
 });
 
 test("conditional unarmed effects update normal and bonus damage and resolve sheet references", () => {

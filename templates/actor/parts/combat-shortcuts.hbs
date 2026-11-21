@@ -6,11 +6,9 @@
     {{#each weaponShortcuts}}
         <div class="aa-combat-shortcut-group" aria-label="{{name}}">
             <button type="button" data-action="rollWeaponAttack" data-item-id="{{id}}" title="Attaque — {{name}}" aria-label="Attaque — {{name}} : {{attack}}">{{icon}}{{attack}}</button>
-            {{#if formula}}
-                <button type="button" data-action="rollWeaponDamage" data-item-id="{{id}}" title="Dégâts — {{name}}">💥{{formula}}</button>
-                {{#if light}}<button type="button" data-action="rollWeaponBonusDamage" data-item-id="{{id}}" title="Dégâts d’action bonus — {{name}}">➕</button>{{/if}}
-            {{/if}}
-            {{#if versatile}}
+            <button type="button" data-action="rollWeaponDamage" data-item-id="{{id}}" title="Dégâts — {{name}}{{#unless formula}} · Formule à renseigner dans Équipement{{/unless}}">💥{{formula}}</button>
+            {{#if light}}<button type="button" data-action="rollWeaponBonusDamage" data-item-id="{{id}}" title="Dégâts d’action bonus — {{name}}{{#unless formula}} · Formule à renseigner dans Équipement{{/unless}}">➕</button>{{/if}}
+            {{#if hasVersatile}}
                 <button type="button" data-action="rollWeaponVersatileDamage" data-item-id="{{id}}" title="Dégâts polyvalents — {{name}}">💥{{versatile}}</button>
                 {{#if light}}<button type="button" data-action="rollWeaponBonusDamage" data-item-id="{{id}}" data-versatile="true" title="Dégâts polyvalents d’action bonus — {{name}}">➕</button>{{/if}}
             {{/if}}

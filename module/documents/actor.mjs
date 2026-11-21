@@ -559,6 +559,7 @@ export class ArcaneActor extends Actor {
 
 
         if (!baseFormula) {
+            ui.notifications.warn(`Renseignez la formule de dégâts${versatile ? " polyvalents" : ""} de « ${weapon.name} » dans Équipement.`);
             return;
         }
 
