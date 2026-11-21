@@ -29,7 +29,7 @@ export function bindMotionFields(root) {
 }
 export function selectSceneObject() {
     if(!canvas.ready)return Promise.resolve(null);
-    ui.notifications.info("Cliquez sur l’objet à déplacer. Échap ou clic droit annule.");
+    ui.notifications.info("Cliquez sur le token ou l’objet à déplacer. Échap ou clic droit annule.");
     return new Promise(resolve=>{
         const view=canvas.app.view;
         const finish=doc=>{view.removeEventListener("pointerdown",click,true);document.removeEventListener("keydown",key,true);Hooks.off("canvasTearDown",teardown);resolve(doc);};
@@ -37,9 +37,9 @@ export function selectSceneObject() {
             if(![0,2].includes(event.button))return;event.preventDefault();event.stopPropagation();
             if(event.button===2)return finish(null);
             const p=canvas.canvasCoordinatesFromClient({x:event.clientX,y:event.clientY});
-            const objects=[...(canvas.tokens?.placeables??[]).filter(o=>o.document.getFlag("arcane-advent","storageItemId")||o.actor?.type==="storage"),...(canvas.tiles?.placeables??[]).slice().reverse()];
+            const objects=[...(canvas.tokens?.placeables??[]),...(canvas.tiles?.placeables??[]).slice().reverse()];
             const selected=objects.find(o=>o.visible!==false&&(!o.document.levels?.size||o.document.levels.has(canvas.level?.id))&&o.bounds?.contains(p.x,p.y));
-            if(selected)finish(selected.document);else ui.notifications.warn("Choisissez un décor ou un objet déposé au sol.");
+            if(selected)finish(selected.document);else ui.notifications.warn("Choisissez un token, un décor ou un objet déposé au sol.");
         };
         const key=event=>{if(event.key==="Escape"){event.preventDefault();finish(null);}};
         const teardown=Hooks.on("canvasTearDown",()=>finish(null));

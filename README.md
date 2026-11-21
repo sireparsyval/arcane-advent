@@ -438,8 +438,9 @@ ou laisse place à l’effet final choisi (une lecture puis suppression, derniè
 image conservée ou boucle). Le menu **⋯** conserve les commandes d’impact manuel,
 de continuation et de suppression d’un effet présent.
 
-En bas, **Animer un objet de la scène** permet de choisir directement un décor,
-une tuile ou un objet déposé au sol, puis sa destination. La ligne de réglages
+En bas, **Animer un token ou un objet** permet de choisir directement un token de
+personnage ou de PNJ, un décor, une tuile ou un objet déposé au sol, puis sa
+destination. La ligne de réglages
 définit la durée du trajet en secondes et la rotation : verrouillée, orientée
 selon le trajet avec un offset horaire (0° face au mouvement, 180° dos au mouvement),
 ou continue avec un nombre de tours et un sens horaire/antihoraire. Le déplacement

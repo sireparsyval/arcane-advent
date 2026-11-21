@@ -26,13 +26,13 @@ test("motion rejects stale origins, off-scene destinations and invalid settings 
     assert.throws(()=>make({duration:0}),/durée/);
 });
 
-test("ground-token rendering follows the shared clock and restores position on completion",()=>{
+for (const type of ["storage", "character", "npc"]) test(`${type} token rendering follows the shared clock and restores position on completion`,()=>{
     const hooks=new Map(),ticks=new Set(),position=()=>({set(x,y){this.x=x;this.y=y;}});
     globalThis.Hooks={on:(name,fn)=>hooks.set(name,fn),once(){}};
     globalThis.CONFIG={queries:{}};globalThis.game={time:{serverTime:1150},users:{activeGM:{isSelf:true}}};
     const parent={...scene,id:"scene",tokens:new Map()},plan=make({duration:2,rotation:"continuous",turns:1});
     const flight=plan["flags.arcane-advent.objectMotion"];
-    const token={...doc,parent,id:"ground",uuid:"Scene.scene.Token.ground",...plan,object:{position:position(),mesh:{position:position()}},
+    const token={...doc,parent,actor:{type},id:"ground",uuid:"Scene.scene.Token.ground",...plan,object:{position:position(),mesh:{position:position()}},
         getFlag:()=>flight,update(){return Promise.resolve();}};
     parent.tokens.set(token.id,token);
     globalThis.canvas={ready:true,scene:parent,app:{ticker:{add:fn=>ticks.add(fn),remove:fn=>ticks.delete(fn)}}};
