@@ -36,6 +36,9 @@
             </span>
         </label>
         <p class="hint">Utilisée si cet objet est déposé seul, avec son contenu éventuel. Laissez vide pour utiliser le sac par défaut.</p>
+        {{> aaInventoryItemField label="Taille sur scène (cases)" type="number" name="system.groundTokenSize"
+            value=system.groundTokenSize min=0.1 step="any" required=true}}
+        <p class="hint">Jeton carré : 1 = une case de côté ; 0,5 = une demi-case. Utilisée lors du dépôt ou du lancer.</p>
         {{#if isContainer}}
             <p class="hint">Poids propre du contenant&nbsp;: 0 kg. Le poids affiché dans l’inventaire correspond à son contenu.</p>
         {{else if isPurse}}

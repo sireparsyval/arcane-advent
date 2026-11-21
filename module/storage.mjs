@@ -23,13 +23,19 @@ function requireSceneToken(token, actor, user) {
     }
 }
 
-export async function createStorage({ name = "Objets au sol", scene = null, x, y, ground = false, img, snap = true } = {}) {
+function groundTokenSize(value = 1) {
+    if (!Number.isFinite(value) || value < 0.1) throw new Error("La taille sur scène doit être d’au moins 0,1 case.");
+    return value;
+}
+
+export async function createStorage({ name = "Objets au sol", scene = null, x, y, ground = false, img, snap = true, size = 1 } = {}) {
     if (!game.user.isGM) throw new Error("La création d’un stockage nécessite le MJ.");
+    size = groundTokenSize(size);
     img ||= game.settings.get("arcane-advent", "storageImage") || STORAGE_IMAGE;
     if (ground && !scene) throw new Error("Choisissez une scène pour le dépôt au sol.");
     const document = await Item.create({ name, type: "storage", img,
         ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER },
-        system: { ground, locked: false, contents: [] } });
+        system: { ground, locked: false, contents: [], groundTokenSize: size } });
     if (!document) throw new Error("Le stockage n’a pas pu être créé dans le répertoire Objets.");
     const storage = inventoryForDocument(document);
     try {
@@ -60,13 +66,18 @@ export async function placeStorage(actor, scene = canvas.scene, position = {}) {
         throw new Error("Ce dépôt est déjà présent sur sa scène.");
     }
     const size = scene.grid.size;
-    const center = canvas.stage?.pivot ?? { x: scene.width / 2, y: scene.height / 2 };
-    const coordinate = (value,max) => Math.max(0,Math.min(max,position.snap===false?value:Math.round(value/size)*size));
-    const x = coordinate(position.x ?? center.x-size/2,scene.width-size);
-    const y = coordinate(position.y ?? center.y-size/2,scene.height-size);
     const itemStorage = actor instanceof StorageInventory;
     const model = itemStorage ? await storageTokenModel() : actor;
-    const token = await model.getTokenDocument({ x, y, ...(itemStorage ? {
+    const side = itemStorage ? groundTokenSize(actor.system.groundTokenSize ?? 1) : null;
+    const width = side ?? model.prototypeToken?.width ?? 1;
+    const height = side ?? model.prototypeToken?.height ?? 1;
+    const pixelWidth = width * size, pixelHeight = height * size;
+    if (pixelWidth > scene.width || pixelHeight > scene.height) throw new Error("La taille du jeton dépasse celle de la scène.");
+    const center = canvas.stage?.pivot ?? { x: scene.width / 2, y: scene.height / 2 };
+    const coordinate = (value,max) => Math.max(0,Math.min(max,position.snap===false?value:Math.round(value/size)*size));
+    const x = coordinate(position.x ?? center.x-pixelWidth/2,scene.width-pixelWidth);
+    const y = coordinate(position.y ?? center.y-pixelHeight/2,scene.height-pixelHeight);
+    const token = await model.getTokenDocument({ x, y, width, height, ...(itemStorage ? {
         name: actor.name, actorLink: false, texture: { src: actor.img },
         flags: { "arcane-advent": { storageItemId: actor.id } }, delta: { name: actor.name, img: actor.img }
     } : {}) }, { parent: scene });
@@ -115,20 +126,30 @@ async function processRequest(data, user) {
     if (data.action === "drop" || data.action === "throw") {
         const token = await fromUuid(data.sourceToken);
         requireSceneToken(token, source, user);
+        for (const selection of data.selections) {
+            const configuredSize = source.items.get(selection.id)?.system.groundTokenSize;
+            if (configuredSize != null) groundTokenSize(configuredSize);
+        }
         const preview = transferPlan(source.items, data.selections, foundry.utils.randomID);
         const roots = preview.creates.filter(item => !item.system.containerId);
         const single = roots.length === 1 ? roots[0] : null;
         const thrown = data.action === "throw";
         const center = objectCenter(token), size = token.parent.grid.size;
+        const side = groundTokenSize(single?.system.groundTokenSize ?? 1), extent = side * size;
         if (thrown) {
             const weapon = source.items.get(data.selections[0]?.id);
             if(data.selections.length!==1||weapon?.type!=="weapon"||weapon.system.corporeal||!weapon.system.equipped
                 ||!new Set(weapon.system.properties).has("thrown"))throw Error("Choisissez une arme Lancer équipée et non corporelle.");
-            objectMotionPlan({documentName:"Token",parent:token.parent,x:center.x-size/2,y:center.y-size/2,width:1,height:1,rotation:0},data.points,data.motion);
+            if (center.x-extent/2 < 0 || center.y-extent/2 < 0
+                || center.x+extent/2 > token.parent.width || center.y+extent/2 > token.parent.height) {
+                throw new Error("Le jeton de l’objet lancé doit tenir dans la scène à son point de départ.");
+            }
+            objectMotionPlan({documentName:"Token",parent:token.parent,x:center.x-extent/2,y:center.y-extent/2,width:side,height:side,rotation:0},data.points,data.motion);
         }
         destination = await createStorage({ name: single?.name || "Objets au sol",
             img: single?.system.groundTokenImage?.trim() || (thrown ? single?.img : undefined), scene: token.parent,
-            x: thrown ? center.x-size/2 : token.x + token.width * size, y: thrown ? center.y-size/2 : token.y, ground: true, snap: !thrown });
+            x: thrown ? center.x-extent/2 : token.x + token.width * size, y: thrown ? center.y-extent/2 : token.y,
+            ground: true, snap: !thrown, size: side });
         groundCreated = true;
     } else if (data.action === "transfer") {
         const token = await fromUuid(data.targetToken);

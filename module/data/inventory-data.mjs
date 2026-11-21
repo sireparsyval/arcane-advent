@@ -9,6 +9,7 @@ class InventoryItemData extends BaseItemData {
             ...super.defineSchema(),
             containerId: new StringField({ required: true, nullable: true, blank: false, initial: null }),
             groundTokenImage: new StringField({ required: true, nullable: false, blank: true, initial: "" }),
+            groundTokenSize: new NumberField({ required: true, nullable: false, min: 0.1, initial: 1 }),
             objectClass: new StringField({ required: true, nullable: false, blank: true, initial: "" })
         };
     }

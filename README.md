@@ -143,7 +143,9 @@ dans **Image des dépôts au sol**. Chaque stockage peut ensuite recevoir sa pro
 image ; sa modification se répercute sur ses jetons. Les options de chaque objet,
 contenant ou équipement proposent aussi **Image du jeton au sol** : elle est utilisée
 si l’objet est déposé seul, avec son contenu éventuel. Un lot de plusieurs objets
-ou un objet sans image personnalisée utilise le sac par défaut.
+ou un objet sans image personnalisée utilise le sac par défaut. **Taille sur scène
+(cases)** définit un jeton carré lors du dépôt ou du lancer : 1 = une case de
+côté, 0,5 = une demi-case. Les anciens objets gardent une taille par défaut de 1.
 
 Les transferts sont traités un à un par le MJ, avec remappage des identifiants
 de contenants, verrouillage temporaire et compensation des écritures échouées.

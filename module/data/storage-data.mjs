@@ -1,6 +1,6 @@
 import { BaseItemData } from "./base-item-data.mjs";
 
-const { BooleanField, ArrayField, ObjectField } = foundry.data.fields;
+const { BooleanField, ArrayField, ObjectField, NumberField } = foundry.data.fields;
 
 export class StorageData extends foundry.abstract.TypeDataModel {
     static defineSchema() {
@@ -13,6 +13,7 @@ export class StorageItemData extends BaseItemData {
         return { ...super.defineSchema(),
             locked: new BooleanField({ initial: false }),
             ground: new BooleanField({ initial: false }),
+            groundTokenSize: new NumberField({ required: true, nullable: false, min: 0.1, initial: 1 }),
             contents: new ArrayField(new ObjectField({ nullable: false }), { initial: [] })
         };
     }

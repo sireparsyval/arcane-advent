@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { isDeepStrictEqual } from "node:util";
-import { registerStorageService, STORAGE_QUERY, storageAccess, requestInventoryAction, createStorage, isGroundTemplate } from "../module/storage.mjs";
+import { registerStorageService, STORAGE_QUERY, storageAccess, requestInventoryAction, createStorage, placeStorage, isGroundTemplate } from "../module/storage.mjs";
 import { inventoryForDocument, inventoryForToken } from "../module/storage-inventory.mjs";
 import { migrateStorageActors } from "../module/storage-migration.mjs";
 
@@ -272,9 +272,9 @@ test("a failed ground drop removes its empty storage and token", async () => {
     assert.equal(source.flags.inventoryBusy, "earlier");
 });
 
-test("a single dropped item uses its ground image and keeps it when picked up", async () => {
+test("a single dropped item uses its ground image and square size and retains both when picked up", async () => {
     const source = actor("image-source", "alice");
-    const sword = item("sword", 3); sword.system.groundTokenImage = "assets/sword.webp";
+    const sword = item("sword", 3); sword.system.groundTokenImage = "assets/sword.webp"; sword.system.groundTokenSize = 0.5;
     source.items.set(sword.id, sword);
     const before = new Set(scene.tokens.keys());
     const result = await query({ action: "drop", source: source.uuid, sourceToken: token(source).uuid,
@@ -283,18 +283,21 @@ test("a single dropped item uses its ground image and keeps it when picked up", 
     const deposit = [...scene.tokens].find(t => !before.has(t.id) && t.actor.isToken);
     assert.equal(deposit.texture.src, "assets/sword.webp");
     assert.equal(deposit.name, "sword");
+    assert.equal(deposit.width, 0.5);
+    assert.equal(deposit.height, 0.5);
     const recipient = actor("image-recipient", "alice");
     const dropped = [...inventoryForToken(deposit).items][0];
     assert.equal((await query(request(inventoryForToken(deposit), recipient, {
         selections: [{ id: dropped.id, quantity: 2 }]
     }))).count, 1);
     assert.equal([...recipient.items][0].system.groundTokenImage, "assets/sword.webp");
+    assert.equal([...recipient.items][0].system.groundTokenSize, 0.5);
     assert.ok(scene.tokens.has(deposit.id), "Deletion must be opt-in");
 });
 
 test("a dropped container uses its own image and carries the whole nested inventory", async () => {
     const source = actor("bag-image-source", "alice");
-    const bag = item("bag", 1); bag.type = "container"; bag.system.groundTokenImage = "assets/bag.webp";
+    const bag = item("bag", 1); bag.type = "container"; bag.system.groundTokenImage = "assets/bag.webp"; bag.system.groundTokenSize = 2;
     const inner = item("inner", 1); inner.type = "container"; inner.system.containerId = "bag";
     const potion = item("potion", 4); potion.system.containerId = "inner";
     for (const value of [bag, inner, potion]) source.items.set(value.id, value);
@@ -304,6 +307,8 @@ test("a dropped container uses its own image and carries the whole nested invent
     assert.equal(result.count, 3);
     const deposit = [...scene.tokens].find(t => !before.has(t.id) && t.actor.isToken);
     assert.equal(deposit.texture.src, "assets/bag.webp");
+    assert.equal(deposit.width, 2);
+    assert.equal(deposit.height, 2);
     const copies = [...inventoryForToken(deposit).items];
     const newBag = copies.find(i => i.name === "bag"), newInner = copies.find(i => i.name === "inner");
     assert.equal(newInner.system.containerId, newBag.id);
@@ -316,6 +321,7 @@ test("multiple roots or an item without a custom image use the default bag", asy
     for (const multiple of [true, false]) {
         const source = actor(`default-image-${multiple}`, "alice");
         const first = item("first", 1); if (multiple) first.system.groundTokenImage = "assets/first.webp";
+        first.system.groundTokenSize = 3;
         source.items.set(first.id, first);
         if (multiple) source.items.set("second", item("second", 1));
         const before = new Set(scene.tokens.keys());
@@ -324,6 +330,84 @@ test("multiple roots or an item without a custom image use the default bag", asy
         assert.equal(result.count, multiple ? 2 : 1);
         const deposit = [...scene.tokens].find(t => !before.has(t.id) && t.actor.isToken);
         assert.equal(deposit.texture.src, "assets/test.png");
+        assert.equal(deposit.width, multiple ? 1 : 3);
+        assert.equal(deposit.height, multiple ? 1 : 3);
+    }
+});
+
+test("all equipped item types use the configured square size when dropped", async () => {
+    for (const type of ["object", "weapon", "shield", "protection", "accessory"]) {
+        const source = actor(`sized-${type}`, "alice"), entry = item(`sized-${type}`, 1);
+        entry.type = type;
+        Object.assign(entry.system, { equipped: type !== "object", properties: [], groundTokenSize: 0.75 });
+        source.items.set(entry.id, entry);
+        const result = await query({ action: "drop", source: source.uuid, sourceToken: token(source).uuid,
+            selections: [{ id: entry.id, quantity: 1 }] });
+        assert.equal(result.count, 1);
+        const placed = [...scene.tokens].find(t => [...(inventoryForToken(t)?.items ?? [])].some(i => i.name === entry.name));
+        assert.equal(placed.width, 0.75);
+        assert.equal(placed.height, 0.75);
+        assert.equal([...inventoryForToken(placed).items][0].system.equipped, false);
+    }
+});
+
+test("storage placement remembers its square size and clamps its whole footprint to scene bounds", async () => {
+    const storage = await createStorage({ name: "Grand dépôt", size: 2, scene });
+    assert.equal(storage.system.groundTokenSize, 2);
+    const [placed] = await placeStorage(storage, scene, { x: 1990, y: 1990 });
+    assert.equal(placed.width, 2);
+    assert.equal(placed.height, 2);
+    assert.equal(placed.x, 1800);
+    assert.equal(placed.y, 1800);
+});
+
+test("invalid or oversized scene sizes never remove source items or leave empty deposits", async () => {
+    for (const [index, size] of [-1, 0, 0.05, NaN, Infinity, "2", 50].entries()) {
+        const source = actor(`invalid-size-${index}`, "alice"), entry = item("object", 1);
+        entry.system.groundTokenSize = size; source.items.set(entry.id, entry);
+        const sourceToken = token(source), tokenCount = scene.tokens.size, storageCount = game.items.size;
+        const result = await query({ action: "drop", source: source.uuid, sourceToken: sourceToken.uuid,
+            selections: [{ id: entry.id, quantity: 1 }] });
+        assert.ok(result.error);
+        assert.equal(source.items.has(entry.id), true);
+        assert.equal(scene.tokens.size, tokenCount);
+        assert.equal(game.items.size, storageCount);
+    }
+});
+
+test("thrown weapon sizes apply to both the animation footprint and the recoverable token", async () => {
+    for (const size of [0.5, 2]) {
+        const source = actor(`sized-throw-${size}`, "alice"), entry = item(`knife-${size}`, 1);
+        entry.type = "weapon";
+        Object.assign(entry.system, { equipped: true, properties: ["thrown"], groundTokenSize: size });
+        source.items.set(entry.id, entry);
+        const result = await query({ action: "throw", source: source.uuid, sourceToken: token(source).uuid,
+            selections: [{ id: entry.id, quantity: 1 }], points: [{ x: 150, y: 150 }, { x: 550, y: 550 }], motion: { duration: 1 } });
+        assert.equal(result.error, undefined);
+        assert.equal(result.warning, undefined);
+        const placed = [...scene.tokens].find(t => [...(inventoryForToken(t)?.items ?? [])].some(i => i.name === entry.name));
+        assert.equal(placed.width, size);
+        assert.equal(placed.height, size);
+        assert.equal(placed.x, 550 - size * 50);
+        assert.equal(placed.y, 550 - size * 50);
+        assert.equal(placed.getFlag("arcane-advent", "objectMotion").visual.width, size * 100);
+        assert.equal(placed.getFlag("arcane-advent", "objectMotion").visual.height, size * 100);
+    }
+});
+
+test("throwing rejects a footprint outside the scene at departure or arrival before transferring the weapon", async () => {
+    for (const [size, destination] of [[4, 550], [2, 1950]]) {
+        const source = actor(`oversized-throw-${size}`, "alice"), entry = item(`large-knife-${size}`, 1);
+        entry.type = "weapon";
+        Object.assign(entry.system, { equipped: true, properties: ["thrown"], groundTokenSize: size });
+        source.items.set(entry.id, entry);
+        const sourceToken = token(source), tokenCount = scene.tokens.size, storageCount = game.items.size;
+        const result = await query({ action: "throw", source: source.uuid, sourceToken: sourceToken.uuid,
+            selections: [{ id: entry.id, quantity: 1 }], points: [{ x: 150, y: 150 }, { x: destination, y: destination }], motion: { duration: 1 } });
+        assert.match(result.error, /scène/);
+        assert.equal(source.items.has(entry.id), true);
+        assert.equal(scene.tokens.size, tokenCount);
+        assert.equal(game.items.size, storageCount);
     }
 });
 
