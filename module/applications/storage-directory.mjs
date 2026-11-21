@@ -1,3 +1,4 @@
+import { formDialog } from "./form-interactions.mjs";
 import { createStorage, placeStorage, storageAccess, isGroundTemplate, isGroundDeposit } from "../storage.mjs";
 import { inventoryForDocument } from "../storage-inventory.mjs";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -22,7 +23,7 @@ export class StorageDirectory extends HandlebarsApplicationMixin(ApplicationV2) 
             },
             unlockOperation: async function (_event, target) {
                 if (!game.user.isGM) return;
-                const confirmed = await foundry.applications.api.DialogV2.confirm({
+                const confirmed = await formDialog.confirm({
                     window: { title: "Débloquer un inventaire" },
                     content: "<p>À utiliser uniquement après une interruption de connexion, après avoir vérifié les deux inventaires concernés. Débloquer ?</p>", rejectClose: false });
                 if (confirmed) await (await fromUuid(target.dataset.actorUuid))?.unsetFlag("arcane-advent", "inventoryBusy");

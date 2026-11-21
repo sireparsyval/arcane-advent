@@ -1,3 +1,4 @@
+import { formDialog } from "./form-interactions.mjs";
 import { isInventoryItem, isInventoryContainer } from "../inventory.mjs";
 import { requestInventoryAction, storageAccess, isGroundDeposit } from "../storage.mjs";
 import { inventoryForToken } from "../storage-inventory.mjs";
@@ -72,7 +73,7 @@ export async function inventoryActionDialog(actor, action, initialId = null) {
             }
             list.append(row);
         }
-        const choice = await foundry.applications.api.DialogV2.prompt({
+        const choice = await formDialog.prompt({
             window: { title: action === "transfer" ? "Transférer des objets" : "Déposer au sol" },
             position: { width: 600 }, content, rejectClose: false,
             render: (_event, dialog) => {

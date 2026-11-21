@@ -2,8 +2,9 @@ import { isInventoryContainer, luqaCounters } from "../../inventory.mjs";
 import { WEAPON_PROPERTIES } from "../../expertise.mjs";
 import { storageInventoryOwner } from "../../storage-inventory.mjs";
 import { ammunitionItems } from "../../weapon-ammunition.mjs";
+import { bindFieldEnter, formDialog } from "../form-interactions.mjs";
 
-const { DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
+const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
 
 const PROTECTION_ZONES = {
@@ -54,6 +55,7 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
     static DEFAULT_OPTIONS = {
         classes: ["arcane-advent", "aa-inventory-item-sheet"],
         position: { width: 520, height: "auto" },
+        form: { submitOnChange: false, closeOnSubmit: true },
         actions: {
             addReduction: this.#onAddReduction,
             removeReduction: this.#onRemoveReduction,
@@ -78,6 +80,11 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
     _getFrameButtons(options) {
         const buttons = super._getFrameButtons(options);
         return storageInventoryOwner(this.document) ? buttons.filter(button => button.action !== "copyUuid") : buttons;
+    }
+
+    async _onRender(context, options) {
+        await super._onRender(context, options);
+        bindFieldEnter(this.element);
     }
 
     async _prepareContext(options) {
@@ -130,7 +137,8 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
         const actor = this.document.actor ?? storageInventoryOwner(this.document);
         if (!["character", "npc", "storage"].includes(actor?.type)) return super._processSubmitData(event, form, data, options);
         const updated = await actor.updateInventoryItem(id, data);
-        return updated ? { updated } : {};
+        if (!updated) throw new Error("L’objet n’a pas pu être enregistré.");
+        return { updated };
     }
 
     static #onAddReduction(event, target) {
@@ -158,7 +166,7 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
         const coins = luqaCounters(item).some(({ value }) => value > 0)
             ? "<p>Les Luqa inscrits dans la bourse seront supprimés avec elle.</p>"
             : "";
-        const confirmed = await DialogV2.confirm({
+        const confirmed = await formDialog.confirm({
             window: { title: "Supprimer de l’inventaire" },
             content: `<p>Supprimer « ${name} » ?</p>${contents}${coins}`,
             yes: { label: "Supprimer", default: false },

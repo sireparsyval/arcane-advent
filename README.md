@@ -12,6 +12,12 @@ La roue dentée des Traits et le bouton **Effets** des Aptitudes ouvrent le mêm
 éditeur. Il est aussi disponible pour ces Objets dans le répertoire. Les onglets
 séparent les effets, leur activation, la description et le récapitulatif.
 Les changements restent un brouillon jusqu'à **Enregistrer**.
+Dans les champs sur une seule ligne, **Entrée** confirme le champ sans soumettre
+ni fermer le menu. Les zones de texte conservent leurs retours à la ligne et les
+boutons restent activables au clavier lorsqu’ils ont le focus. **Enregistrer**
+ou **Appliquer** ferme l’éditeur après réussite ; une validation ou une écriture
+échouée laisse la fenêtre et sa saisie ouvertes. Les fiches d’objets, d’équipements,
+de glyphes et d’éléments de scène suivent également cette règle.
 
 - **Bonus / malus / coefficient** : caractéristiques, JS, Défense de base,
   chacune des quatre Défenses partielles, Perception passive, Initiative,

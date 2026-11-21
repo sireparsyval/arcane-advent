@@ -1,10 +1,11 @@
+import { formDialog } from "./form-interactions.mjs";
 import { glyphDisplay, isGlyphId, normalizeGlyphId } from "../glyphs.mjs";
 import {
     getGlyphCatalog, GLYPH_PACK, GLYPH_SORT_FIELDS, importGlyphReferences, isGlyphSort, nextGlyphSort,
     requireGlyphGM, showGlyphInChat, sortGlyphReferences
 } from "../glyph-catalog.mjs";
 
-const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const searchText = value => value.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("fr");
 
 export class GlyphCatalog extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -153,7 +154,7 @@ export class GlyphCatalog extends HandlebarsApplicationMixin(ApplicationV2) {
 
     static async _create() {
         return this._perform(async () => {
-            const id = await DialogV2.prompt({
+            const id = await formDialog.prompt({
                 window: { title: "Ajouter une référence de glyphe" },
                 content: '<label>Identifiant<input name="glyphId" value="" placeholder="G019" required pattern="[Gg][0-9]{3,}" autofocus></label>',
                 ok: { label: "Ajouter", callback: (_event, button) => normalizeGlyphId(new FormData(button.form).get("glyphId")) },
@@ -183,7 +184,7 @@ export class GlyphCatalog extends HandlebarsApplicationMixin(ApplicationV2) {
     static async _delete(_event, target) {
         return this._perform(async () => {
             const item = await this._entry(target);
-            const confirmed = await DialogV2.confirm({
+            const confirmed = await formDialog.confirm({
                 window: { title: "Supprimer la référence du glyphe" },
                 content: "<p>Supprimer cette référence et ses notes MJ ?</p>",
                 yes: { label: "Supprimer" }, no: { label: "Conserver" }, rejectClose: false

@@ -1,3 +1,4 @@
+import { formDialog } from "./form-interactions.mjs";
 import { effectSkillRows } from "../effect-skills.mjs";
 
 const openDialogs = new WeakMap();
@@ -8,7 +9,7 @@ export async function openEffectSkillsDialog(actor) {
     if (current?.rendered) { current.bringToFront(); return current; }
     const content = document.createElement("div");
     content.innerHTML = '<section data-effect-skills></section>';
-    const dialog = new foundry.applications.api.DialogV2({
+    const dialog = formDialog.create({
         classes: ["arcane-advent", "aa-effect-skills-dialog"],
         window: { title: `Compétences — Effets actifs — ${actor.name}` },
         position: { width: 520 }, content,

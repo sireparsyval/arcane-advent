@@ -1,5 +1,6 @@
 import { glyphDisplay, isGlyphId, normalizeGlyphId } from "../../glyphs.mjs";
 import { glyphReferenceName, requireGlyphGM, showGlyphInChat } from "../../glyph-catalog.mjs";
+import { bindFieldEnter } from "../form-interactions.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -8,12 +9,18 @@ export class GlyphSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     static DEFAULT_OPTIONS = {
         classes: ["arcane-advent", "aa-glyph-sheet"],
         position: { width: 560, height: "auto" },
+        form: { submitOnChange: false, closeOnSubmit: true },
         actions: { showGlyph: this._showGlyph }
     };
 
     static PARTS = {
         editor: { template: "systems/arcane-advent/templates/item/glyph-sheet.hbs" }
     };
+
+    async _onRender(context, options) {
+        await super._onRender(context, options);
+        bindFieldEnter(this.element);
+    }
 
     _canRender(options) {
         requireGlyphGM();

@@ -9,6 +9,7 @@ import { APTITUDE_RANGE_MODES, aptitudeRangeMode, aptitudeRangeSummary,
     bindAptitudeRangeToggle, refreshAptitudeTargetingFields } from "../../aptitude-targeting.mjs";
 import { inventoryActionDialog } from "../inventory-transfer.mjs";
 import { runQuickInventoryAction } from "../ground-item-transfer.mjs";
+import { bindFieldEnter, formDialog } from "../form-interactions.mjs";
 import { VOLUME_LABELS, ENCUMBRANCE_STAGES } from "../../encumbrance.mjs";
 import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedModifier } from "../../modifiers.mjs";
 import { removeLinkedAptitudeFromTrait } from "../../documents/item.mjs";
@@ -901,7 +902,7 @@ export class ArcaneCharacterSheet
         const message = document.createElement("p");
         message.textContent = `Retirer l’aptitude « ${aptitude.name} », liée au Trait « ${trait.name} » ?`;
         content.append(message);
-        const confirmed = await foundry.applications.api.DialogV2.confirm({
+        const confirmed = await formDialog.confirm({
             window: { title: "Retirer l’aptitude liée" },
             content, modal: true, rejectClose: false,
             yes: { label: "Retirer" }, no: { label: "Annuler" }
@@ -924,7 +925,7 @@ export class ArcaneCharacterSheet
         content.append(heading);
 
         if (!linked.length) {
-            const confirmed = await foundry.applications.api.DialogV2.confirm({
+            const confirmed = await formDialog.confirm({
                 window: { title: "Retirer le Trait" },
                 content, modal: true, rejectClose: false,
                 yes: { label: "Retirer" }, no: { label: "Annuler" }
@@ -986,7 +987,7 @@ export class ArcaneCharacterSheet
             }
         };
 
-        const dialog = new foundry.applications.api.DialogV2({
+        const dialog = formDialog.create({
             window: { title: "Suppression du Trait et de ses Aptitudes" },
             content, modal: true, form: { closeOnSubmit: false },
             buttons: [
@@ -1078,7 +1079,6 @@ export class ArcaneCharacterSheet
         const aptitude = this.actor.items.get(target.dataset.itemId);
         if (aptitude?.type !== "aptitude") return;
 
-        const { DialogV2 } = foundry.applications.api;
         let system = aptitude.system;
         const content = document.createElement("div");
         const durationActive = system.effectDuration.enabled || isAptitudeOptionVisible(system, "duration");
@@ -1125,7 +1125,7 @@ export class ArcaneCharacterSheet
             if (unit && !Object.hasOwn(APTITUDE_RECOVERY_UNITS, unit)) throw Error("Unité invalide.");
             return { remaining, max, unit };
         };
-        const dialog = new DialogV2({
+        const dialog = formDialog.create({
             window: { title: "Options — " + aptitude.name },
             position: { width: 590 }, content, modal: true, form: { closeOnSubmit: false },
             buttons: [
@@ -1309,7 +1309,7 @@ export class ArcaneCharacterSheet
         });
         buttons.push({ action: "cancel", label: "Annuler", type: "button",
             callback: (_event, _button, app) => app.close() });
-        const dialog = new foundry.applications.api.DialogV2({
+        const dialog = formDialog.create({
             window: { title: kind === "automatic" ? "Condition automatique" : "Condition manuelle" },
             position: { width: 650 }, content, modal: true, form: { closeOnSubmit: false }, buttons
         });
@@ -1407,7 +1407,7 @@ export class ArcaneCharacterSheet
             callback: (_event, _button, app) => app.close()
         });
 
-        const dialog = new foundry.applications.api.DialogV2({
+        const dialog = formDialog.create({
             window: { title: editing ? "Modifier le jet d’aptitude" : "Ajouter un jet d’aptitude" },
             position: { width: 430 },
             content,
@@ -1456,7 +1456,7 @@ export class ArcaneCharacterSheet
             }
         );
 
-        const dialog = new foundry.applications.api.DialogV2({
+        const dialog = formDialog.create({
             window: { title: item ? section.editLabel : section.addLabel },
             position: { width: 420 },
             content,
@@ -1547,7 +1547,7 @@ export class ArcaneCharacterSheet
         message.textContent = `Retirer « ${item.name} » de la fiche du personnage ?`;
         content.append(message);
 
-        const confirmed = await foundry.applications.api.DialogV2.confirm({
+        const confirmed = await formDialog.confirm({
             window: { title: item.type === "aptitude" ? "Retirer l’aptitude" : "Retirer la condition" },
             content,
             modal: true,
@@ -1627,6 +1627,7 @@ export class ArcaneCharacterSheet
 
     async _onRender(context, options) {
         await super._onRender(context, options);
+        bindFieldEnter(this.element);
         if (this._inventoryQuickBusy) for (const button of this.element.querySelectorAll('[data-action="quickInventory"]')) button.disabled = true;
         bindDefenseReductionTooltips(this.element, this.actor.items, activeCharacterEffects(this.actor));
         this._arcanology.bind(this.element.querySelector(".aa-arcanology"));
@@ -2125,7 +2126,7 @@ export class ArcaneCharacterSheet
         label.append(select);
         content.append(label);
 
-        const destination = await foundry.applications.api.DialogV2.prompt({
+        const destination = await formDialog.prompt({
             window: { title: `Déplacer « ${item.name} »` },
             content,
             modal: true,
@@ -2290,7 +2291,7 @@ export class ArcaneCharacterSheet
         const weapon = this.actor.items.get(target.dataset.itemId);
         if (!this.isEditable || weapon?.type !== "weapon") return;
         const ammo = weapon.system.ammunition, escape = foundry.utils.escapeHTML;
-        return foundry.applications.api.DialogV2.wait({ window:{title:"Chargement et munitions"},position:{width:400},
+        return formDialog.wait({ window:{title:"Chargement et munitions"},position:{width:400},
             content:`<div class="standard-form aa-ammunition-settings"><label class="aa-checkbox-toggle"><input type="checkbox" name="loading" ${ammo.loading?"checked":""}><span>Chargement</span></label>
                 <label class="aa-checkbox-toggle"><input type="checkbox" name="system.ammunition.enabled" ${ammo.enabled?"checked":""}><span>Munitions</span></label>
                 <div class="aa-ammunition-choices"><label>Stock<select name="stock"><option value="">Choisir…</option>${ammunitionItems(this.actor).map(item=>`<option value="${escape(item.id)}" ${item.id===ammo.itemId?"selected":""}>${escape(item.name)} (${item.system.quantity})</option>`).join("")}</select></label>
@@ -2413,7 +2414,6 @@ export class ArcaneCharacterSheet
         const expertise = this.actor.items.get(target.dataset.expertiseId);
         if (expertise?.type !== "expertise") return;
 
-        const { DialogV2 } = foundry.applications.api;
         const content = document.createElement("div");
         content.innerHTML = await foundry.applications.handlebars.renderTemplate(
             "systems/arcane-advent/templates/actor/expertise-dialog.hbs", {
@@ -2429,7 +2429,7 @@ export class ArcaneCharacterSheet
                 })
             }
         );
-        const dialog = new DialogV2({
+        const dialog = formDialog.create({
             window: { title: "Options — " + expertise.name },
             position: { width: 500 }, content, modal: true,
             form: { closeOnSubmit: false },
@@ -2476,7 +2476,7 @@ export class ArcaneCharacterSheet
                 {
                     action: "delete", label: "Supprimer", type: "button",
                     callback: async (_event, _button, app) => {
-                        const confirmed = await DialogV2.confirm({
+                        const confirmed = await formDialog.confirm({
                             window: { title: "Supprimer l’Expertise" },
                             content: "Supprimer cette Expertise ?", yes: { label: "Supprimer" },
                             no: { label: "Annuler" }, rejectClose: false
@@ -2524,7 +2524,7 @@ export class ArcaneCharacterSheet
             return;
         }
 
-        const name = await foundry.applications.api.DialogV2.wait({
+        const name = await formDialog.wait({
             window: { title: "Ajouter un type de dégâts" },
             position: { width: 320, height: "auto" },
             content: '<label class="form-group stacked">Nom du type<input type="text" name="damageType" placeholder="Tranchants…" required pattern=".*\\S.*" autofocus></label>',
@@ -2664,7 +2664,7 @@ export class ArcaneCharacterSheet
     }
 
     static async _onShowMercyHelp(event, target) {
-        await foundry.applications.api.DialogV2.prompt({
+        await formDialog.prompt({
             window: { title: "Points de Miséricorde" },
             content: target.dataset.tooltipText,
             ok: { label: "Fermer" },

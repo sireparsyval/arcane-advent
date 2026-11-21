@@ -1,3 +1,4 @@
+import { formDialog } from "./form-interactions.mjs";
 import { inventoryActor, looseGroundItem, requestInventoryAction, storageAccess } from "../storage.mjs";
 import { inventoryForToken } from "../storage-inventory.mjs";
 import { isInventoryItem } from "../inventory.mjs";
@@ -103,7 +104,7 @@ export async function quickInventoryAction(source, itemId, action, { signal } = 
         Object.assign(amount, { name: "quantity", type: "number", min: "1", max: String(maximum), step: "1", defaultValue: String(maximum) });
         label.append(amount);
         content.append(label);
-        quantity = await foundry.applications.api.DialogV2.prompt({
+        quantity = await formDialog.prompt({
             window: { title: item.name }, position: { width: 320 }, content, rejectClose: false,
             buttons: [{ action: "cancel", label: "Annuler", callback: () => null }],
             ok: { label: action === "transfer" ? "Transférer" : "Déposer", callback: (_event, button) => {

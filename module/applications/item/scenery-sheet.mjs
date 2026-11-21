@@ -1,6 +1,7 @@
 import { placeSceneObject } from "../../scene-objects.mjs";
 import { animationModels } from "../scene-animation-composer.mjs";
 import { animationSettings } from "../../scene-animation-settings.mjs";
+import { bindFieldEnter } from "../form-interactions.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -16,6 +17,7 @@ export class SceneryElementSheet extends HandlebarsApplicationMixin(ItemSheetV2)
         classes: ["arcane-advent", "aa-scenery-sheet"],
         position: { width: 610, height: 720 },
         window: { resizable: true },
+        form: { submitOnChange: false, closeOnSubmit: true },
         actions: { placeSceneObject: this.onPlaceSceneObject }
     };
 
@@ -42,6 +44,7 @@ export class SceneryElementSheet extends HandlebarsApplicationMixin(ItemSheetV2)
 
     async _onRender(context, options) {
         await super._onRender(context, options);
+        bindFieldEnter(this.element);
         const negative = this.element.querySelector('[name="system.light.negative"]');
         negative?.addEventListener("change", () => {
             const select = this.element.querySelector('[name="system.light.animation"]');
@@ -64,9 +67,11 @@ export class SceneryElementSheet extends HandlebarsApplicationMixin(ItemSheetV2)
 
     static async onPlaceSceneObject() {
         if (!this.isEditable || !game.user.isGM) return;
+        if (!this.form.reportValidity()) return;
         try {
             await this.submit();
             await placeSceneObject(this.document, canvas.scene);
+            await this.close();
         } catch (error) { ui.notifications.error(error.message); }
     }
 }

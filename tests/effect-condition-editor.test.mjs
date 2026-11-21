@@ -53,6 +53,27 @@ const click = (dialog, dataset) => dialog.root.listeners.get("click")({ target: 
 const save = dialog => dialog.config.buttons.find(button => button.action === "save").callback(null,
     { form: { querySelector: () => null, reportValidity: () => true } }, dialog);
 
+for (const type of ["trait", "aptitude", "character"]) test(`Enregistrer ferme l’éditeur ${type} seulement après la fin de l’écriture`, async () => {
+    const { owner, dialog } = await fixture(type);
+    let complete;
+    owner.update = () => new Promise(resolve => { complete = resolve; });
+    const saving = save(dialog);
+    assert.notEqual(dialog.closed, true);
+    complete(); await saving;
+    assert.equal(dialog.closed, true);
+});
+
+test("un échec d’enregistrement conserve la fenêtre et son brouillon, puis permet de réessayer", async () => {
+    const { owner, dialog } = await fixture("aptitude");
+    owner.update = async () => { throw new Error("Écriture interrompue"); };
+    await save(dialog);
+    assert.notEqual(dialog.closed, true);
+    assert.match(errors.at(-1), /Écriture interrompue/);
+    owner.update = async () => {};
+    await save(dialog);
+    assert.equal(dialog.closed, true);
+});
+
 test("les commandes Copier/Coller sont en haut des Traits et absentes des autres éditeurs", async () => {
     for (const type of ["trait", "aptitude", "character"]) {
         const { dialog } = await fixture(type);

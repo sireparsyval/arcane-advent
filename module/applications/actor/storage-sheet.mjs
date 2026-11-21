@@ -3,6 +3,7 @@ import { storageAccess, placeStorage, isGroundTemplate, isGroundDeposit, looseGr
 import { inventoryActionDialog } from "../inventory-transfer.mjs";
 import { inventoryForDocument, inventoryForToken } from "../../storage-inventory.mjs";
 import { runQuickInventoryAction } from "../ground-item-transfer.mjs";
+import { bindFieldEnter, formDialog } from "../form-interactions.mjs";
 
 const { ActorSheetV2, ItemSheetV2 } = foundry.applications.sheets;
 const { HandlebarsApplicationMixin } = foundry.applications.api;
@@ -36,7 +37,7 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
                 }
                 label.append(select);
                 content.append(label);
-                const destination = await foundry.applications.api.DialogV2.prompt({
+                const destination = await formDialog.prompt({
                     window: { title: "Déplacer dans un contenant" }, content, rejectClose: false,
                     buttons: [{ action: "cancel", label: "Annuler", callback: () => false }],
                     ok: { label: "Déplacer", callback: (_event, button) => button.form.elements.destination.value }
@@ -103,6 +104,7 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
 
     async _onRender(context, options) {
         await super._onRender(context, options);
+        bindFieldEnter(this.element);
         if (this._looseLayout !== Boolean(context.looseItem)) {
             this._looseLayout = Boolean(context.looseItem);
             this.setPosition(this._looseLayout ? { width: 360, height: "auto" } : { width: 720, height: 570 });

@@ -1,3 +1,4 @@
+import { formDialog } from "./form-interactions.mjs";
 import { EFFECT_ABILITIES, EFFECT_ROLL_SCOPES, EFFECT_STAT_TARGETS, EFFECT_DAMAGE_ZONES,
     activeCharacterEffects, characterEffectSources, conditionActor, effectRuleSummary, effectRuleActive, effectRuleSettings, effectSourceActive,
     newEffectRule, resolveRollEffects } from "../character-effects.mjs";
@@ -98,7 +99,7 @@ export async function openCharacterEffectsEditor(owner, { actor = owner.actor ??
     let tab = "effects", traitParametersPasted = false, traitClipboardBusy = false;
     const content = document.createElement("div"); // DialogV2 requires an unadorned outer div.
     content.innerHTML = '<section class="aa-effects-editor" data-effect-editor></section>';
-    const dialog = new foundry.applications.api.DialogV2({
+    const dialog = formDialog.create({
         window: { title: `${isItem ? owner.type === "trait" ? "Trait" : "Aptitude" : "Effets permanents"} — ${owner.name}`, resizable: true },
         position: { width: 850, height: 760 }, content, modal: true, form: { closeOnSubmit: false },
         buttons: [{ action: "save", label: "Enregistrer", callback: async (_event, button, app) => {
@@ -243,7 +244,7 @@ export async function openCharacterEffectsManager(actor) {
     if (!actor.isOwner) return;
     const content = document.createElement("div");
     content.innerHTML = '<section class="aa-effects-editor" data-effect-manager></section>';
-    const dialog = new foundry.applications.api.DialogV2({
+    const dialog = formDialog.create({
         window: { title: `Effets permanents et avantages — ${actor.name}`, resizable: true },
         position: { width: 850, height: 760 }, content,
         buttons: [{ action: "close", label: "Fermer", default: true }]

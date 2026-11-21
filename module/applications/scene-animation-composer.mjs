@@ -1,9 +1,9 @@
+import { formDialog } from "./form-interactions.mjs";
 import { chooseAnimationPath } from "../scene-animation-path.mjs";
 import { requestSceneAnimation } from "../scene-animation-service.mjs";
 import { sceneObjectPosition } from "../scene-projectiles.mjs";
 import { animationSettings, validateAnimationAppearance } from "../scene-animation-settings.mjs";
 const escape = value => foundry.utils.escapeHTML(String(value ?? ""));
-const dialogAPI = () => foundry.applications.api.DialogV2;
 
 export function animationModels() {
     return [...(game.items ?? [])].filter(item => item.type === "visualEffect")
@@ -70,7 +70,7 @@ async function configuration(draft, { title, transition = false, route = null, s
         if (route) buttons.push({ action: "redraw", label: "Retracer le trajet",
             callback: (_event, _button, dialog) => ({ ...read(dialog, draft), decision: "redraw" }) });
         buttons.push({ action: "cancel", label: "Annuler", type: "button", default: true, callback: () => false });
-        const result = await dialogAPI().wait({ position: { width: 560, height: "auto" }, window: { title },
+        const result = await formDialog.wait({ position: { width: 560, height: "auto" }, window: { title },
             content: summary + fields(draft, { transition }), buttons, rejectClose: false,
             render: (_event, dialog) => {
                 const arrival = dialog.element.querySelector('[name="arrival"]');

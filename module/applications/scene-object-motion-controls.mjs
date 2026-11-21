@@ -1,3 +1,4 @@
+import { formDialog } from "./form-interactions.mjs";
 import { chooseAnimationPath } from "../scene-animation-path.mjs";
 import { objectCenter, requestObjectMotion, motionSettings } from "../scene-object-motion.mjs";
 import { requestInventoryAction } from "../storage.mjs";
@@ -60,7 +61,7 @@ export async function throwInventoryWeapon(actor,weaponId) {
     if(!token)throw Error("Placez le personnage sur la scène active.");
     let settings,draft={rotation:"direction"};
     while(!settings) {
-        draft=await foundry.applications.api.DialogV2.wait({window:{title:"Lancer l’arme"},position:{width:620},
+        draft=await formDialog.wait({window:{title:"Lancer l’arme"},position:{width:620},
             content:motionFields(draft),render:(_event,dialog)=>bindMotionFields(dialog.element),
             buttons:[{action:"launch",label:"Tracer et lancer",callback:(_event,_button,dialog)=>readMotionFields(dialog.element,{validate:false})},
                 {action:"cancel",label:"Annuler",type:"button",default:true,callback:()=>false}],rejectClose:false});

@@ -1,9 +1,10 @@
+import { formDialog } from "./form-interactions.mjs";
 import { prepareSceneAnimation, prepareSceneTransition, animationModels } from "./scene-animation-composer.mjs";
 import { requestSceneAnimation } from "../scene-animation-service.mjs";
 import { animatePickedObject, readMotionFields, motionFields, bindMotionFields } from "./scene-object-motion-controls.mjs";
 import { sceneMist, sceneLightEnabled } from "../scene-visual-settings.mjs";
 import { chooseSceneObjectPosition, requestSceneObjectAction, sceneObject, sceneObjectAccess } from "../scene-objects.mjs";
-const { ApplicationV2, HandlebarsApplicationMixin, DialogV2 } = foundry.applications.api;
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const escape = value => foundry.utils.escapeHTML(String(value ?? ""));
 export function effectFolderPath(item) {
     const path=[],seen=new Set();
@@ -54,7 +55,7 @@ export async function openSceneObjectInteraction(tile) {
         }
     }
     buttons.push({ action: "close", label: "Fermer", default: true });
-    return DialogV2.wait({
+    return formDialog.wait({
         window: { title: model.name },
         content: `<p class="aa-scene-object-description">${escape(model.description)}</p>`
             + (locked ? "<p>Cet objet est verrouillé par le MJ.</p>" : "")

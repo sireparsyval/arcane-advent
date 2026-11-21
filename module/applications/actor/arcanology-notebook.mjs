@@ -1,3 +1,4 @@
+import { formDialog } from "../form-interactions.mjs";
 import { glyphDisplay, insertGlyphId, isGlyphId, normalizeGlyphId, verseSegments } from "../../glyphs.mjs";
 import { sendArcaneVerse } from "../../arcane-text.mjs";
 
@@ -250,7 +251,7 @@ export class ArcanologyNotebook {
         const draft = this.draft();
         if (!draft) return;
         if (!draft.isNew) {
-            const confirmed = await foundry.applications.api.DialogV2.confirm({
+            const confirmed = await formDialog.confirm({
                 window: { title: view === "glyphs" ? "Supprimer le glyphe du carnet" : "Supprimer le Verset" },
                 content: "<p>Supprimer cette entrée et ses notes ?</p>",
                 yes: { label: "Supprimer" }, no: { label: "Conserver" }, rejectClose: false
