@@ -61,7 +61,7 @@ async function configuration(draft, { title, transition = false, route = null, s
             sum + Math.hypot(p.x - route.points[i].x, p.y - route.points[i].y), 0) / (scene.grid.size / scene.grid.distance) * 10) / 10}
             ${escape(scene.grid.units ?? "")}. L’effet apparaîtra après confirmation.</p>` : "";
         const buttons = [{
-            action: "confirm", label: transition ? "Déclencher" : route ? "Lancer l’animation" : "Tracer le trajet",
+            action: "confirm", label: transition ? "Déclencher" : "Tracer et lancer",
             callback: (_event, _button, dialog) => {
                 const value = read(dialog, draft);
                 return { ...value, decision: "launch" };
@@ -86,7 +86,7 @@ async function configuration(draft, { title, transition = false, route = null, s
     }
 }
 
-export async function prepareSceneAnimation({ item = null, tile = null } = {}) {
+export async function prepareSceneAnimation({ item = null, tile = null, quick = false } = {}) {
     if (!game.user.isGM) throw Error("Seul le MJ peut préparer une animation.");
     const scene = canvas.scene, levelId = canvas.level?.id;
     if (!canvas.ready || !scene) throw Error("Ouvrez une scène pour préparer une animation.");
@@ -94,25 +94,24 @@ export async function prepareSceneAnimation({ item = null, tile = null } = {}) {
     if (tile && model?.flight) throw Error("Attendez la fin du trajet en cours.");
     if (!tile && item?.type !== "visualEffect") throw Error("Choisissez un modèle d’effet visuel.");
     let draft = animationSettings(model ?? item?.system);
+    if(quick && tile && model.sourceUuid){
+        const source=await fromUuid(model.sourceUuid);
+        if(source?.type==="visualEffect")draft=animationSettings(source.system);
+    }
     // A continuation begins at the size reached by the previous trajectory.
     if (tile) draft.initialSize = 100;
     const name = tile ? model.name : item.name;
-    draft = await configuration(draft, { title: "Préparer — " + name });
+    if (!quick) draft = await configuration(draft, { title: "Préparer — " + name });
     if (!draft) return;
-    while (true) {
+    validate(draft);
+    if (canvas.scene?.id !== scene.id || canvas.level?.id !== levelId) throw Error("La scène ou l’étage a changé.");
+    const route = await chooseAnimationPath({ start: tile ? sceneObjectPosition(tile) : null });
+    if (!route) return;
+    try {
         if (canvas.scene?.id !== scene.id || canvas.level?.id !== levelId) throw Error("La scène ou l’étage a changé.");
-        const route = await chooseAnimationPath({ start: tile ? sceneObjectPosition(tile) : null });
-        if (!route) return;
-        try {
-            const next = await configuration(draft, { title: "Confirmer — " + name, route, scene });
-            if (!next) return;
-            draft = next;
-            if (next.decision === "redraw") continue;
-            if (canvas.scene?.id !== scene.id || canvas.level?.id !== levelId) throw Error("La scène ou l’étage a changé.");
-            return await requestSceneAnimation({ ...draft, action: tile ? "continue" : "launch",
-                effectUuid: item?.uuid, tileId: tile?.id, sceneId: scene.id, levelId, points: route.points });
-        } finally { route.cleanup(); }
-    }
+        return await requestSceneAnimation({ ...draft, action: tile ? "continue" : "launch",
+            effectUuid: item?.uuid, tileId: tile?.id, sceneId: scene.id, levelId, points: route.points });
+    } finally { route.cleanup(); }
 }
 
 export async function prepareSceneTransition(tile) {

@@ -97,15 +97,15 @@ test("panel subscriptions refresh on scene and object updates and are removed on
     setup();
     const panel = new SceneObjectsPanel();
     await panel._onRender({}, {});
-    assert.equal(callbacks.size, 8);
+    assert.equal(callbacks.size, 9);
     await panel._onRender({}, {});
-    assert.equal(callbacks.size, 8);
+    assert.equal(callbacks.size, 9);
     for (const { callback } of callbacks.values()) callback();
-    assert.equal(panel.refreshes, 8);
+    assert.equal(panel.refreshes, 9);
     await panel._onClose({});
     assert.equal(callbacks.size, 0);
     await panel._onRender({}, {});
-    assert.equal(callbacks.size, 8);
+    assert.equal(callbacks.size, 9);
     await panel._onClose({});
 });
 

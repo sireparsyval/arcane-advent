@@ -41,8 +41,10 @@
         {{else if isPurse}}
             <p class="hint">Bourse réservée aux Luqa. Chaque pièce pèse 0,01 kg ; le poids est calculé automatiquement.</p>
         {{else}}
+            {{#unless system.corporeal}}
             {{> aaInventoryItemField label="Poids unitaire (kg)" type="number" name="system.weight"
                 value=system.weight min=0 step="any" required=true}}
+            {{/unless}}
         {{/if}}
         {{> aaInventoryItemField label="Classe d’objet (pour les Expertises)" type="text" name="system.objectClass"
             value=system.objectClass}}
@@ -70,6 +72,7 @@
     {{#if isWeapon}}
         <fieldset {{#unless editable}}disabled{{/unless}}>
             <legend>Arme</legend>
+            <label class="aa-checkbox-toggle"><input type="checkbox" name="system.corporeal" {{#if system.corporeal}}checked{{/if}}><span>🔒 Arme corporelle</span></label>
             {{> aaInventoryItemField label="Classe d’arme" type="text" name="system.weaponClass"
                 value=system.weaponClass}}
             {{> aaInventoryItemField label="Formule de dégâts" type="text" name="system.damageFormula"
@@ -100,7 +103,7 @@
             </fieldset>
             <fieldset>
                 <legend>Lourde et Polyvalente</legend>
-                {{> aaInventoryItemField label="FOR minimum" type="number" name="system.heavy.strengthRequirement"
+                {{> aaInventoryItemField label="Caractéristique minimum" type="number" name="system.heavy.strengthRequirement"
                     value=system.heavy.strengthRequirement min=0 step="1" required=true}}
                 {{> aaInventoryItemField label="Formule de dégâts polyvalents" type="text" name="system.versatile.damageFormula"
                     value=system.versatile.damageFormula}}

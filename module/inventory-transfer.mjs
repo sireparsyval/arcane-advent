@@ -8,6 +8,7 @@ export function transferPlan(items, selections, randomID) {
     const selected = new Map();
     for (const { id, quantity } of selections) {
         const item = byId.get(id);
+        if (item?.type === "weapon" && item.system.corporeal) throw Error("Déverrouillez l’arme corporelle avant de la déplacer.");
         if (!isInventoryItem(item) || selected.has(id)) throw new Error("Sélection d’objets invalide.");
         const count = item.type === "object" ? item.system.quantity : 1;
         const amount = quantity ?? count;

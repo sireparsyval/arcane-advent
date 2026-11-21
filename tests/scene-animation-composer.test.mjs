@@ -73,66 +73,40 @@ test("the visual effect's saved preset populates preparation and stays unchanged
     assert.match(html, /name="finalSize"[^>]*value="200"/);
     assert.match(html, /name="spin"[^>]*value="180"/);
     env.reply({ ...draft, ...original.animation, spin: 90 }); await flush(); await trace(env);
-    env.reply({ ...draft, ...original.animation, spin: 90 }); await pending;
+    await pending;
     assert.equal(env.requests[0].spin, 90);
     assert.equal(env.requests[0].finalMode, "once-keep");
     assert.deepEqual(env.item.system, original);
 });
 
-test("preparation creates nothing until the final confirmation and keeps Ctrl waypoints", async () => {
-    const env = setup(), pending = prepareSceneAnimation({ item: env.item });
-    assert.equal(env.requests.length, 0);
-    env.reply({ ...draft }); await flush();
-    await trace(env);
-    assert.equal(env.requests.length, 0);
-    assert.equal(env.dialogs.length, 2);
-    assert.match(env.dialogs[1].content, /3 points/);
-    env.reply({ ...draft, arrival: "replace", finalEffectUuid: "Item.blast" });
-    await pending;
-    assert.equal(env.requests.length, 1);
-    const request = env.requests[0];
-    assert.equal(request.action, "launch");
-    assert.equal(request.effectUuid, "Item.ball");
-    assert.equal(request.finalEffectUuid, "Item.blast");
-    assert.deepEqual(request.points, [{x:100,y:100},{x:200,y:100},{x:400,y:300}]);
-    assert.equal(env.graphics[0].destroyed, true);
+test("preparation launches as soon as the route is complete, preserving Ctrl waypoints", async () => {
+    const env=setup(),pending=prepareSceneAnimation({item:env.item});
+    env.reply({...draft,arrival:"replace",finalEffectUuid:"Item.blast"});await flush();
+    assert.equal(env.requests.length,0);
+    await trace(env);await pending;
+    assert.equal(env.dialogs.length,1);assert.equal(env.requests.length,1);
+    assert.equal(env.requests[0].action,"launch");assert.equal(env.requests[0].finalEffectUuid,"Item.blast");
+    assert.deepEqual(env.requests[0].points,[{x:100,y:100},{x:200,y:100},{x:400,y:300}]);
+    assert.equal(env.graphics[0].destroyed,true);
 });
-
-test("cancel at configuration, during tracing, or at confirmation never places an effect", async () => {
-    for (const stage of ["configuration", "trace", "confirmation"]) {
-        const env = setup(), pending = prepareSceneAnimation({ item: env.item });
-        if (stage === "configuration") env.reply(null);
-        else {
-            env.reply({ ...draft }); await flush();
-            if (stage === "trace") env.keys.get("keydown")({ key: "Escape", preventDefault() {}, stopPropagation() {} });
-            else { await trace(env); env.reply(null); }
-        }
-        await pending;
-        assert.equal(env.requests.length, 0);
-        assert.equal(env.view.size, 0);
-        assert.ok(env.graphics.every(g => g.destroyed));
+test("quick launch uses saved parameters without opening a dialog", async () => {
+    const env=setup();env.item.system.animation={arrival:"delete",spin:90};
+    const pending=prepareSceneAnimation({item:env.item,quick:true});
+    assert.equal(env.dialogs.length,0);await trace(env);await pending;
+    assert.equal(env.requests[0].arrival,"delete");assert.equal(env.requests[0].spin,90);
+});
+test("cancel at configuration or during tracing never creates an effect", async () => {
+    for(const phase of ["configuration","trace"]){
+        const env=setup(),pending=prepareSceneAnimation({item:env.item});
+        if(phase==="configuration")env.reply(null);
+        else{env.reply({...draft});await flush();env.keys.get("keydown")({key:"Escape",preventDefault(){},stopPropagation(){}});}
+        await pending;assert.equal(env.requests.length,0);assert.equal(env.view.size,0);
     }
 });
-
-test("a confirmed route can be redrawn and edited before launching", async () => {
-    const env = setup(), pending = prepareSceneAnimation({ item: env.item });
-    env.reply({ ...draft }); await flush(); await trace(env);
-    env.reply({ ...draft, duration: 2, decision: "redraw" }); await flush();
-    assert.equal(env.graphics[0].destroyed, true);
-    env.click(10, 20); env.click(300, 400); await flush();
-    env.reply({ ...draft, duration: 2 }); await pending;
-    assert.equal(env.requests[0].duration, 2);
-    assert.deepEqual(env.requests[0].points, [{x:10,y:20},{x:300,y:400}]);
-});
-
-test("a held projectile starts its next route from its actual current position", async () => {
-    const env = setup(), pending = prepareSceneAnimation({ tile: env.tile });
-    env.reply({ ...draft }); await flush();
-    env.click(600, 500); await flush();
-    env.reply({ ...draft }); await pending;
-    assert.equal(env.requests[0].action, "continue");
-    assert.equal(env.requests[0].tileId, "held");
-    assert.deepEqual(env.requests[0].points, [{x:300,y:400},{x:600,y:500}]);
+test("a held effect continues directly from its current position", async () => {
+    const env=setup(),pending=prepareSceneAnimation({tile:env.tile});
+    env.reply({...draft});await flush();env.click(600,500);await pending;
+    assert.deepEqual(env.requests[0].points,[{x:300,y:400},{x:600,y:500}]);assert.equal(env.requests[0].action,"continue");
 });
 
 test("manual impact asks for a final effect and can cancel without changing the held projectile", async () => {
@@ -148,14 +122,10 @@ test("manual impact asks for a final effect and can cancel without changing the 
     assert.equal(env.requests.length, 1);
 });
 
-test("changing scene after tracing aborts launch and removes the preview", async () => {
-    const env = setup(), pending = prepareSceneAnimation({ item: env.item });
-    env.reply({ ...draft }); await flush(); await trace(env);
-    canvas.scene = { id: "other" };
-    env.reply({ ...draft });
-    await assert.rejects(pending, /scène ou l’étage a changé/);
-    assert.equal(env.requests.length, 0);
-    assert.equal(env.graphics[0].destroyed, true);
+test("changing scene while tracing aborts launch and cleans the preview", async () => {
+    const env=setup(),pending=prepareSceneAnimation({item:env.item});
+    env.reply({...draft});await flush();env.click(100,100);canvas.scene={id:"other"};env.click(200,200);
+    await assert.rejects(pending,/scène ou l’étage a changé/);assert.equal(env.requests.length,0);assert.equal(env.graphics[0].destroyed,true);
 });
 
 test("route controls allow undoing an intermediate step and cancel on right click", async () => {

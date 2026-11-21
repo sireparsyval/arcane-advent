@@ -37,14 +37,10 @@ export async function removeLinkedAptitudeFromTrait(actor, traitId, aptitudeId) 
 
 
 export function getEquipmentConflictType(type, properties) {
-    if (type === "shield") return "weapon";
-    if (type === "weapon" && hasTwoHandedProperty(properties)) return "shield";
+    // Hand availability now affects attack rolls instead of changing the loadout.
     return null;
 }
 
-function hasTwoHandedProperty(properties) {
-    return properties instanceof Set ? properties.has("twoHanded") : properties?.includes("twoHanded");
-}
 
 function projectInventoryItem(item, changes = {}) {
     const system = {};
@@ -83,6 +79,10 @@ export class ArcaneItem extends Item {
 
         if (system.containerId) system.equipped = false;
         else if (system.equipped === true) system.containerId = null;
+        if (["character", "npc"].includes(this.actor?.type) && this.type === "weapon"
+            && (system.corporeal ?? this.system.corporeal)) {
+            system.equipped = true; system.containerId = null;
+        }
 
         if (this.type === "weapon" && Object.hasOwn(system, "properties")) {
             // Une modification des propriétés clôt la migration de l'ancien indicateur :
@@ -128,11 +128,6 @@ export class ArcaneItem extends Item {
             ui.notifications.warn("Un seul équipement permettant la Garde peut être équipé à la fois.");
             return false;
         }
-        if (equipped.some(item => item.type === "shield")
-            && equipped.some(item => getEquipmentConflictType(item.type, item.system.properties) === "shield")) {
-            ui.notifications.warn("Un bouclier et une arme à deux mains ne peuvent pas être équipés ensemble.");
-            return false;
-        }
     }
 
     static async _preCreateOperation(documents, operation, user) {
@@ -153,15 +148,20 @@ export class ArcaneItem extends Item {
 
         let guardTaken = equippedGuardItems(embedded).length > 0;
         for (const item of pending) {
-            const { containerId, properties } = item.system;
+            const body = ["character", "npc"].includes(actor?.type) && item.type === "weapon" && item.system.corporeal;
+            const containerId = body ? null : item.system.containerId, properties = item.system.properties;
             const changes = {};
+            if (body) {
+                changes["system.equipped"] = true; changes["system.containerId"] = null;
+                if(guardTaken && equipmentAllowsGuard(item)){ui.notifications.warn("Un seul équipement de Garde peut être actif.");return false;}
+            }
             if (actor?.type === "storage" && EQUIPMENT_TYPES.includes(item.type)) changes["system.equipped"] = false;
             if (containerId && (!inventoryOwner(actor)
                 || !canPlaceInContainer(inventory, item.id, containerId))) {
                 // Copies may still reference a container in their source Actor.
                 changes["system.containerId"] = null;
             }
-            if (EQUIPMENT_TYPES.includes(item.type) && item.system.equipped) {
+            if (EQUIPMENT_TYPES.includes(item.type) && (item.system.equipped || body)) {
                 const conflictType = getEquipmentConflictType(item.type, properties);
                 if ((containerId && !Object.hasOwn(changes, "system.containerId"))
                     || (inventoryOwner(actor) && conflictType && blockedTypes.has(item.type))) {

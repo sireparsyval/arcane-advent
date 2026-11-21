@@ -78,7 +78,8 @@ function actor(id, owner, type = "character") {
 }
 function token(actor, hidden = false) {
     const value = { documentName: "Token", id: `t${++serial}`, uuid: `Scene.scene.Token.t${serial}`, actor,
-        parent: scene, hidden, x: 100, y: 100, width: 1, actorId: actor.id, actorLink: true,
+        parent: scene, hidden, x: 100, y: 100, width: 1, height:1, rotation:0, actorId: actor.id, actorLink: true,
+        async update(changes){merge(this,changes);return this;},
         getFlag(scope, key) { return this.flags?.[scope]?.[key]; } };
     documents.set(value.uuid, value); scene.tokens.set(value.id, value); return value;
 }
@@ -234,6 +235,29 @@ test("ground drops reuse one model and keep independent token inventories", asyn
     const template = game.actors.find(isGroundTemplate);
     assert.equal(template.items.size, 0);
     assert.equal(storageAccess(template, gm), false);
+});
+
+test("throwing removes the equipped weapon and animates a recoverable ground inventory",async()=>{
+    const source=actor("throw-source","alice"),w=item("knife",1);
+    w.type="weapon";w.img="icons/knife.png";Object.assign(w.system,{equipped:true,properties:new Set(["thrown"]),corporeal:false});
+    source.items.set(w.id,w);const origin=token(source);
+    const result=await query({action:"throw",source:source.uuid,sourceToken:origin.uuid,selections:[{id:w.id,quantity:1}],
+        points:[{x:150,y:150},{x:550,y:550}],motion:{duration:1,rotation:"direction"}});
+    assert.equal(result.error,undefined);assert.equal(result.warning,undefined);assert.equal(result.count,1);
+    assert.equal(source.items.has(w.id),false);
+    const ground=[...scene.tokens].find(t=>[...(inventoryForToken(t)?.items??[])].some(i=>i.name==="knife"));
+    assert.ok(ground);assert.equal(ground.x,500);assert.equal(ground.y,500);
+    assert.equal(ground.getFlag("arcane-advent","objectMotion").duration,1000);
+    assert.equal([...inventoryForToken(ground).items][0].system.equipped,false);
+});
+
+test("invalid throw paths and corporeal weapons never remove inventory",async()=>{
+    const source=actor("throw-invalid","alice"),w=item("claw",1);
+    w.type="weapon";Object.assign(w.system,{equipped:true,properties:new Set(["thrown"]),corporeal:true});source.items.set(w.id,w);
+    const data={action:"throw",source:source.uuid,sourceToken:token(source).uuid,selections:[{id:w.id,quantity:1}],
+        points:[{x:150,y:150},{x:3000,y:3000}],motion:{duration:1}};
+    assert.ok((await query(data)).error);assert.equal(source.items.has(w.id),true);
+    w.system.corporeal=false;assert.ok((await query(data)).error);assert.equal(source.items.has(w.id),true);
 });
 
 test("a failed ground drop removes its empty storage and token", async () => {

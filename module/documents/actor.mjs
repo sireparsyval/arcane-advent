@@ -5,6 +5,7 @@ import { signedModifier } from "../modifiers.mjs";
 import { expertiseMatches, matchingExpertiseBonus } from "../expertise.mjs";
 import { STORAGE_IMAGE } from "../storage.mjs";
 import { withWeaponAmmunition } from "../weapon-ammunition.mjs";
+import { weaponAttackRestrictions } from "../weapon-usage.mjs";
 import { activeCharacterEffects, conditionActor, resolveRollEffects, sourceConditionsSatisfied } from "../character-effects.mjs";
 
 const SORT_SPACING = 100000;
@@ -133,6 +134,9 @@ export class ArcaneActor extends Actor {
 
             const update = foundry.utils.expandObject(changes);
             const system = update.system ??= {};
+            if (item.type === "weapon" && (system.corporeal ?? item.system.corporeal)) {
+                system.equipped = true; system.containerId = null;
+            }
             const containerChanged = Object.hasOwn(system, "containerId");
             if (containerChanged && !canPlaceInContainer(this.items, itemId, system.containerId)) {
                 ui.notifications.warn("Ce déplacement créerait un cycle ou viserait un contenant invalide.");
@@ -159,6 +163,7 @@ export class ArcaneActor extends Actor {
                     system: { properties, guardEnabled: system.guardEnabled ?? item.system.guardEnabled } })) {
                     for (const other of this.items) {
                         if (other.id === itemId || !other.system.equipped || !equipmentAllowsGuard(other)
+                            || (other.type === "weapon" && other.system.corporeal)
                             || updates.some(update => update._id === other.id)) continue;
                         updates.push({ _id: other.id, system: { equipped: false } });
                     }
@@ -211,6 +216,10 @@ export class ArcaneActor extends Actor {
             ? resolveRollEffects([], context, "normal")
             : resolveRollEffects(activeCharacterEffects(this), context, mode ?? this.system.rollMode);
         mode = effects.mode;
+        if (context.disadvantage) {
+            effects.disadvantage = true;
+            mode = effects.advantage ? "normal" : "disadvantage";
+        }
         modifier += effects.bonus;
         if (effects.sources.length) {
             flavor += `<br><small>Effets : ${foundry.utils.escapeHTML(effects.sources.join(" · "))}${effects.advantage && effects.disadvantage ? " — Avantage et Désavantage : Neutre" : ""}</small>`;
@@ -490,6 +499,14 @@ export class ArcaneActor extends Actor {
         return withWeaponAmmunition(this, weaponId, () => this._rollWeaponAttack(weaponId, mode));
     }
 
+    async rollImprovisedDamage() {
+        const modifier = this.system.abilities.strength.modifier;
+        const roll = new foundry.dice.Roll(`1d4 ${modifier < 0 ? "-" : "+"} ${Math.abs(modifier)}`);
+        await roll.evaluate();
+        await roll.toMessage({ speaker: foundry.documents.ChatMessage.getSpeaker({ actor: this }), flavor: "Dégâts — Arme improvisée" });
+        return roll;
+    }
+
     async _rollWeaponAttack(
         weaponId,
         mode = this.system.rollMode ?? "normal"
@@ -515,11 +532,10 @@ export class ArcaneActor extends Actor {
             ability.modifier
             + expertiseBonus;
 
-        return this._rollD20(
-            modifier,
-            mode,
-            `Attaque — ${weapon.name}`, { type: "attack", ability: ability.key }
-        );
+        const restriction = weaponAttackRestrictions(this, weapon);
+        return this._rollD20(modifier, mode,
+            `Attaque — ${foundry.utils.escapeHTML(weapon.name)}${restriction.reasons.length ? "<br><small>" + foundry.utils.escapeHTML(restriction.reasons.join(" · ")) + "</small>" : ""}`,
+            { type: "attack", ability: ability.key, disadvantage: restriction.disadvantage });
     }
 
     async rollWeaponDamage(

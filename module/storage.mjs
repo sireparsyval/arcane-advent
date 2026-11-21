@@ -1,5 +1,6 @@
 import { executeTransfer, transferPlan } from "./inventory-transfer.mjs";
 import { inventoryForDocument, inventoryForToken, StorageInventory } from "./storage-inventory.mjs";
+import { animateSceneObject, objectCenter, objectMotionPlan } from "./scene-object-motion.mjs";
 
 export const STORAGE_IMAGE = "assets/arcane-advent/entities/objects/item-stash.png";
 export const STORAGE_QUERY = "arcane-advent.inventory";
@@ -22,7 +23,7 @@ function requireSceneToken(token, actor, user) {
     }
 }
 
-export async function createStorage({ name = "Objets au sol", scene = null, x, y, ground = false, img } = {}) {
+export async function createStorage({ name = "Objets au sol", scene = null, x, y, ground = false, img, snap = true } = {}) {
     if (!game.user.isGM) throw new Error("La création d’un stockage nécessite le MJ.");
     img ||= game.settings.get("arcane-advent", "storageImage") || STORAGE_IMAGE;
     if (ground && !scene) throw new Error("Choisissez une scène pour le dépôt au sol.");
@@ -32,7 +33,7 @@ export async function createStorage({ name = "Objets au sol", scene = null, x, y
     if (!document) throw new Error("Le stockage n’a pas pu être créé dans le répertoire Objets.");
     const storage = inventoryForDocument(document);
     try {
-        if (scene) await placeStorage(storage, scene, { x, y });
+        if (scene) await placeStorage(storage, scene, { x, y, snap });
         return storage;
     } catch (error) {
         await document.delete();
@@ -60,8 +61,9 @@ export async function placeStorage(actor, scene = canvas.scene, position = {}) {
     }
     const size = scene.grid.size;
     const center = canvas.stage?.pivot ?? { x: scene.width / 2, y: scene.height / 2 };
-    const x = Math.max(0, Math.min(scene.width - size, Math.round((position.x ?? center.x - size / 2) / size) * size));
-    const y = Math.max(0, Math.min(scene.height - size, Math.round((position.y ?? center.y - size / 2) / size) * size));
+    const coordinate = (value,max) => Math.max(0,Math.min(max,position.snap===false?value:Math.round(value/size)*size));
+    const x = coordinate(position.x ?? center.x-size/2,scene.width-size);
+    const y = coordinate(position.y ?? center.y-size/2,scene.height-size);
     const itemStorage = actor instanceof StorageInventory;
     const model = itemStorage ? await storageTokenModel() : actor;
     const token = await model.getTokenDocument({ x, y, ...(itemStorage ? {
@@ -110,15 +112,23 @@ async function processRequest(data, user) {
     }
     let destination;
     let groundCreated = false;
-    if (data.action === "drop") {
+    if (data.action === "drop" || data.action === "throw") {
         const token = await fromUuid(data.sourceToken);
         requireSceneToken(token, source, user);
         const preview = transferPlan(source.items, data.selections, foundry.utils.randomID);
         const roots = preview.creates.filter(item => !item.system.containerId);
         const single = roots.length === 1 ? roots[0] : null;
+        const thrown = data.action === "throw";
+        const center = objectCenter(token), size = token.parent.grid.size;
+        if (thrown) {
+            const weapon = source.items.get(data.selections[0]?.id);
+            if(data.selections.length!==1||weapon?.type!=="weapon"||weapon.system.corporeal||!weapon.system.equipped
+                ||!new Set(weapon.system.properties).has("thrown"))throw Error("Choisissez une arme Lancer équipée et non corporelle.");
+            objectMotionPlan({documentName:"Token",parent:token.parent,x:center.x-size/2,y:center.y-size/2,width:1,height:1,rotation:0},data.points,data.motion);
+        }
         destination = await createStorage({ name: single?.name || "Objets au sol",
-            img: single?.system.groundTokenImage?.trim(), scene: token.parent,
-            x: token.x + token.width * token.parent.grid.size, y: token.y, ground: true });
+            img: single?.system.groundTokenImage?.trim() || (thrown ? single?.img : undefined), scene: token.parent,
+            x: thrown ? center.x-size/2 : token.x + token.width * size, y: thrown ? center.y-size/2 : token.y, ground: true, snap: !thrown });
         groundCreated = true;
     } else if (data.action === "transfer") {
         const token = await fromUuid(data.targetToken);
@@ -140,6 +150,11 @@ async function processRequest(data, user) {
             locked.push(actor);
         }
         result = await executeTransfer(source, destination, data.selections, foundry.utils.randomID);
+        if (data.action === "throw") {
+            const token = [...game.scenes].flatMap(scene=>[...scene.tokens]).find(token=>inventoryForToken(token)?.uuid===destination.uuid);
+            try { if(!token)throw Error("Jeton du dépôt introuvable.");await animateSceneObject(token,data.points,data.motion); }
+            catch(error){result.warning=`L’arme est déposée au sol, mais son animation a échoué : ${error.message}`;}
+        }
     } finally {
         for (const actor of locked) await actor.unsetFlag("arcane-advent", "inventoryBusy");
         // An empty deposit created for a failed operation can be removed safely.
@@ -180,11 +195,11 @@ export function registerStorageService() {
     };
 }
 
-export async function requestInventoryAction(actor, selections, { action, sourceToken, targetToken, deleteEmptyGround = false }) {
+export async function requestInventoryAction(actor, selections, { action, sourceToken, targetToken, deleteEmptyGround = false, points, motion }) {
     const gm = game.users.activeGM;
     if (!gm) throw new Error("Un MJ doit être connecté pour déplacer les objets.");
     const data = { requestId: foundry.utils.randomID(), source: actor.uuid,
-        selections, action, sourceToken, targetToken, deleteEmptyGround: deleteEmptyGround === true };
+        selections, action, sourceToken, targetToken, deleteEmptyGround: deleteEmptyGround === true, points, motion };
     const result = gm.isSelf
         ? await CONFIG.queries[STORAGE_QUERY](data, { user: game.user })
         : await gm.query(STORAGE_QUERY, data, { timeout: 30000 });

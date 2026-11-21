@@ -22,6 +22,7 @@ export class WeaponData extends EquipmentData {
     static defineSchema() {
         return {
             ...super.defineSchema(),
+            corporeal: new BooleanField({ initial: false }),
 
             weaponClass: new StringField({
                 required: true,

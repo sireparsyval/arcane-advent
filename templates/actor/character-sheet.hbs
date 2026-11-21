@@ -62,16 +62,20 @@
 {{#*inline "equippedInventoryControls"}}
     <div class="aa-equipment-actions">
         {{#if @root.canEditState}}
+            {{#unless system.corporeal}}
             <button type="button" data-action="toggleEquipment" data-item-id="{{id}}"
                 aria-label="Déséquiper" title="Déséquiper">{{#if unequipText}}{{unequipText}}{{else}}↓{{/if}}</button>
             <button type="button" data-action="moveInventoryItem" data-item-id="{{id}}"
                 data-inventory-drag="{{id}}" draggable="true"
                 aria-label="Déplacer vers un contenant" title="Déplacer vers… (ou glisser)">↪</button>
+            {{/unless}}
             <button type="button" data-action="editInventoryItem" data-item-id="{{id}}"
                 aria-label="Modifier {{name}}" title="Modifier">⚙</button>
         {{/if}}
         {{#if @root.inventory.showWeights}}
+            {{#unless system.corporeal}}
             {{> inventoryWeight}}
+            {{/unless}}
         {{/if}}
     </div>
 {{/inline}}
@@ -1127,30 +1131,31 @@
                                             data-equipment-edit data-item-id="{{id}}" data-item-field="system.weaponClass">
                                     </label>
                                     {{> equippedInventoryControls}}
+                                    <button type="button" data-action="toggleCorporealWeapon" data-item-id="{{id}}" aria-pressed="{{system.corporeal}}"
+                                        title="Arme corporelle : toujours équipée, sans poids" {{#unless @root.canEditState}}disabled{{/unless}}>{{#if system.corporeal}}🔒{{else}}🔓{{/if}}</button>
                                 </div>
 
-                                <div class="aa-weapon-combat">
-                                    <div class="aa-weapon-attack">
-                                        <span class="aa-equipment-stat" title="Caractéristique utilisée">{{attackAbility}}</span>
-                                        <span class="aa-equipment-stat" title="Bonus d'Expertise">Exp. {{expertiseBonus}}</span>
-                                        <button type="button" data-action="rollWeaponAttack" data-item-id="{{id}}"
-                                            title="Jet d'attaque">🎲 Attaque {{attackTotal}}</button>
-                                    </div>
-                                    <div class="aa-weapon-damage">
-                                        <label class="aa-equipment-inline">
-                                            <span>Dégâts</span>
-                                            <input type="text" value="{{system.damageFormula}}" placeholder="1d6"
-                                                data-equipment-edit data-item-id="{{id}}" data-item-field="system.damageFormula">
-                                        </label>
-                                        <button type="button" data-action="rollWeaponDamage" data-item-id="{{id}}"
-                                            aria-label="Jet de dégâts" title="Jet de dégâts">🎲</button>
-                                    </div>
-                                    <label class="aa-weapon-range aa-equipment-inline">
-                                        <span>Portée</span>
-                                        <input type="number" value="{{system.range}}"
-                                            data-equipment-edit data-item-id="{{id}}" data-item-field="system.range">
+                                <div class="aa-weapon-combat aa-weapon-combat-compact">
+                                    <span class="aa-equipment-stat" title="Caractéristique utilisée">{{attackAbility}}</span>
+                                    {{#if properties.heavy}}<label class="aa-equipment-inline"><input class="aa-weapon-minimum" type="number" min="0" step="1" value="{{system.heavy.strengthRequirement}}" data-equipment-edit data-item-id="{{id}}" data-item-field="system.heavy.strengthRequirement" aria-label="Valeur minimale de la caractéristique utilisée">min.</label>{{/if}}
+                                    <span class="aa-equipment-stat">Exp. {{expertiseBonus}}</span>
+                                    <button type="button" data-action="rollWeaponAttack" data-item-id="{{id}}" title="{{attackPenalty}}">⚔️{{attackModifierLabel}}</button>
+                                    <label class="aa-equipment-inline">Dégâts<input class="aa-weapon-formula" type="text" value="{{system.damageFormula}}" placeholder="1d6" data-equipment-edit data-item-id="{{id}}" data-item-field="system.damageFormula"></label>
+                                    <button type="button" data-action="rollWeaponDamage" data-item-id="{{id}}" title="Dégâts">💥</button>
+                                    {{#if properties.light}}<button type="button" data-action="rollWeaponBonusDamage" data-item-id="{{id}}" title="Dégâts d’action bonus">➕</button>{{/if}}
+                                    {{#if properties.versatile}}
+                                        <label class="aa-equipment-inline" title="Dégâts polyvalents"><input class="aa-weapon-formula" type="text" value="{{system.versatile.damageFormula}}" placeholder="1d8" data-equipment-edit data-item-id="{{id}}" data-item-field="system.versatile.damageFormula" aria-label="Dégâts polyvalents"></label>
+                                        <button type="button" data-action="rollWeaponVersatileDamage" data-item-id="{{id}}" title="Dégâts polyvalents">💥</button>
+                                        {{#if properties.light}}<button type="button" data-action="rollWeaponBonusDamage" data-item-id="{{id}}" data-versatile="true" title="Dégâts polyvalents d’action bonus">➕</button>{{/if}}
+                                    {{/if}}
+                                    <div class="aa-weapon-ranges">
+                                        <span>{{#if properties.thrown}}Portées{{else}}{{#if properties.ammunition}}Portées{{else}}Portée{{/if}}{{/if}}</span>
+                                        <input type="number" min="0" step="any" value="{{system.range}}" data-equipment-edit data-item-id="{{id}}" data-item-field="system.range" aria-label="Allonge de l’arme">
+                                        {{#if properties.thrown}}<span>| n.</span><input type="number" min="0" value="{{system.thrown.normalRange}}" data-equipment-edit data-item-id="{{id}}" data-item-field="system.thrown.normalRange" aria-label="Portée normale de lancer"><span>l.</span><input type="number" min="0" value="{{system.thrown.longRange}}" data-equipment-edit data-item-id="{{id}}" data-item-field="system.thrown.longRange" aria-label="Portée longue de lancer">{{/if}}
+                                        {{#if properties.ammunition}}{{#unless properties.thrown}}<span>| n.</span>{{else}}<span>| Distance n.</span>{{/unless}}<input type="number" min="0" value="{{system.ammunition.normalRange}}" data-equipment-edit data-item-id="{{id}}" data-item-field="system.ammunition.normalRange" aria-label="Portée normale à distance"><span>l.</span><input type="number" min="0" value="{{system.ammunition.longRange}}" data-equipment-edit data-item-id="{{id}}" data-item-field="system.ammunition.longRange" aria-label="Portée longue à distance">{{/if}}
                                         <span>m</span>
-                                    </label>
+                                    </div>
+                                    {{#if properties.thrown}}<button class="aa-weapon-motion" type="button" data-action="throwWeapon" data-item-id="{{id}}" title="Lancer et déposer cette arme" {{#if system.corporeal}}disabled{{/if}}>🎯</button>{{else}}{{#if properties.ammunition}}<button class="aa-weapon-motion" type="button" data-action="weaponAmmunitionMenu" data-item-id="{{id}}" title="Chargement et munitions">♻️</button>{{/if}}{{/if}}
                                 </div>
 
                                 <div class="aa-equipment-detail">
@@ -1193,86 +1198,6 @@
                                     </div>
                                 </div>
 
-                                <div class="aa-weapon-configs">
-                                    {{#if properties.thrown}}
-                                        <div class="aa-weapon-property-config">
-                                            <strong>Lancer</strong>
-                                            <label class="aa-equipment-inline">
-                                                <span>Portée normale</span>
-                                                <input type="number" value="{{system.thrown.normalRange}}"
-                                                    data-equipment-edit data-item-id="{{id}}" data-item-field="system.thrown.normalRange">
-                                                <span>m</span>
-                                            </label>
-                                            <label class="aa-equipment-inline">
-                                                <span>Portée longue</span>
-                                                <input type="number" value="{{system.thrown.longRange}}"
-                                                    data-equipment-edit data-item-id="{{id}}" data-item-field="system.thrown.longRange">
-                                                <span>m</span>
-                                            </label>
-                                        </div>
-                                    {{/if}}
-                                    {{#if properties.light}}
-                                        <div class="aa-weapon-property-config">
-                                            <strong>Légère</strong>
-                                            <button type="button" data-action="rollWeaponBonusDamage" data-item-id="{{id}}">
-                                                🎲 Dégâts d'attaque bonus
-                                            </button>
-                                        </div>
-                                    {{/if}}
-                                    {{#if properties.heavy}}
-                                        <div class="aa-weapon-property-config">
-                                            <strong>Lourde</strong>
-                                            <label class="aa-equipment-inline">
-                                                <span>FOR minimum</span>
-                                                <input type="number" value="{{system.heavy.strengthRequirement}}"
-                                                    data-equipment-edit data-item-id="{{id}}" data-item-field="system.heavy.strengthRequirement">
-                                            </label>
-                                        </div>
-                                    {{/if}}
-                                    {{#if properties.versatile}}
-                                        <div class="aa-weapon-property-config">
-                                            <strong>Polyvalente</strong>
-                                            <label class="aa-equipment-inline">
-                                                <span>Dégâts</span>
-                                                <input type="text" value="{{system.versatile.damageFormula}}" placeholder="1d8"
-                                                    data-equipment-edit data-item-id="{{id}}" data-item-field="system.versatile.damageFormula">
-                                            </label>
-                                            <button type="button" data-action="rollWeaponVersatileDamage" data-item-id="{{id}}"
-                                                aria-label="Jet de dégâts polyvalents" title="Jet de dégâts polyvalents">🎲</button>
-                                            {{#if properties.light}}<button type="button" data-action="rollWeaponBonusDamage" data-item-id="{{id}}" data-versatile="true"
-                                                title="Dégâts polyvalents d’action bonus">➕</button>{{/if}}
-                                        </div>
-                                    {{/if}}
-                                    {{#if properties.ammunition}}
-                                        <div class="aa-weapon-property-config">
-                                            <strong>Distance</strong>
-                                            <label class="aa-equipment-inline">
-                                                <span>Portée normale</span>
-                                                <input type="number" value="{{system.ammunition.normalRange}}"
-                                                    data-equipment-edit data-item-id="{{id}}" data-item-field="system.ammunition.normalRange">
-                                                <span>m</span>
-                                            </label>
-                                            <label class="aa-equipment-inline">
-                                                <span>Portée longue</span>
-                                                <input type="number" value="{{system.ammunition.longRange}}"
-                                                    data-equipment-edit data-item-id="{{id}}" data-item-field="system.ammunition.longRange">
-                                                <span>m</span>
-                                            </label>
-                                            <button type="button" data-action="toggleWeaponSetting" data-setting="loading" data-item-id="{{id}}"
-                                                aria-pressed="{{system.ammunition.loading}}" {{#unless @root.canEditState}}disabled{{/unless}}>Chargement</button>
-                                            <button type="button" data-action="toggleWeaponSetting" data-setting="enabled" data-item-id="{{id}}"
-                                                aria-pressed="{{system.ammunition.enabled}}" {{#unless @root.canEditState}}disabled{{/unless}}>Munitions</button>
-                                            {{#if system.ammunition.enabled}}
-                                                <select data-equipment-edit data-item-id="{{id}}" data-item-field="system.ammunition.itemId" aria-label="Stock de munitions" {{#unless @root.canEditState}}disabled{{/unless}}>
-                                                    <option value="">Choisir des munitions…</option>
-                                                    {{#each ammunitionChoices}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}} ({{quantity}})</option>{{/each}}
-                                                </select>
-                                                <label class="aa-equipment-inline">Par attaque<input type="number" min="1" step="1" required value="{{system.ammunition.quantity}}"
-                                                    data-equipment-edit data-item-id="{{id}}" data-item-field="system.ammunition.quantity" {{#unless @root.canEditState}}readonly{{/unless}}></label>
-                                            {{/if}}
-                                        </div>
-                                    {{/if}}
-                                </div>
                             </div>
                         {{else}}
                             <p class="aa-empty-equipment">Aucune arme équipée.</p>

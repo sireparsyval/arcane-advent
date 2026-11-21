@@ -1,17 +1,8 @@
 import { activeCharacterEffects, applyStatisticEffects, resolveRollEffects } from "./character-effects.mjs";
 
 export function unarmedDamage(actor) {
-    const saved = actor.getFlag?.("arcane-advent", "unarmedDamage") ?? {};
-    const ability = ["strength", "dexterity", "best"].includes(saved.ability) ? saved.ability : "strength";
-    const ids = new Set(saved.expertiseIds ?? []);
-    const expertise = [...actor.items].filter(item => item.type === "expertise" && ids.has(item.id))
-        .reduce((total, item) => total + (Number(item.system.bonus) || 0), 0);
-    const strength = actor.system.abilities.strength.modifier, dexterity = actor.system.abilities.dexterity.modifier;
-    const modifier = ability === "best" ? Math.max(strength, dexterity) : ability === "dexterity" ? dexterity : strength;
     const rules = activeCharacterEffects(actor);
-    return { ability, expertiseIds: [...ids], bonusAction: Boolean(saved.bonusAction),
-        damage: applyStatisticEffects(1 + modifier + expertise, "unarmedDamage", rules),
-        bonusDamage: applyStatisticEffects(1 + expertise, "unarmedDamage", rules) };
+    return { damage: applyStatisticEffects(1 + actor.system.abilities.strength.modifier, "unarmedDamage", rules) };
 }
 
 export function equippedAttackShortcuts(actor) {

@@ -18,6 +18,15 @@ const { WeaponData } = await import("../module/data/weapon-data.mjs");
 const { ArcaneItem, getEquipmentConflictType } = await import("../module/documents/item.mjs");
 const { ArcaneInventoryItemSheet } = await import("../module/applications/item/inventory-item-sheet.mjs");
 
+test("corporeal weapons remain equipped and outside containers until explicitly unlocked",async()=>{
+    const item={type:"weapon",actor:{type:"character"},system:{corporeal:true,equipped:true}};
+    const changes={system:{equipped:false,containerId:"bag"}};
+    await ArcaneItem.prototype._preUpdate.call(item,changes,{},{});
+    assert.equal(changes.system.equipped,true);assert.equal(changes.system.containerId,null);
+    const unlocked={system:{corporeal:false,equipped:false}};
+    await ArcaneItem.prototype._preUpdate.call(item,unlocked,{},{});assert.equal(unlocked.system.equipped,false);
+});
+
 test("les anciennes armes de Garde conservent leurs propriétés et deviennent utilisables", () => {
     for (const properties of [["twoHanded", "heavy"], new Set(["finesse"]), undefined]) {
         const source = { equipped: true, guardEnabled: true, properties };
@@ -59,7 +68,7 @@ test("la Garde d'un bouclier reste configurable indépendamment des propriétés
     await ArcaneItem.prototype._preUpdate.call({ type: "shield", system: {} }, changes, {}, {});
     assert.equal(changes.system.guardEnabled, true);
     assert.equal(getEquipmentConflictType("weapon", new Set(["guard"])), null);
-    assert.equal(getEquipmentConflictType("weapon", new Set(["guard", "twoHanded"])), "shield");
+    assert.equal(getEquipmentConflictType("weapon", new Set(["guard", "twoHanded"])), null);
 });
 
 test("la fiche d'arme propose Garde et enregistre le choix sans exiger Deux mains", async () => {
@@ -80,3 +89,4 @@ test("la fiche d'arme propose Garde et enregistre le choix sans exiger Deux main
         assert.equal(data.system.guardEnabled, false);
     }
 });
+

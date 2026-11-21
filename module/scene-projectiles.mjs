@@ -28,9 +28,10 @@ export function projectileFrame(flight, now = sceneClock()) {
 }
 
 export function sceneObjectFlight(tile) {
-    const model = modelFor(tile), flight = model?.flight;
+    const model = modelFor(tile), motion = tile?.getFlag?.(SCOPE, "objectMotion") ?? tile?.flags?.[SCOPE]?.objectMotion;
+    const flight = motion ?? model?.flight;
     // A regular move invalidates a previous trajectory even when imported flags remain.
-    return model?.kind === "visualEffect" && flight?.to?.x === tile.x && flight?.to?.y === tile.y ? flight : null;
+    return (motion || model?.kind === "visualEffect") && flight?.to?.x === tile.x && flight?.to?.y === tile.y ? flight : null;
 }
 
 export function sceneObjectPosition(tile, now = sceneClock()) {
@@ -43,7 +44,18 @@ export function projectileAppearance(flight, now = sceneClock()) {
     if (!frame || !visual) return null;
     const scale = 1 + (visual.endScale - 1) * frame.progress;
     return { width: visual.width * scale, height: visual.height * scale,
-        rotation: visual.rotation + visual.spin * frame.progress * flight.duration / 1000 };
+        rotation: visual.rotationMode === "direction" ? movementHeading(flight.points, frame.progress) + (visual.offset ?? 0)
+            : visual.rotation + visual.spin * frame.progress * flight.duration / 1000 };
+}
+
+export function movementHeading(points, progress) {
+    const lengths = points.slice(1).map((p,i) => Math.hypot(p.x-points[i].x,p.y-points[i].y));
+    let distance = progress * lengths.reduce((a,b) => a+b,0);
+    for (let i=0;i<lengths.length;i++) {
+        if (distance <= lengths[i] || i === lengths.length-1) return Math.atan2(points[i+1].y-points[i].y,points[i+1].x-points[i].x)*180/Math.PI-90;
+        distance -= lengths[i];
+    }
+    return 0;
 }
 
 export function registerSceneProjectiles({ onComplete } = {}) {
@@ -55,17 +67,24 @@ export function registerSceneProjectiles({ onComplete } = {}) {
         const display = object?.mesh ?? object?.bg;
         if (display && !display.destroyed) display.position.set(point.x, point.y);
         if (display && !display.destroyed) {
-            display.width = appearance?.width ?? tile.width;
-            display.height = appearance?.height ?? tile.height;
+            if(modelFor(tile)?.kind === "visualEffect") {
+                display.width = appearance?.width ?? tile.width;
+                display.height = appearance?.height ?? tile.height;
+            }
             display.rotation = (appearance?.rotation ?? tile.rotation) * Math.PI / 180;
         }
         if (object?.controls && !object.destroyed && !object.controls.destroyed) {
-            object.controls.shape.updateSource({ x: point.x, y: point.y });
+            object.controls.shape.updateSource({ x: point.x, y: point.y, ...(appearance ?? {}) });
             object.controls.refresh();
         }
         Hooks.callAll("arcaneAdventSceneObjectPosition", tile, point, appearance);
     }
     function forget(tile, flight) {
+        const motion = tile?.getFlag?.(SCOPE, "objectMotion") ?? tile?.flags?.[SCOPE]?.objectMotion;
+        if (motion) {
+            if (game.users?.activeGM?.isSelf && motion.id === flight?.id) tile.update({ "flags.arcane-advent.objectMotion": null }, { sceneObjectSync: true }).catch(error => ui.notifications.error(error.message));
+            return;
+        }
         if (!flight || !game.users?.activeGM?.isSelf || !tile.parent.tiles.has(tile.id)
             || modelFor(tile)?.flight?.id !== flight.id) return;
         if (onComplete) { onComplete(tile, flight.id); return; }

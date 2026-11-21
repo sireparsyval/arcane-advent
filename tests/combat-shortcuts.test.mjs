@@ -6,17 +6,14 @@ function actor(items = [], settings = {}) {
     return { items, getFlag: () => settings, system: { abilities: { strength: {modifier:2}, dexterity:{modifier:4} }, effectRules: {} },
         getWeaponAbilityData: () => ({ key:"strength", modifier:2 }), getExpertiseBonus: () => 3 };
 }
-test("unarmed damage defaults to Force, selected Expertises contribute once and bonus damage ignores the modifier", () => {
-    const items = [{id:"e",type:"expertise",system:{bonus:2}},{id:"unused",type:"expertise",system:{bonus:9}}];
-    assert.equal(unarmedDamage(actor(items)).damage, 3);
-    const config = { expertiseIds:["e","e","deleted"], bonusAction:true, ability:"strength" };
-    assert.equal(unarmedDamage(actor(items,config)).damage, 5);
-    assert.equal(unarmedDamage(actor(items,config)).bonusDamage, 3);
-    assert.equal(unarmedDamage(actor(items,{...config,ability:"best"})).damage, 7);
-    assert.equal(unarmedDamage(actor(items,{...config,ability:"dexterity"})).damage, 7);
-    const negative = actor(items,config); negative.system.abilities.strength.modifier = -3;
-    assert.equal(unarmedDamage(negative).damage, 0); assert.equal(unarmedDamage(negative).bonusDamage, 3);
+test("unarmed damage uses Force and ignores old Expertise, ability and bonus-action settings", () => {
+    const items=[{id:"e",type:"expertise",system:{bonus:9}}];
+    const a=actor(items,{expertiseIds:["e"],ability:"dexterity",bonusAction:true});
+    assert.deepEqual(unarmedDamage(a),{damage:3});
+    a.system.abilities.strength.modifier=-2;
+    assert.deepEqual(unarmedDamage(a),{damage:-1});
 });
+
 test("equipped shortcuts follow equipment order, show the full attack bonus and select icons and secondary damage", () => {
     const weapon = (id, properties, sort, equipped = true) => ({id,name:id,type:"weapon",sort,system:{properties:new Set(properties),equipped,damageFormula:"1d4",versatile:{damageFormula:"1d6"}}});
     const a = actor([weapon("bow",["ammunition"],3),weapon("blade",["light","versatile"],1),weapon("knife",["thrown"],2),weapon("off",[],0,false)]);
@@ -33,11 +30,11 @@ test("conditional unarmed effects update normal and bonus damage and resolve she
         activationMode:"conditions", conditionIds:["ready"] };
     const trait = { id:"trait",type:"trait",name:"Poings",system:{conditions:{ready:{kind:"manual",enabled:true}},effectRules:{damage:rule}} };
     const a = actor([trait,{id:"e",type:"expertise",system:{bonus:2}}],{expertiseIds:["e"],bonusAction:true});
-    assert.equal(unarmedDamage(a).damage,9); assert.equal(unarmedDamage(a).bonusDamage,7);
+    assert.equal(unarmedDamage(a).damage,7);
     trait.system.conditions.ready.enabled=false;
-    assert.equal(unarmedDamage(a).damage,5); assert.equal(unarmedDamage(a).bonusDamage,3);
+    assert.equal(unarmedDamage(a).damage,3);
     trait.system.conditions.ready.enabled=true; rule.enabled=false;
-    assert.equal(unarmedDamage(a).damage,5); assert.equal(unarmedDamage(a).bonusDamage,3);
+    assert.equal(unarmedDamage(a).damage,3);
 });
 
 test("unarmed bonuses before and after multiplication follow the standard effect calculation", () => {
@@ -48,5 +45,4 @@ test("unarmed bonuses before and after multiplication follow the standard effect
         unrelated:{...newEffectRule(),target:"defense",amount:100}
     };
     assert.equal(unarmedDamage(a).damage,11);
-    assert.equal(unarmedDamage(a).bonusDamage,7);
 });

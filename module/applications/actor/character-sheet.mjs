@@ -2,6 +2,8 @@ import { ARCANE_ALIGNMENTS, ARCANE_NEEDS } from "../../config.mjs";
 import { bindDefenseReductionTooltips } from "../../defense-reductions.mjs";
 import { unarmedDamage, equippedAttackShortcuts } from "../../combat-shortcuts.mjs";
 import { ammunitionItems } from "../../weapon-ammunition.mjs";
+import { weaponAttackRestrictions } from "../../weapon-usage.mjs";
+import { throwInventoryWeapon } from "../scene-object-motion-controls.mjs";
 import { APTITUDE_RANGE_MODES, aptitudeRangeMode, aptitudeRangeSummary,
     bindAptitudeRangeToggle, refreshAptitudeTargetingFields } from "../../aptitude-targeting.mjs";
 import { inventoryActionDialog } from "../inventory-transfer.mjs";
@@ -251,7 +253,16 @@ export class ArcaneCharacterSheet
             removeDamageReduction: this._onRemoveDamageReduction,
 
             rollWeaponAttack: this._onRollWeaponAttack,
-            editUnarmedDamage: this._onEditUnarmedDamage,
+            rollImprovisedDamage: async function () { await this.actor.rollImprovisedDamage(); },
+            toggleCorporealWeapon: async function (_event, target) {
+                const weapon = this.actor.items.get(target.dataset.itemId);
+                if (this.isEditable && weapon?.type === "weapon") await this.actor.updateInventoryItem(weapon.id, { "system.corporeal": !weapon.system.corporeal });
+            },
+            weaponAmmunitionMenu: this._onWeaponAmmunitionMenu,
+            throwWeapon: async function (_event, target) {
+                try { await throwInventoryWeapon(this.actor,target.dataset.itemId); }
+                catch(error){ui.notifications.error(error.message);}
+            },
             toggleWeaponSetting: this._onToggleWeaponSetting,
             rollWeaponDamage: this._onRollWeaponDamage,
 
@@ -615,6 +626,7 @@ export class ArcaneCharacterSheet
 
                     return {
                         ...equipmentView(item),
+                        attackPenalty: weaponAttackRestrictions(this.actor,item).reasons.join(" · "),
                         ammunitionChoices: ammunitionItems(this.actor).map(ammo => ({ id: ammo.id, name: ammo.name,
                             quantity: ammo.system.quantity, selected: ammo.id === item.system.ammunition.itemId })),
 
@@ -2245,28 +2257,28 @@ export class ArcaneCharacterSheet
         ); } catch (error) { ui.notifications.error(error.message); }
     }
 
-    static async _onEditUnarmedDamage() {
-        if (!this.isEditable) return;
-        const saved = unarmedDamage(this.actor), escape = foundry.utils.escapeHTML;
-        const choices = [...this.actor.items].filter(item => item.type === "expertise");
-        return foundry.applications.api.DialogV2.wait({ window: { title: "Dégâts à mains nues" },
-            content: `<div class="standard-form"><label>Modificateur<select name="ability">${Object.entries({ strength: "Force", dexterity: "Dextérité", best: "Meilleur de Force / Dextérité" }).map(([key,label]) => `<option value="${key}" ${saved.ability === key ? "selected" : ""}>${label}</option>`).join("")}</select></label>
-            <fieldset><legend>Expertises prises en compte</legend>${choices.map(item => `<label class="checkbox"><input type="checkbox" data-unarmed-expertise="${escape(item.id)}" ${saved.expertiseIds.includes(item.id) ? "checked" : ""}>${escape(item.name)} (${item.system.bonus})</label>`).join("") || "<p>Aucune Expertise.</p>"}</fieldset>
-            <label class="checkbox"><input name="bonusAction" type="checkbox" ${saved.bonusAction ? "checked" : ""}>Afficher les dégâts en action bonus (1 + Expertises, sans modificateur)</label></div>`,
-            buttons: [{ action: "save", label: "Enregistrer", callback: async (_event, button) => {
-                const form = button.form;
-                await this.actor.setFlag("arcane-advent", "unarmedDamage", {
-                    ability: form.querySelector('[name="ability"]').value,
-                    expertiseIds: [...form.querySelectorAll("[data-unarmed-expertise]:checked")].map(field => field.dataset.unarmedExpertise),
-                    bonusAction: form.querySelector('[name="bonusAction"]').checked
-                });
-            } }, { action: "cancel", label: "Annuler", default: true, callback: () => false }], rejectClose: false });
-    }
-
     static async _onToggleWeaponSetting(_event, target) {
         const item = this.actor.items.get(target.dataset.itemId), key = target.dataset.setting;
         if (!this.isEditable || item?.type !== "weapon" || !["loading", "enabled"].includes(key)) return;
         await this.actor.updateInventoryItem(item.id, { [`system.ammunition.${key}`]: !item.system.ammunition[key] });
+    }
+
+    static async _onWeaponAmmunitionMenu(_event, target) {
+        const weapon = this.actor.items.get(target.dataset.itemId);
+        if (!this.isEditable || weapon?.type !== "weapon") return;
+        const ammo = weapon.system.ammunition, escape = foundry.utils.escapeHTML;
+        return foundry.applications.api.DialogV2.wait({ window:{title:"Chargement et munitions"},position:{width:400},
+            content:`<div class="standard-form aa-ammunition-settings"><label class="aa-checkbox-toggle"><input type="checkbox" name="loading" ${ammo.loading?"checked":""}><span>Chargement</span></label>
+                <label class="aa-checkbox-toggle"><input type="checkbox" name="system.ammunition.enabled" ${ammo.enabled?"checked":""}><span>Munitions</span></label>
+                <div class="aa-ammunition-choices"><label>Stock<select name="stock"><option value="">Choisir…</option>${ammunitionItems(this.actor).map(item=>`<option value="${escape(item.id)}" ${item.id===ammo.itemId?"selected":""}>${escape(item.name)} (${item.system.quantity})</option>`).join("")}</select></label>
+                <label>Quantité par attaque<input type="number" name="quantity" min="1" step="1" value="${ammo.quantity}" required></label></div></div>`,
+            buttons:[{action:"save",label:"Enregistrer",callback:async(_event,button)=>{
+                const form=button.form;if(!this.actor.items.has(weapon.id)||!this.isEditable)return;
+                await this.actor.updateInventoryItem(weapon.id,{"system.ammunition.loading":form.querySelector('[name="loading"]').checked,
+                    "system.ammunition.enabled":form.querySelector('[name="system.ammunition.enabled"]').checked,
+                    "system.ammunition.itemId":form.querySelector('[name="stock"]').value,
+                    "system.ammunition.quantity":Number(form.querySelector('[name="quantity"]').value)});
+            }},{action:"cancel",label:"Annuler",default:true,callback:()=>false}],rejectClose:false});
     }
 
 

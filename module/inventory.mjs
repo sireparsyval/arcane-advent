@@ -47,6 +47,7 @@ export function canPlaceInContainer(items, itemId, containerId) {
 }
 
 function carriedWeight(item, weight) {
+    if (item.type === "weapon" && item.system.corporeal) return 0;
     return item.type === "object" ? weight * (item.system.quantity ?? 1) : weight;
 }
 

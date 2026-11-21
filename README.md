@@ -267,23 +267,27 @@ et la modifient d’une unité, sans changer l’unité choisie ni descendre sou
 
 ### Aptitudes
 Une barre compacte entre **Statut** et **Aptitudes** regroupe les dégâts à mains
-nues et les jets des armes équipées, dans leur ordre d’équipement. **👊** configure
-Force, Dextérité ou le meilleur des deux, les Expertises ajoutées aux dégâts et
-l’affichage du bonus : dégâts normaux = 1 + modificateur + Expertises ; dégâts en
-action bonus = 1 + Expertises. Le bouton bonus à mains nues est un simple repère.
-La cible d’effet **Dégâts sans arme** ajuste ces deux valeurs selon les conditions
-et les règles habituelles de bonus/malus avant ou après multiplication. L’action
-bonus ignore toujours le modificateur de caractéristique dans son calcul de base.
-Les attaques d’arme affichent leur bonus total ; les dégâts affichent seulement
-leur formule de base. **Légère + Polyvalente** propose aussi les dégâts polyvalents
-en action bonus, sur la barre et dans l’équipement.
+nues (1 + modificateur de Force, ajustés par les éventuels Effets sans arme), un
+jet d’arme improvisée (1d4 + modificateur de Force) et les jets des armes équipées.
+Le bouton 👊 est un simple repère sans menu, Expertise ni action bonus. Les armes
+Légères proposent des dégâts bonus pour leur formule normale et polyvalente.
 
-La propriété **Distance** conserve la clé interne historique `ammunition` pour
-préserver les armes et filtres d’Expertise existants. Ses portées et **Chargement**
-sont conservés. Le toggle séparé **Munitions** permet de choisir un Objet possédé
-de classe **Munitions** et une quantité par attaque. Le jet d’attaque consomme ce
-stock (y compris depuis les raccourcis) ; un stock épuisé est retiré. Un stock
-manquant ou insuffisant bloque le tir. Les jets de dégâts ne consomment rien.
+Le verrou 🔒 d’une arme en fait une **arme corporelle** : toujours équipée sur
+le personnage, hors contenant et sans poids transporté. Déverrouiller permet
+de la déséquiper ou de la transférer. Une arme **Lourde** impose un minimum sur la
+valeur effective de la caractéristique utilisée pour attaquer ; en dessous, le
+jet est désavantagé. Une arme **Deux mains** est désavantagée si un bouclier ou
+une autre arme non corporelle est équipé. Les avantages et désavantages suivent
+leur règle habituelle d’annulation ; le matériel n’est plus déséquipé pour ce conflit.
+La restriction d’un seul équipement de Garde actif reste applicable.
+
+Les dégâts normaux, bonus et polyvalents sont réunis avant les portées. **Distance**
+garde les portées normale/longue et sa clé historique ammunition. ♻️ ouvre
+Chargement/Munitions : choix d’un Objet de classe **Munitions** et de sa quantité
+consommée à chaque attaque. Un stock insuffisant bloque le tir. **Lancer** affiche
+ses portées et un bouton 🎯 : régler le mouvement, tracer depuis le personnage,
+puis l’arme quitte son inventaire et devient un dépôt récupérable animé. Aucun
+jet d’attaque ou dégât n’est lancé automatiquement par ce déplacement.
 
 Les Passifs n'affichent pas de niveau ; les autres Aptitudes conservent leur
 niveau comme coût en PdF (aucun coût ou effet critique n'est automatiquement appliqué).
@@ -420,28 +424,27 @@ plusieurs presets pour une même image/vidéo. Le trajet reste choisi à chaque
 utilisation. Une continuation part de la position et de la taille atteintes ;
 l’effet final manuel reprend aussi les réglages de fin de la projection.
 
-Le bouton **Animations**, en bas du répertoire **Objets**, propose les modèles
-d’**Effet Visuel** du monde avant même qu’un exemplaire soit placé.
-Choisir un modèle et **Préparer une projection**. Régler la durée totale du
-trajet (0,1 à 60 secondes), puis tracer : clic sur A, **Ctrl + clic** pour chaque
-étape intermédiaire, clic sans Ctrl sur B. Retour arrière retire la dernière
-étape ; Échap ou clic droit annule. Le tracé est une prévisualisation locale.
+La fenêtre **Animations** présente deux listes : modèles d’Effet Visuel du
+répertoire à gauche, exemplaires présents sur la scène à droite. Chaque entrée
+montre son icône, son nom et le chemin de dossiers de son modèle. **▶** reprend
+les préréglages, demande le trajet et lance immédiatement à sa définition.
+**✎** ouvre les réglages ponctuels avant **Tracer et lancer** ; **⚙** ouvre le
+modèle de l’effet. Les réglages ponctuels ne modifient pas le modèle.
 
-La confirmation permet d’ajuster les réglages ou de retracer. Aucun effet
-n’apparaît sur la scène avant **Lancer l’animation**. Le déplacement suit
-les segments à vitesse constante et se synchronise chez les participants.
+Cliquer sur A puis B ; **Ctrl + clic** ajoute des étapes, Retour arrière retire
+la dernière étape, Échap ou clic droit annule. Le lancement suit directement la
+fin du tracé, sans seconde confirmation. À l’arrivée, l’effet reste, disparaît
+ou laisse place à l’effet final choisi (une lecture puis suppression, dernière
+image conservée ou boucle). Le menu **⋯** conserve les commandes d’impact manuel,
+de continuation et de suppression d’un effet présent.
 
-À l’arrivée, choisir de garder le projectile, de le supprimer ou de déclencher
-un autre modèle d’effet. L’effet final peut être lu **une fois puis supprimé**,
-**une fois puis conservé** (dernière image d’une vidéo), ou **en boucle**.
-La durée réelle d’une vidéo est utilisée ; pour une image ou une brume,
-renseigner la durée prévue. Les vidéos démarrent au début, sans point de départ
-aléatoire. La suppression est pilotée par le MJ actif, même s’il change de scène.
+En bas, **Animer un objet de la scène** permet de choisir directement un décor,
+une tuile ou un objet déposé au sol, puis sa destination. La ligne de réglages
+définit la durée du trajet en secondes et la rotation : verrouillée, orientée
+selon le trajet avec un offset horaire (0° face au mouvement, 180° dos au mouvement),
+ou continue avec un nombre de tours et un sens horaire/antihoraire. Le déplacement
+conserve l’objet à l’arrivée, avec son contenu éventuel. La même rotation est
+disponible pour le lancer d’une arme. Les participants voient le mouvement et
+l’orientation synchronisés ; le MJ actif termine aussi les mouvements hors scène.
 
-Pour attendre un jet de sauvegarde, garder la boule à l’arrivée. Dans la liste
-des effets présents, **Interagir → Continuer / préparer un trajet** repart de
-sa position actuelle ; **Déclencher l’effet final** la remplace immédiatement
-par l’explosion choisie. Les modèles du répertoire restent réutilisables.
-
-Les jets, dégâts, esquives et collisions sont décidés par le MJ. La préparation
-et l’animation ne modifient pas les caractéristiques des personnages.
+Les jets, dégâts, esquives et collisions restent décidés par le MJ.

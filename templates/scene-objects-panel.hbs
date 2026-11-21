@@ -1,28 +1,36 @@
+{{#*inline "animationEntry"}}
+    <article class="aa-animation-entry">
+        <img src="{{img}}" alt="">
+        <div class="aa-animation-entry-text"><strong>{{name}}</strong><small>{{path}}</small>{{#if status}}<small>{{status}}</small>{{/if}}</div>
+        <div class="aa-animation-entry-actions">
+            <button type="button" data-action="launch" data-uuid="{{uuid}}" data-tile-id="{{id}}" title="Tracer et lancer les préréglages" aria-label="Lancer {{name}}" {{#if moving}}disabled{{/if}}>▶</button>
+            <button type="button" data-action="prepare" data-uuid="{{uuid}}" data-tile-id="{{id}}" title="Préparer puis tracer et lancer" aria-label="Préparer {{name}}" {{#if moving}}disabled{{/if}}>✎</button>
+            <button type="button" data-action="model" data-uuid="{{uuid}}" data-tile-id="{{id}}" title="Paramètres de l’effet" aria-label="Paramètres de {{name}}">⚙</button>
+            {{#if id}}<button type="button" data-action="interact" data-tile-id="{{id}}" title="Impact, suppression et interactions" aria-label="Interagir avec {{name}}">⋯</button>{{/if}}
+        </div>
+    </article>
+{{/inline}}
 <section class="aa-scene-objects-body">
     <p>{{#if sceneName}}Scène : <strong>{{sceneName}}</strong>{{else}}Ouvrez une scène pour préparer une animation.{{/if}}</p>
     {{#if isGM}}
-        <fieldset class="standard-form">
-            <legend>Nouvelle animation</legend>
-            <label>Modèle d’effet<select name="animationModel">
-                {{#each models}}<option value="{{uuid}}" {{#if selected}}selected{{/if}}>{{name}}</option>{{/each}}
-            </select></label>
-            <p>Préparez le trajet et son arrivée. Rien n’apparaît sur la scène avant « Lancer l’animation ».</p>
-            <div class="form-footer">
-                <button type="button" data-action="prepare" {{#unless hasModels}}disabled{{/unless}}>Préparer une projection</button>
-                <button type="button" data-action="createModel">+ Modèle d’effet</button>
-            </div>
-        </fieldset>
-    {{/if}}
-    <h3>Effets et objets présents sur la scène</h3>
-    <p>Utilisez « Interagir » pour poursuivre un trajet, déclencher l’effet final ou manipuler un décor.</p>
-    <div class="aa-scene-objects-list">
+        <div class="aa-animation-columns">
+            <section><header><h3>Effets du répertoire</h3><button type="button" data-action="createModel" title="Créer un Effet Visuel">+</button></header>
+                <div class="aa-scene-objects-list">{{#each models}}{{> animationEntry}}{{else}}<p>Aucun Effet Visuel dans le répertoire.</p>{{/each}}</div>
+            </section>
+            <section><header><h3>Effets sur la scène</h3></header>
+                <div class="aa-scene-objects-list">{{#each effects}}{{> animationEntry}}{{else}}<p>Aucun effet présent sur cette scène.</p>{{/each}}</div>
+            </section>
+        </div>
+        <footer class="aa-object-motion-footer"><button type="button" data-action="moveObject">Animer un objet de la scène</button>{{{motionFields}}}</footer>
+    {{else}}
+        <div class="aa-scene-objects-list">
         {{#each objects}}
             <article class="aa-scene-object-row">
                 <img src="{{img}}" alt="">
                 <div><strong>{{name}}</strong><small>{{type}}{{#if status}} · {{status}}{{/if}}</small></div>
                 <button type="button" data-action="interact" data-tile-id="{{id}}">Interagir</button>
-                {{#if @root.isGM}}<button type="button" data-action="model" data-tile-id="{{id}}" title="Ouvrir le modèle"><i class="fa-solid fa-gear" aria-hidden="true"></i><span class="sr-only">Ouvrir le modèle</span></button>{{/if}}
             </article>
         {{else}}<p>Aucun effet ou objet accessible sur cette scène.</p>{{/each}}
     </div>
+    {{/if}}
 </section>

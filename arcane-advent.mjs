@@ -34,6 +34,7 @@ import { registerSceneObjects, sceneObjectPlan, createSceneObjectFromPlan, delet
 import { registerSceneAnimations } from "./module/scene-animation-service.mjs";
 import { registerSceneMist } from "./module/scene-mist.mjs";
 import { registerSceneProjectiles } from "./module/scene-projectiles.mjs";
+import { registerObjectMotion } from "./module/scene-object-motion.mjs";
 import { SceneObjectsPanel, openSceneObjectInteraction } from "./module/applications/scene-objects-panel.mjs";
 import { registerGlyphCatalog } from "./module/applications/glyph-catalog.mjs";
 import { registerTokenBars } from "./module/token-bars.mjs";
@@ -54,6 +55,7 @@ Hooks.once("init", () => {
     const animations = registerSceneAnimations({ planFor: sceneObjectPlan, create: createSceneObjectFromPlan,
         remove: deleteSceneObject, sync: syncSceneObject });
     registerSceneProjectiles({ onComplete: animations.complete });
+    registerObjectMotion();
     registerArcaneHotbar();
     registerArcaneText();
     registerGlyphCatalog();

@@ -330,6 +330,33 @@ body.detached > .aa-detached-sheet .window-content {
     padding: 5px 8px;
     overflow-x: auto;
 }
+
+.aa-weapon-combat-compact { display:flex; flex-wrap:wrap; align-items:center; gap:4px; }
+.aa-weapon-combat-compact input.aa-weapon-formula { width:4.5rem; flex:0 0 4.5rem; }
+.aa-weapon-combat-compact input.aa-weapon-minimum { width:2.6rem; }
+.aa-weapon-ranges { display:flex; align-items:center; gap:3px; white-space:nowrap; }
+.aa-weapon-ranges input { width:3rem; min-width:0; }
+.aa-weapon-combat-compact .aa-weapon-motion { margin-inline-start:auto; }
+.aa-animation-columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; flex:1; min-height:0; }
+.aa-animation-columns > section { min-width:0; display:flex; flex-direction:column; border:1px solid var(--aa-border); border-radius:5px; padding:8px; }
+.aa-animation-columns header { display:flex; align-items:center; justify-content:space-between; gap:6px; }
+.aa-animation-columns header h3 { margin:0; font-size:1rem; }
+.aa-animation-columns header button { width:28px; }
+.aa-animation-columns .aa-scene-objects-list { overflow-y:auto; min-height:0; }
+.aa-animation-entry { display:flex; align-items:center; gap:6px; padding:7px 0; border-bottom:1px solid var(--aa-border); }
+.aa-animation-entry > img { width:36px; height:36px; object-fit:contain; }
+.aa-animation-entry-text { flex:1; min-width:0; overflow-wrap:anywhere; }
+.aa-animation-entry-text small { display:block; font-size:.75rem; opacity:.7; }
+.aa-animation-entry-actions { display:flex; gap:3px; flex-wrap:wrap; max-width:68px; }
+.aa-animation-entry-actions button { width:28px; height:28px; padding:0; margin:0; }
+.aa-object-motion-footer { display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:10px; }
+.aa-object-motion-footer > button { width:auto; padding-inline:24px; }
+.aa-object-motion-settings { display:flex; align-items:center; flex-wrap:wrap; justify-content:center; gap:5px; }
+.aa-object-motion-settings label { display:flex; align-items:center; gap:4px; border:1px solid var(--aa-border); border-radius:4px; padding:4px; white-space:nowrap; font-size:.85rem; }
+.aa-object-motion-settings input { width:3.5rem; }
+.aa-object-motion-settings select { width:auto; }
+.aa-object-motion-settings [hidden] { display:none; }
+.aa-scene-objects .aa-scene-objects-body { display:flex; flex-direction:column; height:100%; min-height:0; }
 .aa-combat-shortcut-group { display: flex; flex: 0 0 auto; align-items: center; gap: 3px; }
 .aa-combat-shortcut-group + .aa-combat-shortcut-group { border-inline-start: 1px solid var(--aa-border); padding-inline-start: 8px; }
 .aa-combat-shortcuts button { width: auto; min-height: 26px; margin: 0; padding: 2px 5px; white-space: nowrap; }
