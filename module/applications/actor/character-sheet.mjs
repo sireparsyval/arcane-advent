@@ -591,6 +591,8 @@ export class ArcaneCharacterSheet
                     depth,
                     container,
                     isPurse: item.type === "purse",
+                    equipmentIcon: item.type === "weapon" ? weaponAttackIcon(item)
+                        : ({ shield: "🛡️", protection: "🪖", accessory: "🎀" }[item.type] ?? ""),
                     nested: Boolean(item.system.containerId),
                     coins: luqaCounters(item),
                     expanded: !this._collapsedInventory.has(item.id),
