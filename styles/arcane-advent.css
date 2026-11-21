@@ -1119,6 +1119,8 @@ body.detached > .aa-detached-sheet .window-content {
     display: flex; flex-direction: column; gap: 10px; min-height: 0; height: 100%; }
 .aa-storage-header { display: flex; align-items: center; gap: 14px; }
 .aa-storage-header > img { width: 100px; height: 100px; object-fit: contain; border: 0; }
+.aa-ground-item-header { margin-block-end: 12px; }
+.aa-ground-item-header > img { width: 72px; height: 72px; }
 .aa-storage-header > div { flex: 1; min-width: 0; display: grid; gap: 8px; }
 .aa-storage-header label { display: flex; align-items: center; gap: 8px; }
 .aa-storage-header input:not([type="checkbox"]) { flex: 1; min-width: 0; }

@@ -67,16 +67,28 @@ export function transferPlan(items, selections, randomID) {
 // Both sides are locked by the caller. A failed write is compensated from
 // snapshots; source items are removed only after every destination item exists.
 export async function executeTransfer(source, destination, selections, randomID) {
-    if (source.uuid === destination.uuid) throw new Error("Choisissez un autre destinataire.");
+    const destinations = Array.isArray(destination) ? destination : [destination];
+    if (destinations.some(entry => source.uuid === entry.uuid)) throw new Error("Choisissez un autre destinataire.");
+    if (new Set(destinations.map(entry => entry.uuid)).size !== destinations.length) throw new Error("Destinations de dépôt invalides.");
     const plan = transferPlan(source.items, selections, randomID);
+    const roots = plan.creates.filter(item => !item.system.containerId);
+    if (Array.isArray(destination) && roots.length !== destinations.length) throw new Error("Dépôts au sol incomplets.");
+    const copies = new Map(plan.creates.map(item => [item._id, item]));
+    const rootFor = item => {
+        while (item.system.containerId) item = copies.get(item.system.containerId);
+        return item._id;
+    };
+    const groups = destinations.map((entry, index) => ({ destination: entry,
+        creates: Array.isArray(destination) ? plan.creates.filter(item => rootFor(item) === roots[index]._id) : plan.creates }));
     // Foundry mutates operations (parentUuid, data, updates, ids). Reusing one
     // can redirect a world storage Item write into the recipient Actor.
     const options = () => ({ keepId: true, aaTransfer: true });
-    const ids = plan.creates.map(item => item._id);
     try {
-        const created = await destination.createEmbeddedDocuments("Item", plan.creates, options());
-        if (created.length !== ids.length || ids.some(id => !destination.items.get(id))) {
-            throw new Error("Le stockage destinataire n’a pas accepté tous les objets.");
+        for (const { destination, creates } of groups) {
+            const created = await destination.createEmbeddedDocuments("Item", creates, options());
+            if (created.length !== creates.length || creates.some(item => !destination.items.get(item._id))) {
+                throw new Error("Le stockage destinataire n’a pas accepté tous les objets.");
+            }
         }
         if (plan.updates.length) {
             const updated = await source.updateEmbeddedDocuments("Item", plan.updates, options());
@@ -94,12 +106,15 @@ export async function executeTransfer(source, destination, selections, randomID)
             const existing = plan.originals.filter(item => source.items.get(item._id));
             if (existing.length) await source.updateEmbeddedDocuments("Item", existing, options());
             if (plan.originals.some(item => !source.items.get(item._id))) throw new Error("Restauration incomplète.");
-            const remaining = ids.filter(id => destination.items.get(id));
-            if (remaining.length) await destination.deleteEmbeddedDocuments("Item", remaining, options());
-            if (ids.some(id => destination.items.get(id))) throw new Error("Annulation incomplète.");
+            for (const { destination, creates } of groups) {
+                const ids = creates.map(item => item._id);
+                const remaining = ids.filter(id => destination.items.get(id));
+                if (remaining.length) await destination.deleteEmbeddedDocuments("Item", remaining, options());
+                if (ids.some(id => destination.items.get(id))) throw new Error("Annulation incomplète.");
+            }
         } catch (rollbackError) {
             console.error("Arcane Advent | Réconciliation nécessaire", { source: source.uuid,
-                destination: destination.uuid, plan, error, rollbackError });
+                destinations: destinations.map(entry => entry.uuid), plan, error, rollbackError });
             throw new Error("Transfert interrompu : le MJ doit vérifier les deux inventaires (détails dans la console).");
         }
         throw error;

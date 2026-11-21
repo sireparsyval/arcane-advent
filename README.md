@@ -118,10 +118,20 @@ traiter les échanges ; les joueurs n’ont pas besoin de modifier les permissio
 du personnage destinataire. Ils ne peuvent donner que les objets de leurs propres
 personnages, ou prendre ceux d’un stockage ouvert accessible sur leur scène.
 
-**Déposer au sol…** crée un sac à côté du jeton de l’inventaire source. Les objets
-quittent cet inventaire et restent disponibles dans le sac. Double-cliquer sur
-le sac ouvre son inventaire. Pour récupérer son contenu, cibler son personnage
-puis transférer depuis le sac. L’option **Supprimer le dépôt s’il est vide après
+**Déposer au sol…** place chaque objet libre, équipement ou bourse sur un jeton
+distinct, près de l’inventaire source. Les exemplaires d’une même pile restent
+groupés ; un contenant emporte son contenu sur un seul jeton. Chaque dépôt utilise
+l’image sur scène et la taille de l’objet correspondant.
+
+Double-cliquer sur un objet libre ouvre une fiche compacte avec **Transférer**.
+Une pile demande la quantité (le maximum par défaut) ; un exemplaire unique ne
+demande aucune confirmation. Une cible explicite reçoit directement l’objet.
+Sans cible, cliquer sur le personnage ou le stockage destinataire dans la scène ;
+un token simplement sélectionné n’est jamais utilisé comme cible implicite.
+Échap ou clic droit annule ce choix. Le dépôt est supprimé quand il est vidé.
+
+Les contenants et stockages conservent leur inventaire complet et leur sélection
+de transfert. L’option **Supprimer le dépôt s’il est vide après
 le transfert**, décochée par défaut, supprime aussi l’Objet correspondant lorsque
 le transfert a réussi et qu’il ne reste rien. Elle ne s’applique pas aux stockages
 permanents. Supprimer seulement un jeton conserve son Objet dans le répertoire.
@@ -142,8 +152,9 @@ L’image par défaut est `assets/arcane-advent/entities/objects/item-stash.png`
 dans **Image des dépôts au sol**. Chaque stockage peut ensuite recevoir sa propre
 image ; sa modification se répercute sur ses jetons. Les options de chaque objet,
 contenant ou équipement proposent aussi **Image du jeton au sol** : elle est utilisée
-si l’objet est déposé seul, avec son contenu éventuel. Un lot de plusieurs objets
-ou un objet sans image personnalisée utilise le sac par défaut. **Taille sur scène
+pour son dépôt, avec son contenu éventuel. Sans image sur scène personnalisée,
+un objet libre utilise son icône ; un contenant utilise le sac par défaut.
+**Taille sur scène
 (cases)** définit un jeton carré lors du dépôt ou du lancer : 1 = une case de
 côté, 0,5 = une demi-case. Les anciens objets gardent une taille par défaut de 1.
 

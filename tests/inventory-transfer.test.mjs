@@ -110,6 +110,32 @@ test("source and destination may not be the same actor", async () => {
     assert.equal(source.items.size, 1);
 });
 
+test("a multi-deposit transfer separates roots while a container retains all descendants", async () => {
+    const source = actor("source", [item("bag", "container"), item("apple", "object", { containerId: "bag", quantity: 8 }),
+        item("potion", "object", { quantity: 4 }), item("purse", "purse", { coins: { gold: 2 } })]);
+    const deposits = [actor("bag-ground"), actor("potion-ground"), actor("purse-ground")];
+    const result = await executeTransfer(source, deposits, [{ id: "bag" }, { id: "potion", quantity: 3 }, { id: "purse" }], randomID);
+    assert.equal(result.count, 4);
+    const bag = [...deposits[0].items].find(entry => entry.type === "container");
+    assert.equal([...deposits[0].items].find(entry => entry.type === "object").system.containerId, bag.id);
+    assert.equal([...deposits[0].items].find(entry => entry.type === "object").system.quantity, 8);
+    assert.equal([...deposits[1].items][0].system.quantity, 3);
+    assert.equal([...deposits[2].items][0].system.coins.gold, 2);
+    assert.equal(source.items.size, 1);
+    assert.equal(source.items.get("potion").system.quantity, 1);
+});
+
+test("a later deposit failure rolls back every destination and preserves the complete source", async () => {
+    const source = actor("source", [item("apple", "object", { quantity: 5 }), item("sword", "weapon", { equipped: true })]);
+    const deposits = [actor("first"), actor("second")];
+    deposits[1].createEmbeddedDocuments = async () => { throw new Error("second deposit failed"); };
+    await assert.rejects(executeTransfer(source, deposits, [{ id: "apple", quantity: 3 }, { id: "sword" }], randomID), /second deposit failed/);
+    assert.equal(source.items.size, 2);
+    assert.equal(source.items.get("apple").system.quantity, 5);
+    assert.equal(source.items.get("sword").system.equipped, true);
+    assert.ok(deposits.every(entry => entry.items.size === 0));
+});
+
 test("transfers serialize proxy-backed flags before copying and preserve their data", async () => {
     const source = actor("source", [item("apple", "object", { quantity: 2 })]);
     const original = source.items.get("apple").toObject;

@@ -1,4 +1,11 @@
 <div class="aa-storage-body">
+    {{#if looseItem}}
+    <header class="aa-storage-header aa-ground-item-header">
+        <img src="{{looseItem.img}}" alt="{{looseItem.name}}">
+        <div><strong>{{looseItem.name}}</strong><span>× {{looseItem.quantity}}</span></div>
+    </header>
+    <button type="button" data-action="transferLoose" {{#unless canTransfer}}disabled{{/unless}}><i class="fa-solid fa-right-left"></i> Transférer</button>
+    {{else}}
     <header class="aa-storage-header">
         <img src="{{actor.img}}" alt="{{actor.name}}">
         <div>
@@ -41,4 +48,5 @@
             <button type="button" data-action="addItem" data-type="purse">+ Bourse</button>
         {{/if}}
     </footer>
+    {{/if}}
 </div>

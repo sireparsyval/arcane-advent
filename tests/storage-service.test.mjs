@@ -317,7 +317,7 @@ test("a dropped container uses its own image and carries the whole nested invent
     assert.equal(source.items.size, 0);
 });
 
-test("multiple roots or an item without a custom image use the default bag", async () => {
+test("multiple loose roots have separate tokens, per-item images and per-item square sizes", async () => {
     for (const multiple of [true, false]) {
         const source = actor(`default-image-${multiple}`, "alice");
         const first = item("first", 1); if (multiple) first.system.groundTokenImage = "assets/first.webp";
@@ -328,11 +328,56 @@ test("multiple roots or an item without a custom image use the default bag", asy
         const result = await query({ action: "drop", source: source.uuid, sourceToken: token(source).uuid,
             selections: [...source.items].map(i => ({ id: i.id, quantity: 1 })) });
         assert.equal(result.count, multiple ? 2 : 1);
-        const deposit = [...scene.tokens].find(t => !before.has(t.id) && t.actor.isToken);
-        assert.equal(deposit.texture.src, "assets/test.png");
-        assert.equal(deposit.width, multiple ? 1 : 3);
-        assert.equal(deposit.height, multiple ? 1 : 3);
+        const deposits = [...scene.tokens].filter(t => !before.has(t.id) && t.actor.isToken);
+        assert.equal(deposits.length, multiple ? 2 : 1);
+        const deposit = deposits.find(t => [...inventoryForToken(t).items][0].name === "first");
+        assert.equal(deposit.texture.src, multiple ? "assets/first.webp" : "assets/test.png");
+        assert.equal(deposit.width, 3);
+        assert.equal(deposit.height, 3);
+        assert.equal(inventoryForToken(deposit).items.size, 1);
+        if (multiple) {
+            const second = deposits.find(t => t !== deposit);
+            assert.equal(second.width, 1);
+            assert.equal(second.texture.src, "assets/test.png");
+            assert.ok(deposit.x + deposit.width * 100 <= second.x || second.x + second.width * 100 <= deposit.x
+                || deposit.y + deposit.height * 100 <= second.y || second.y + second.height * 100 <= deposit.y);
+        }
     }
+});
+
+test("failure to create a later ground token cleans all new deposits without removing inventory", async () => {
+    const source = actor("multi-create-failure", "alice");
+    source.items.set("apple", item("apple", 3)); source.items.set("stone", item("stone", 1));
+    const origin = token(source), previousItems = game.items.size, previousTokens = scene.tokens.size;
+    const original = Item.create;
+    let creations = 0;
+    Item.create = async function (data) { if (++creations === 2) throw new Error("creation interrupted"); return original.call(this, data); };
+    try {
+        const result = await query({ action: "drop", source: source.uuid, sourceToken: origin.uuid,
+            selections: [{ id: "apple", quantity: 2 }, { id: "stone", quantity: 1 }] });
+        assert.match(result.error, /creation interrupted/);
+        assert.equal(source.items.size, 2); assert.equal(source.items.get("apple").system.quantity, 3);
+        assert.equal(game.items.size, previousItems); assert.equal(scene.tokens.size, previousTokens);
+    } finally { Item.create = original; }
+});
+
+test("failure to stock a later ground deposit compensates all copies and deletes the empty tokens", async () => {
+    const source = actor("multi-stock-failure", "alice");
+    source.items.set("first", item("first", 3)); source.items.set("rejected", item("rejected", 1));
+    const origin = token(source), previousItems = game.items.size, previousTokens = scene.tokens.size;
+    const original = StoredItem.prototype.update;
+    let fail = true;
+    StoredItem.prototype.update = async function (changes, options) {
+        if (fail && changes["system.contents"]?.some(entry => entry.name === "rejected")) { fail = false; throw new Error("stock interrupted"); }
+        return original.call(this, changes, options);
+    };
+    try {
+        const result = await query({ action: "drop", source: source.uuid, sourceToken: origin.uuid,
+            selections: [{ id: "first", quantity: 2 }, { id: "rejected", quantity: 1 }] });
+        assert.match(result.error, /stock interrupted/);
+        assert.equal(source.items.size, 2); assert.equal(source.items.get("first").system.quantity, 3);
+        assert.equal(game.items.size, previousItems); assert.equal(scene.tokens.size, previousTokens);
+    } finally { StoredItem.prototype.update = original; }
 });
 
 test("all equipped item types use the configured square size when dropped", async () => {

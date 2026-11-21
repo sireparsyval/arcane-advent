@@ -1,6 +1,7 @@
 import { executeTransfer, transferPlan } from "./inventory-transfer.mjs";
 import { inventoryForDocument, inventoryForToken, StorageInventory } from "./storage-inventory.mjs";
 import { animateSceneObject, objectCenter, objectMotionPlan } from "./scene-object-motion.mjs";
+import { isInventoryContainer, isInventoryItem } from "./inventory.mjs";
 
 export const STORAGE_IMAGE = "assets/arcane-advent/entities/objects/item-stash.png";
 export const STORAGE_QUERY = "arcane-advent.inventory";
@@ -8,6 +9,11 @@ export const inventoryActor = actor => ["character", "npc", "storage"].includes(
 export const isGroundTemplate = actor => actor?.type === "storage" && !actor.isToken
     && actor.getFlag("arcane-advent", "groundTemplate") === true;
 export const isGroundDeposit = actor => actor?.type === "storage" && actor.system.ground && !isGroundTemplate(actor);
+export function looseGroundItem(actor) {
+    if (!isGroundDeposit(actor)) return null;
+    const items = [...actor.items];
+    return items.length === 1 && isInventoryItem(items[0]) && !isInventoryContainer(items[0]) ? items[0] : null;
+}
 export const storageAccess = (actor, user = game.user) => actor?.type === "storage"
     && !isGroundTemplate(actor)
     && (user.isGM || (!actor.system.locked && actor.testUserPermission(user, "OBSERVER")
@@ -26,6 +32,42 @@ function requireSceneToken(token, actor, user) {
 function groundTokenSize(value = 1) {
     if (!Number.isFinite(value) || value < 0.1) throw new Error("La taille sur scène doit être d’au moins 0,1 case.");
     return value;
+}
+
+// Reserve one square footprint per root, near the source and inside the scene.
+// A selected container and all its descendants share the same footprint.
+function groundPositions(token, roots) {
+    const scene = token.parent, grid = scene.grid.size;
+    const occupied = [...scene.tokens].map(doc => ({ x: doc.x, y: doc.y, width: doc.width * grid, height: doc.height * grid }));
+    return roots.map(root => {
+        const side = groundTokenSize(root.system.groundTokenSize ?? 1), extent = side * grid;
+        if (extent > scene.width || extent > scene.height) throw new Error("La taille du jeton dépasse celle de la scène.");
+        const baseX = Math.round(Math.max(0, Math.min(scene.width - extent, token.x + token.width * grid)) / grid);
+        const baseY = Math.round(Math.max(0, Math.min(scene.height - extent, token.y)) / grid);
+        const available = (cx, cy) => {
+            const x = cx * grid, y = cy * grid;
+            return x >= 0 && y >= 0 && x + extent <= scene.width && y + extent <= scene.height
+                && !occupied.some(rect => x < rect.x + rect.width && x + extent > rect.x && y < rect.y + rect.height && y + extent > rect.y);
+        };
+        const max = Math.ceil(Math.max(scene.width, scene.height) / grid) + 1;
+        for (let radius = 0; radius <= max; radius++) {
+            for (let dx = -radius; dx <= radius; dx++) for (const dy of radius ? [-radius, radius] : [0]) {
+                if (available(baseX + dx, baseY + dy)) {
+                    const position = { x: (baseX + dx) * grid, y: (baseY + dy) * grid, size: side };
+                    occupied.push({ ...position, width: extent, height: extent });
+                    return position;
+                }
+            }
+            for (let dy = -radius + 1; dy < radius; dy++) for (const dx of [-radius, radius]) {
+                if (available(baseX + dx, baseY + dy)) {
+                    const position = { x: (baseX + dx) * grid, y: (baseY + dy) * grid, size: side };
+                    occupied.push({ ...position, width: extent, height: extent });
+                    return position;
+                }
+            }
+        }
+        throw new Error("Il n’y a pas assez de place près du personnage pour déposer ces objets.");
+    });
 }
 
 export async function createStorage({ name = "Objets au sol", scene = null, x, y, ground = false, img, snap = true, size = 1 } = {}) {
@@ -122,7 +164,7 @@ async function processRequest(data, user) {
         throw new Error("Sélectionnez au moins un objet.");
     }
     let destination;
-    let groundCreated = false;
+    const groundCreated = [];
     if (data.action === "drop" || data.action === "throw") {
         const token = await fromUuid(data.sourceToken);
         requireSceneToken(token, source, user);
@@ -146,11 +188,18 @@ async function processRequest(data, user) {
             }
             objectMotionPlan({documentName:"Token",parent:token.parent,x:center.x-extent/2,y:center.y-extent/2,width:side,height:side,rotation:0},data.points,data.motion);
         }
-        destination = await createStorage({ name: single?.name || "Objets au sol",
-            img: single?.system.groundTokenImage?.trim() || (thrown ? single?.img : undefined), scene: token.parent,
-            x: thrown ? center.x-extent/2 : token.x + token.width * size, y: thrown ? center.y-extent/2 : token.y,
-            ground: true, snap: !thrown, size: side });
-        groundCreated = true;
+        const positions = thrown ? [{ x: center.x - extent / 2, y: center.y - extent / 2, size: side }] : groundPositions(token, roots);
+        try {
+            for (const [index, root] of roots.entries()) {
+                groundCreated.push(await createStorage({ name: root.name,
+                    img: root.system.groundTokenImage?.trim() || (!isInventoryContainer(root) ? root.img : undefined),
+                    scene: token.parent, ...positions[index], ground: true, snap: !thrown }));
+            }
+        } catch (error) {
+            for (const storage of groundCreated) await deleteEmptyGround(storage);
+            throw error;
+        }
+        destination = groundCreated;
     } else if (data.action === "transfer") {
         const token = await fromUuid(data.targetToken);
         destination = inventoryForToken(token);
@@ -159,7 +208,7 @@ async function processRequest(data, user) {
         if (destination.type === "storage" && !storageAccess(destination, user)) throw new Error("Ce stockage est verrouillé ou inaccessible.");
     } else throw new Error("Action inconnue.");
 
-    const actors = [...new Set([source, destination])];
+    const actors = [...new Set([source, ...(Array.isArray(destination) ? destination : [destination])])];
     const locked = [];
     let result;
     try {
@@ -172,16 +221,14 @@ async function processRequest(data, user) {
         }
         result = await executeTransfer(source, destination, data.selections, foundry.utils.randomID);
         if (data.action === "throw") {
-            const token = [...game.scenes].flatMap(scene=>[...scene.tokens]).find(token=>inventoryForToken(token)?.uuid===destination.uuid);
+            const token = [...game.scenes].flatMap(scene=>[...scene.tokens]).find(token=>inventoryForToken(token)?.uuid===groundCreated[0].uuid);
             try { if(!token)throw Error("Jeton du dépôt introuvable.");await animateSceneObject(token,data.points,data.motion); }
             catch(error){result.warning=`L’arme est déposée au sol, mais son animation a échoué : ${error.message}`;}
         }
     } finally {
         for (const actor of locked) await actor.unsetFlag("arcane-advent", "inventoryBusy");
         // An empty deposit created for a failed operation can be removed safely.
-        if (groundCreated && destination.items.size === 0) {
-            await deleteEmptyGround(destination);
-        }
+        for (const storage of groundCreated) if (storage.items.size === 0) await deleteEmptyGround(storage);
     }
     if (data.deleteEmptyGround === true && isGroundDeposit(source) && source.items.size === 0) {
         try { result.deletedGround = await deleteEmptyGround(source); }
