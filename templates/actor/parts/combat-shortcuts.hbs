@@ -1,7 +1,7 @@
 <section class="aa-panel aa-combat-shortcuts" aria-label="Attaques et dégâts">
     <div class="aa-combat-shortcut-group">
-        <button type="button" title="Dégâts à mains nues : 1 + modificateur de Force" aria-label="Dégâts à mains nues : {{unarmed.damage}}">👊{{unarmed.damage}}</button>
-        <button type="button" data-action="rollImprovisedDamage" title="Arme improvisée : 1d4 + modificateur de Force">💥1d4</button>
+        <button type="button" title="Dégâts à mains nues : {{unarmed.damage}} — 1 + modificateur de Force" aria-label="Dégâts à mains nues : {{unarmed.damage}}">👊</button>
+        <button type="button" data-action="rollImprovisedDamage" title="Arme improvisée : 1d4 + modificateur de Force" aria-label="Dégâts d’arme improvisée">💥</button>
     </div>
     {{#each weaponShortcuts}}
         <div class="aa-combat-shortcut-group" aria-label="{{name}}">
