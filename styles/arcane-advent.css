@@ -331,12 +331,20 @@ body.detached > .aa-detached-sheet .window-content {
     overflow-x: auto;
 }
 
-.aa-weapon-combat-compact { display:flex; flex-wrap:wrap; align-items:center; gap:4px; }
-.aa-weapon-combat-compact input.aa-weapon-formula { width:4.5rem; flex:0 0 4.5rem; }
+.aa-weapon-combat.aa-weapon-combat-compact { display:flex; flex-wrap:wrap; align-items:center; gap:4px; }
+.aa-weapon-combat-compact input.aa-weapon-formula {
+    box-sizing:border-box; width:calc(4ch + 8px); flex:0 0 calc(4ch + 8px);
+    min-width:0; padding-inline:3px; text-align:center; font-variant-numeric:tabular-nums;
+}
 .aa-weapon-combat-compact input.aa-weapon-minimum { width:2.6rem; }
-.aa-weapon-ranges { display:flex; align-items:center; gap:3px; white-space:nowrap; }
-.aa-weapon-ranges input { width:3rem; min-width:0; }
-.aa-weapon-combat-compact .aa-weapon-motion { margin-inline-start:auto; }
+.aa-weapon-ranges { display:flex; align-items:center; gap:3px; margin-inline-start:auto; white-space:nowrap; }
+.aa-weapon-ranges input {
+    box-sizing:border-box; width:calc(3ch + 8px); flex:0 0 calc(3ch + 8px);
+    min-width:0; padding-inline:3px; text-align:center; font-variant-numeric:tabular-nums; appearance:textfield;
+}
+.aa-weapon-ranges input::-webkit-inner-spin-button,
+.aa-weapon-ranges input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
+.aa-weapon-combat-compact .aa-weapon-motion { margin-inline-start:0; }
 .aa-animation-columns { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:12px; flex:1; min-height:0; }
 .aa-animation-columns > section { min-width:0; display:flex; flex-direction:column; border:1px solid var(--aa-border); border-radius:5px; padding:8px; }
 .aa-animation-columns header { display:flex; align-items:center; justify-content:space-between; gap:6px; }
