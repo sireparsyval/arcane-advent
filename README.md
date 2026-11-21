@@ -18,6 +18,10 @@ Les changements restent un brouillon jusqu'à **Enregistrer**.
   Vitesse, charge maximale et maxima de PdC/PdF/Dés de Conscience.
 - **Effet sur les jets** : bonus fixe et indicateurs indépendants Avantage et
   Désavantage. Filtrer par famille de jet, caractéristique associée et compétence.
+- **Réduction de dégâts** : montant fixe positif, pour tous les dégâts (type vide)
+  ou un type précis, sur toutes les zones ou seulement Tête, Torse, Bras ou Jambes.
+- **Résistance aux dégâts (%)** : même sélection de type et de zone, avec une
+  valeur de 0 à 100 %. La plus forte résistance du même type est retenue par zone.
 - **Activation** : permanente, aptitude passive, manuelle, durée d'effet restante
   ou conditions automatiques, réunies avec ET ou OU. Les effets d'une source
   peuvent aussi être désactivés sans supprimer leur configuration.
@@ -251,6 +255,15 @@ réductions cumulées par type de dégâts des protections équipées couvrant c
 zone. Seuls les types ayant une réduction positive apparaissent, avec les noms,
 montants et unités alignés en colonnes. L’infobulle est aussi accessible au clavier
 et disponible sur les fiches PNJ compactes.
+
+Les Effets actifs du personnage, de ses Traits et de ses Aptitudes y contribuent
+aussi : les réductions fixes s’ajoutent à celles de l’équipement ; les résistances
+s’affichent séparément en %. Une protection globale apparaît sur les quatre zones.
+Les conditions et désactivations sont prises en compte. Les réductions propres au
+bouclier restent dans son infobulle. Les dégâts restent appliqués manuellement.
+
+Dans **Altérations d’État**, les boutons **−** et **+** entourent la durée restante
+et la modifient d’une unité, sans changer l’unité choisie ni descendre sous zéro.
 
 ### Aptitudes
 Les Passifs n'affichent pas de niveau ; les autres Aptitudes conservent leur

@@ -21,7 +21,7 @@ function addDamageReductions(totals, damageReductions) {
     }
 }
 
-export function defenseReductionsByZone(items) {
+export function defenseReductionsByZone(items, effects = []) {
     const totals = Object.fromEntries(Object.keys(DEFENSE_ZONE_LABELS).map(zone => [zone, new Map()]));
     for (const item of items) {
         if (item.type !== "protection" || !item.system?.equipped) continue;
@@ -29,6 +29,22 @@ export function defenseReductionsByZone(items) {
         if (!(zones instanceof Set) && !Array.isArray(zones)) continue;
         const covered = [...new Set(zones)].filter(zone => Object.hasOwn(totals, zone));
         addDamageReductions(covered.map(zone => totals[zone]), item.system.damageReductions);
+    }
+    for (const effect of effects) {
+        if (!["reduction", "resistance"].includes(effect.kind) || effect.enabled === false || effect.active === false || effect.amountError) continue;
+        const zones = effect.damageZone === "all" || !effect.damageZone ? Object.keys(totals) : [effect.damageZone];
+        const covered = zones.filter(zone => Object.hasOwn(totals, zone)).map(zone => totals[zone]);
+        if (effect.kind === "resistance") {
+            const amount = Number(effect.amount);
+            if (!Number.isFinite(amount) || amount <= 0 || amount > 100) continue;
+            const name = (effect.damageType?.trim() || "Tous types").replace(/\s+/g, " ").normalize("NFC");
+            const label = PHYSICAL_TYPES.get(name.toLocaleLowerCase("fr")) ?? name;
+            const key = "resistance:" + label.toLocaleLowerCase("fr");
+            for (const rows of covered) {
+                const previous = rows.get(key);
+                rows.set(key, { label: previous?.label ?? label, amount: Math.max(previous?.amount ?? 0, amount), percent: true });
+            }
+        } else addDamageReductions(covered, { [effect.damageType?.trim() || "Tous types"]: effect.amount });
     }
     return Object.fromEntries(Object.entries(totals).map(([zone, rows]) => [zone, [...rows.values()]]));
 }
@@ -44,9 +60,9 @@ export function shieldDamageReductions(items) {
 
 // Build with textContent so free-form damage names stay text in the native
 // tooltip. A single table keeps amounts and units aligned across all rows.
-export function bindDefenseReductionTooltips(root, items) {
+export function bindDefenseReductionTooltips(root, items, effects = []) {
     const equipment = Array.from(items);
-    const byZone = defenseReductionsByZone(equipment);
+    const byZone = defenseReductionsByZone(equipment, effects);
     const shieldRows = shieldDamageReductions(equipment);
     for (const element of root.querySelectorAll("[data-defense-zone], [data-defense-shield]")) {
         const shield = element.hasAttribute("data-defense-shield");
@@ -62,7 +78,7 @@ export function bindDefenseReductionTooltips(root, items) {
         table.className = "aa-defense-reductions";
         table.setAttribute("aria-label", `Réductions — ${label}`);
         const body = table.createTBody();
-        for (const { label, amount } of rows) {
+        for (const { label, amount, percent } of rows) {
             const row = body.insertRow();
             const name = root.ownerDocument.createElement("th");
             name.scope = "row";
@@ -73,7 +89,7 @@ export function bindDefenseReductionTooltips(root, items) {
             number.textContent = `−${amount}`;
             const unit = row.insertCell();
             unit.className = "aa-defense-reduction-unit";
-            unit.textContent = "Dgts";
+            unit.textContent = percent ? "%" : "Dgts";
         }
         element.dataset.tooltipHtml = table.outerHTML;
         element.dataset.tooltipClass = "aa-defense-tooltip";

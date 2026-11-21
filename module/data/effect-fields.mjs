@@ -1,4 +1,4 @@
-import { EFFECT_STAT_TARGETS, EFFECT_ROLL_SCOPES, EFFECT_ACTIVATIONS, EFFECT_ABILITIES } from "../character-effects.mjs";
+import { EFFECT_STAT_TARGETS, EFFECT_ROLL_SCOPES, EFFECT_ACTIVATIONS, EFFECT_ABILITIES, EFFECT_DAMAGE_ZONES } from "../character-effects.mjs";
 import { CONDITION_METRICS } from "../aptitude-conditions.mjs";
 
 export function conditionsField() {
@@ -29,7 +29,9 @@ export function effectFields({ aptitude = false, withConditions = true } = {}) {
         effectRules: new TypedObjectField(new SchemaField({
             label: new StringField({ blank: true, initial: "" }),
             enabled: new BooleanField({ initial: true }),
-            kind: new StringField({ choices: ["stat", "roll"], initial: "stat" }),
+            kind: new StringField({ choices: ["stat", "roll", "reduction", "resistance"], initial: "stat" }),
+            damageType: new StringField({ blank: true, initial: "" }),
+            damageZone: new StringField({ choices: Object.keys(EFFECT_DAMAGE_ZONES), initial: "all" }),
             target: new StringField({ choices: Object.keys(EFFECT_STAT_TARGETS), initial: "strength" }),
             amount: new NumberField({ initial: 0 }),
             amountFormula: new StringField({ blank: true, initial: "" }),

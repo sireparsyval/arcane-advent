@@ -297,6 +297,13 @@ body.detached > .aa-detached-sheet .window-content {
     overflow-wrap: anywhere;
 }
 
+.aa-condition-duration {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+
 .aa-condition-heading button,
 .aa-condition-row button {
     flex: 0 0 auto;
@@ -2986,7 +2993,8 @@ body.detached > .aa-detached-sheet .window-content {
     color: var(--aa-accent);
 }
 
-.aa-aptitude-option > .aa-aptitude-counter-step {
+.aa-aptitude-option > .aa-aptitude-counter-step,
+.aa-condition-duration > .aa-aptitude-counter-step {
     align-self: center;
     flex: 0 0 18px;
     width: 18px;

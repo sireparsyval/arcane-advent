@@ -22,7 +22,20 @@
                         <p>{{#if description}}{{description}}{{else}}Aucune description.{{/if}}</p>
                     </details>
                     {{#if zone}}<span class="aa-condition-level">{{zone}}</span>{{/if}}
-                    {{#if durationLabel}}<span class="aa-condition-level">⏳ {{durationLabel}}</span>{{/if}}
+                    {{#if durationLabel}}
+                        <span class="aa-condition-level aa-condition-duration">
+                            {{#if @root.canEditState}}
+                                <button type="button" class="aa-aptitude-counter-step" data-action="stepAlterationDuration"
+                                    data-item-id="{{id}}" data-step="-1" aria-label="Réduire la durée de {{name}}"
+                                    {{#unless canDecreaseDuration}}disabled{{/unless}}>−</button>
+                            {{/if}}
+                            <span>⏳ {{durationLabel}}</span>
+                            {{#if @root.canEditState}}
+                                <button type="button" class="aa-aptitude-counter-step" data-action="stepAlterationDuration"
+                                    data-item-id="{{id}}" data-step="1" aria-label="Augmenter la durée de {{name}}">+</button>
+                            {{/if}}
+                        </span>
+                    {{/if}}
                     {{#if modifierLabel}}
                         <span class="aa-condition-modifier-label" title="{{modifierLabel}}">{{modifierLabel}}</span>
                     {{/if}}

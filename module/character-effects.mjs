@@ -19,11 +19,13 @@ export const EFFECT_ABILITIES = Object.freeze({ strength: "Force", dexterity: "D
 export const EFFECT_STAT_TARGETS = Object.freeze({ ...MODIFIER_TARGETS,
     carryingCapacity: "Charge maximale (kg)", consciousnessMax: "PdC — maximum",
     feverMax: "PdF — maximum", consciousnessDiceMax: "Dés de Conscience — maximum" });
+export const EFFECT_DAMAGE_ZONES = Object.freeze({ all: "Globale — toutes les zones", head: "Tête", torso: "Torse", arms: "Bras", legs: "Jambes" });
 
 export function newEffectRule(kind = "stat") {
     return { label: "", enabled: true, kind, target: "strength", amount: 0, amountFormula: "", coefficient: 1,
         addBefore: false, scope: "all", ability: "", skill: "", advantage: false, disadvantage: false,
-        activationMode: "always", conditionMode: "selected", conditionIds: [], conditionMatch: "all" };
+        activationMode: "always", conditionMode: "selected", conditionIds: [], conditionMatch: "all",
+        damageType: "", damageZone: "all" };
 }
 
 export function sourceConditionsSatisfied(actor, system) {
@@ -159,6 +161,7 @@ export function effectRuleSummary(rule, { compact = false, actor = null } = {}) 
     const value = resolved?.value ?? rule.amount;
     const reference = rule.amountFormula && !actor && !rule.amountResolved ? rule.amountFormula : "";
     const signed = value => Number(value) > 0 ? `+${Number(value)}` : String(Number(value) || 0);
+    if (["reduction", "resistance"].includes(rule.kind)) return `${rule.kind === "resistance" ? "Résistance" : "Réduction"} : ${rule.damageType?.trim() || "Tous types"} · −${reference || value || 0} ${rule.kind === "resistance" ? "%" : "Dgts"} · ${EFFECT_DAMAGE_ZONES[rule.damageZone ?? "all"]}`;
     if (rule.kind === "roll") {
         const namedSkill = compact && rule.scope === "skill" && rule.skill?.trim();
         const pieces = namedSkill ? [] : [EFFECT_ROLL_SCOPES[rule.scope] ?? EFFECT_ROLL_SCOPES.all];

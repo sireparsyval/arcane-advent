@@ -1,4 +1,4 @@
-import { EFFECT_ABILITIES, EFFECT_ROLL_SCOPES, EFFECT_STAT_TARGETS,
+import { EFFECT_ABILITIES, EFFECT_ROLL_SCOPES, EFFECT_STAT_TARGETS, EFFECT_DAMAGE_ZONES,
     activeCharacterEffects, characterEffectSources, conditionActor, effectRuleSummary, effectRuleActive, effectRuleSettings, effectSourceActive,
     newEffectRule, resolveRollEffects } from "../character-effects.mjs";
 import { conditionSummary } from "../aptitude-conditions.mjs";
@@ -45,6 +45,16 @@ function rollRuleHTML(actor, rule) {
         <label class="checkbox"><input data-efield="advantage" type="checkbox" ${checked(rule.advantage)}>Avantage</label>
         <label class="checkbox"><input data-efield="disadvantage" type="checkbox" ${checked(rule.disadvantage)}>Désavantage</label>
     </div><p class="hint" data-rule-summary>${escape(effectRuleSummary(rule, { actor: summaryActor(actor) }))}</p>`;
+}
+
+function reductionRuleHTML(actor, rule) {
+    const resistance = rule.kind === "resistance";
+    return `<div class="aa-effect-grid">
+        <label>Type de dégâts${input("damageType", rule.damageType ?? "", 'type="text" placeholder="Tous types si vide, Feu, Tranchants…"')}</label>
+        <label>Zone protégée${select("damageZone", EFFECT_DAMAGE_ZONES, rule.damageZone ?? "all")}</label>
+        ${amountInput(actor, rule, resistance ? "Résistance aux dégâts (0 à 100 %)" : "Réduction fixe des dégâts (valeur positive)")}
+    </div><p class="hint" data-rule-summary>${escape(effectRuleSummary(rule, { actor: summaryActor(actor) }))}</p>
+    <p class="hint">${resistance ? "Pour un même type de dégâts et une même zone, seule la résistance la plus forte est retenue." : "Les réductions actives s’ajoutent à celles des protections."} Affichage dans les infobulles du bloc Défense ; les dégâts restent gérés manuellement.</p>`;
 }
 
 function ruleConditionsHTML(rule, conditions, ownerType) {
@@ -97,6 +107,8 @@ export async function openCharacterEffectsEditor(owner, { actor = owner.actor ??
                 for (const rule of Object.values(draft.effectRules)) {
                     const amount = editorAmount(actor, rule);
                     if (amount.error) throw Error(amount.error);
+                    if (rule.kind === "reduction" && !amount.pending && amount.value < 0) throw Error("La réduction des dégâts doit être positive.");
+                    if (rule.kind === "resistance" && !amount.pending && (amount.value < 0 || amount.value > 100)) throw Error("La résistance doit être comprise entre 0 et 100 %.");
                     if (rule.kind === "stat" && (!Number.isFinite(Number(rule.coefficient)) || rule.coefficient < 0)) throw Error("Coefficient invalide.");
                     if (rule.activationMode === "conditions") {
                         if (!["all", "any"].includes(rule.conditionMatch ?? "all")) throw Error("Combinaison de conditions invalide.");
@@ -129,13 +141,13 @@ export async function openCharacterEffectsEditor(owner, { actor = owner.actor ??
             <datalist id="aa-effect-skills">${[...(actor.items ?? [])].filter(item => item.type === "skill").map(item => `<option value="${escape(item.name)}"></option>`).join("")}</datalist>
             <div class="aa-effect-body">
             ${tab === "effects" ? `<p class="hint">Les effets s'appliquent au personnage qui possède cette source. Ajoutez autant de règles que nécessaire.</p>
-                <div class="aa-effect-toolbar"><button type="button" data-add-effect="stat">+ Bonus / malus / coefficient</button><button type="button" data-add-effect="roll">+ Effet sur les jets</button></div>
+                <div class="aa-effect-toolbar"><button type="button" data-add-effect="stat">+ Bonus / malus / coefficient</button><button type="button" data-add-effect="roll">+ Effet sur les jets</button><button type="button" data-add-effect="reduction">+ Réduction de dégâts</button><button type="button" data-add-effect="resistance">+ Résistance aux dégâts (%)</button></div>
                 ${rules.map(([id, rule]) => `<article class="aa-effect-card" data-effect-rule="${escape(id)}">
                     <div class="aa-effect-card-heading"><label class="checkbox"><input data-efield="enabled" type="checkbox" ${checked(rule.enabled !== false)}>Activé</label>
                     ${input("label", rule.label, 'type="text" placeholder="Nom de l’effet (facultatif)" aria-label="Nom de l’effet"')}
                     <button type="button" data-duplicate-effect="${escape(id)}" title="Dupliquer cet effet">⧉</button>
                     <button type="button" data-remove-effect="${escape(id)}" title="Retirer cet effet">×</button></div>
-                    ${rule.kind === "roll" ? rollRuleHTML(actor, rule) : statRuleHTML(actor, rule)}
+                    ${rule.kind === "roll" ? rollRuleHTML(actor, rule) : ["reduction", "resistance"].includes(rule.kind) ? reductionRuleHTML(actor, rule) : statRuleHTML(actor, rule)}
                     ${ruleConditionsHTML(rule, draft.conditions, owner.type)}</article>`).join("") || '<p class="hint">Aucun effet configuré.</p>'}
                 <p class="hint">Bonus / malus : nombre fixe ou référence à la fiche, par exemple @abilities.strength.value (score de Force), @abilities.strength.modifier (modificateur), ou -@abilities.strength.modifier pour un malus. Le préfixe @system. est aussi accepté. Formules : max(@abilities.dexterity.modifier, @abilities.constitution.modifier), min(...), abs(...), floor(...), ceil(...) et round(...), avec +, −, *, / et des parenthèses. Les arguments sont séparés par des virgules ; les décimales utilisent un point dans les formules. Pour un élément possédé : @items.ID.system.level, avec son identifiant réel.</p>
                 <p class="hint">Un avantage et un désavantage s'annulent, même s'il y a plusieurs sources d'un côté. « Neutre » sur la fiche n'efface pas les effets permanents. Pour les formules d'aptitude autres que 1d20, seul le bonus fixe ciblant les jets d'aptitude s'applique ; la formule reste telle qu'elle a été écrite.</p>` : ""}

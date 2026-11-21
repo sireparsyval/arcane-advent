@@ -1,10 +1,72 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { defenseReductionsByZone, shieldDamageReductions } from "../module/defense-reductions.mjs";
+import { activeCharacterEffects, newEffectRule, effectRuleSummary } from "../module/character-effects.mjs";
 
 const protection = (zones, damageReductions, equipped = true) => ({ type: "protection", system: {
     equipped, zones: new Set(zones), damageReductions
 } });
+
+test("global and partial effects combine with armor while respecting activation and conditions", () => {
+    const rule = changes => ({ ...newEffectRule("reduction"), amount: 3, damageType: "Feu", ...changes });
+    const actor = { system: { effectRules: {} }, items: [{ id: "trait", name: "Protection", type: "trait", system: {
+        conditions: { c: { kind: "manual", enabled: false } }, effectRules: {
+            global: rule({}), partial: rule({ damageZone: "head", amount: 2 }),
+            gated: rule({ activationMode: "conditions", conditionIds: ["c"], amount: 10 }),
+            disabled: rule({ enabled: false, amount: 100 })
+        }
+    } }] };
+    const equipment = [protection(["head"], { Feu: 1 })];
+    let rows = defenseReductionsByZone(equipment, activeCharacterEffects(actor));
+    assert.deepEqual(rows.head, [{ label: "Feu", amount: 6 }]);
+    assert.deepEqual(rows.torso, [{ label: "Feu", amount: 3 }]);
+    actor.items[0].system.conditions.c.enabled = true;
+    rows = defenseReductionsByZone(equipment, activeCharacterEffects(actor));
+    assert.equal(rows.head[0].amount, 16); assert.equal(rows.legs[0].amount, 13);
+    actor.items[0].system.effectRules.global.enabled = false;
+    actor.items[0].system.conditions.c.enabled = false;
+    rows = defenseReductionsByZone(equipment, activeCharacterEffects(actor));
+    assert.deepEqual(rows.head, [{ label: "Feu", amount: 3 }]); assert.deepEqual(rows.torso, []);
+});
+
+test("all-type protection and invalid or inactive damage effects stay distinct", () => {
+    const rows = defenseReductionsByZone([], [
+        { kind: "reduction", amount: 2, damageZone: "all", damageType: "" },
+        { kind: "reduction", amount: 3, damageZone: "arms", damageType: "slashing" },
+        { kind: "reduction", amount: 50, damageZone: "all", active: false },
+        { kind: "reduction", amount: 50, damageZone: "all", amountError: "bad" },
+        { kind: "reduction", amount: -1, damageZone: "all" }
+    ]);
+    assert.deepEqual(rows.head, [{ label: "Tous types", amount: 2 }]);
+    assert.deepEqual(rows.arms, [{ label: "Tous types", amount: 2 }, { label: "Tranchants", amount: 3 }]);
+    assert.match(effectRuleSummary({ kind: "reduction", amount: 2, damageZone: "arms", damageType: "Feu" }), /Feu.*−2 Dgts.*Bras/);
+});
+
+test("resistances keep the strongest percentage per type and zone without mixing with flat reductions", () => {
+    const rule = changes => ({ ...newEffectRule("resistance"), amount: 25, damageType: "Feu", ...changes });
+    const actor = { system: { effectRules: { first: rule({}), second: rule({ amount: 50, damageType: " feu " }),
+        partial: rule({ amount: 75, damageZone: "head" }), off: rule({ enabled: false, amount: 100 }),
+        invalid: rule({ amount: 101 }) } }, items: [] };
+    const armor = [protection(["head"], { Feu: 3 })];
+    const rows = defenseReductionsByZone(armor, activeCharacterEffects(actor));
+    assert.deepEqual(rows.head, [{ label: "Feu", amount: 3 }, { label: "Feu", amount: 75, percent: true }]);
+    assert.deepEqual(rows.torso, [{ label: "Feu", amount: 50, percent: true }]);
+    assert.deepEqual(rows.legs, rows.torso);
+    assert.match(effectRuleSummary(rule({ amount: 50 })), /Résistance.*Feu.*50 %.*Globale/);
+});
+
+test("percentage aliases combine, invalid zones and values do not create defense entries", () => {
+    const rows = defenseReductionsByZone([], [
+        { kind: "resistance", damageZone: "arms", damageType: "slashing", amount: 30 },
+        { kind: "resistance", damageZone: "arms", damageType: "Tranchants", amount: 60 },
+        { kind: "resistance", damageZone: "other", amount: 100 },
+        { kind: "resistance", damageZone: "all", amount: NaN },
+        { kind: "resistance", damageZone: "all", amount: -10 },
+        { kind: "resistance", damageZone: "all", amount: 200 }
+    ]);
+    assert.deepEqual(rows.head, []);
+    assert.deepEqual(rows.arms, [{ label: "Tranchants", amount: 60, percent: true }]);
+});
 
 test("only equipped protections covering the selected zone contribute", () => {
     const rows = defenseReductionsByZone([

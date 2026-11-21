@@ -10,7 +10,7 @@ import { canRollGuard } from "../../guard.mjs";
 import { COMBAT_STANCES } from "../../combat-stances.mjs";
 import { EXPERTISE_DOMAINS, WEAPON_PROPERTIES, PROPERTY_FILTER_STATES, normalizedClasses } from "../../expertise.mjs";
 import { aptitudeConditionStatus, conditionSummary } from "../../aptitude-conditions.mjs";
-import { characterEffectSources, conditionActor, effectRuleSummary, effectRuleSettings } from "../../character-effects.mjs";
+import { activeCharacterEffects, characterEffectSources, conditionActor, effectRuleSummary, effectRuleSettings } from "../../character-effects.mjs";
 import { openCharacterEffectsEditor, openCharacterEffectsManager } from "../character-effects-editor.mjs";
 import { bindConditionControls, conditionControls, readConditionControls, validateCondition } from "../effect-condition-controls.mjs";
 import { hotbarRollData } from "../../shortcuts.mjs";
@@ -226,6 +226,7 @@ export class ArcaneCharacterSheet
             deleteTrait: this._onDeleteTrait,
             stepTrack: this._onStepTrack,
             stepAptitudeCounter: this._onStepAptitudeCounter,
+            stepAlterationDuration: this._onStepAlterationDuration,
             showMercyHelp: this._onShowMercyHelp,
 
             addSkill: this._onAddSkill,
@@ -492,6 +493,7 @@ export class ArcaneCharacterSheet
                     .map(([key, label]) => `${label} ${signedModifier(item.system.modifiers[key])}`)
                     .join(" · "),
                 zone: item.system.zone ? INJURY_ZONES[item.system.zone] : "",
+                canDecreaseDuration: type === "alteration" && item.system.duration?.remaining > 0,
                 durationLabel: type === "alteration" && item.system.duration?.enabled
                     ? `${item.system.duration.remaining} ${ALTERATION_DURATION_UNITS[item.system.duration.unit]}` : ""
             }))
@@ -1005,6 +1007,14 @@ export class ArcaneCharacterSheet
         } else if (value !== trait.system[key]) {
             await trait.update({ [`system.${key}`]: value });
         }
+    }
+
+    static async _onStepAlterationDuration(event, target) {
+        const item = this.actor.items.get(target.dataset.itemId), step = Number(target.dataset.step);
+        if (!this.isEditable || item?.type !== "alteration" || !item.system.duration?.enabled || ![-1, 1].includes(step)) return;
+        const remaining = Math.max(0, item.system.duration.remaining + step);
+        if (!Number.isSafeInteger(remaining) || remaining === item.system.duration.remaining) return;
+        await item.update({ "system.duration.remaining": remaining });
     }
 
     static async _onStepAptitudeCounter(event, target) {
@@ -1575,7 +1585,7 @@ export class ArcaneCharacterSheet
 
     async _onRender(context, options) {
         await super._onRender(context, options);
-        bindDefenseReductionTooltips(this.element, this.actor.items);
+        bindDefenseReductionTooltips(this.element, this.actor.items, activeCharacterEffects(this.actor));
         this._arcanology.bind(this.element.querySelector(".aa-arcanology"));
         const isDetached = this.window.windowId === this.id;
         this.element.classList.toggle("aa-detached-sheet", isDetached);
