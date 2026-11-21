@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { newEffectRule } from "../module/character-effects.mjs";
+import { effectSkillRows } from "../module/effect-skills.mjs";
 
 let natural = 12;
 const messages = [], warnings = [];
@@ -64,6 +65,37 @@ test("skill and aptitude rolls receive their targeted bonuses once", async () =>
     assert.equal(result.mode, "advantage");
     const custom = await actor.rollAptitude("a", "custom");
     assert.equal(custom.formula, "2d6 + 6");
+});
+
+test("automatic skill rolls match their displayed totals without adding bonuses or mastery twice", async () => {
+    const actor = fixture({ named: rule({ scope: "skill", skill: "Discrétion", ability: "dexterity", amount: 3, advantage: true }),
+        generic: rule({ scope: "all", amount: 2 }) });
+    let row = effectSkillRows(actor)[0];
+    let result = await actor.rollEffectSkill(row.key);
+    assert.equal(row.total, 6);
+    assert.equal(result.modifier, row.total);
+    assert.equal(result.mode, "advantage");
+    assert.equal(actor.items.size, 0);
+    actor.items.set("s", { id: "s", name: "Discrétion", type: "skill", system: { ability: "dexterity", mastery: 9 } });
+    row = effectSkillRows(actor)[0];
+    result = await actor.rollEffectSkill(row.key);
+    assert.equal(result.modifier, 6);
+    assert.equal((await actor.rollSkill("s")).modifier, 15);
+    actor.system.rollMode = "disadvantage";
+    assert.equal((await actor.rollEffectSkill(row.key)).mode, "normal");
+    actor.system.effectRules.named.enabled = false;
+    const before = messages.length;
+    assert.equal(await actor.rollEffectSkill(row.key), undefined);
+    assert.equal(messages.length, before);
+    assert.equal(warnings.length, 1);
+});
+
+test("automatic skills with an unspecified ability cannot roll", async () => {
+    const actor = fixture({ missing: rule({ scope: "skill", skill: "Navigation", advantage: true }) });
+    const row = effectSkillRows(actor)[0];
+    assert.equal(await actor.rollEffectSkill(row.key), undefined);
+    assert.equal(messages.length, 0);
+    assert.equal(warnings.length, 1);
 });
 
 test("an unmet required condition blocks aptitude use, while natural criticals keep their rules", async () => {

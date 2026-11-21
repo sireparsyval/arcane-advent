@@ -819,6 +819,35 @@ body.detached > .aa-detached-sheet .window-content {
     font-style: italic;
 }
 
+.aa-skill-actions { display: flex; align-items: center; gap: 4px; }
+.aa-skill-actions button { width: 30px; height: 28px; margin: 0; padding: 0; }
+.aa-section-title .aa-skill-actions button,
+.aa-condition-heading .aa-skill-actions button { width: 30px; }
+.aa-skill-total,
+.aa-skill-display-field {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-height: var(--input-height, 30px);
+    min-width: 0;
+    padding: 3px 6px;
+    border: 1px solid var(--aa-border, rgba(220, 200, 175, 0.22));
+    border-radius: 4px;
+}
+.aa-effect-skill-header,
+.aa-effect-skill-row {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) 55px 55px 24px;
+    gap: 6px;
+    align-items: center;
+}
+.aa-effect-skill-header { margin-bottom: 5px; font-size: 0.8rem; text-align: center; opacity: 0.7; }
+.aa-effect-skills-list { display: grid; gap: 5px; max-height: 360px; overflow-y: auto; }
+.aa-effect-skill-row > button { width: 30px; margin: 0; padding: 0; }
+.aa-effect-skill-name { justify-content: flex-start; overflow-wrap: anywhere; }
+.aa-effect-skill-indicator { text-align: center; }
+
 .aa-natural-20 {
     color: #2e9d4d;
 }

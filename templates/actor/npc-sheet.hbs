@@ -165,7 +165,10 @@
             <section class="aa-panel">
                 <div class="aa-condition-heading">
                     <h2>Compétences</h2>
-                    {{#if canEditState}}<button type="button" data-action="addSkill" aria-label="Ajouter une compétence" title="Ajouter une compétence">+</button>{{/if}}
+                    <div class="aa-skill-actions">
+                        {{#if canEditState}}<button type="button" data-action="addSkill" aria-label="Ajouter une compétence" title="Ajouter une compétence">+</button>{{/if}}
+                        <button type="button" data-action="showEffectSkills" aria-label="Compétences avec effets actifs" title="Compétences avec effets actifs">📋</button>
+                    </div>
                 </div>
                 {{#each skills}}
                     <div class="aa-npc-skill" data-sheet-sort-drop="{{id}}">

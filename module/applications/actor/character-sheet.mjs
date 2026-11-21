@@ -3,6 +3,7 @@ import { bindDefenseReductionTooltips } from "../../defense-reductions.mjs";
 import { unarmedDamage, equippedAttackShortcuts, weaponAttackIcon } from "../../combat-shortcuts.mjs";
 import { ammunitionItems } from "../../weapon-ammunition.mjs";
 import { weaponAttackRestrictions } from "../../weapon-usage.mjs";
+import { openEffectSkillsDialog } from "../effect-skills-dialog.mjs";
 import { throwInventoryWeapon } from "../scene-object-motion-controls.mjs";
 import { APTITUDE_RANGE_MODES, aptitudeRangeMode, aptitudeRangeSummary,
     bindAptitudeRangeToggle, refreshAptitudeTargetingFields } from "../../aptitude-targeting.mjs";
@@ -238,6 +239,7 @@ export class ArcaneCharacterSheet
             showMercyHelp: this._onShowMercyHelp,
 
             addSkill: this._onAddSkill,
+            showEffectSkills: function () { return openEffectSkillsDialog(this.actor); },
             deleteSkill: this._onDeleteSkill,
             rollSkill: this._onRollSkill,
 

@@ -902,12 +902,10 @@
 
                             <h3><span class="aa-heading-icon" aria-hidden="true">🧭</span>Compétences</h3>
 
-                            <button
-                                type="button"
-                                data-action="addSkill"
-                            >
-                                + Ajouter
-                            </button>
+                            <div class="aa-skill-actions">
+                                {{#if canEditState}}<button type="button" data-action="addSkill" aria-label="Ajouter une compétence" title="Ajouter une compétence">+</button>{{/if}}
+                                <button type="button" data-action="showEffectSkills" aria-label="Compétences avec effets actifs" title="Compétences avec effets actifs">📋</button>
+                            </div>
 
                         </div>
 
@@ -1010,7 +1008,7 @@
                                     >
 
 
-                                    <strong>
+                                    <strong class="aa-skill-total">
                                         {{total}}
                                     </strong>
 

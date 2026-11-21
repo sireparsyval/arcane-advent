@@ -6,6 +6,7 @@ import { expertiseMatches, matchingExpertiseBonus } from "../expertise.mjs";
 import { STORAGE_IMAGE } from "../storage.mjs";
 import { withWeaponAmmunition } from "../weapon-ammunition.mjs";
 import { weaponAttackRestrictions } from "../weapon-usage.mjs";
+import { effectSkillRows } from "../effect-skills.mjs";
 import { activeCharacterEffects, conditionActor, resolveRollEffects, sourceConditionsSatisfied } from "../character-effects.mjs";
 
 const SORT_SPACING = 100000;
@@ -446,6 +447,16 @@ export class ArcaneActor extends Actor {
             `Jet de ${skill.name}`, { type: "skill", ability: skill.system.ability, skillId, skillName: skill.name }
         );
     }
+    async rollEffectSkill(key, mode = this.system.rollMode ?? "normal") {
+        const row = effectSkillRows(this, { mode }).find(row => row.key === key);
+        if (!row?.canRoll) {
+            ui.notifications.warn("Cette compétence n’a plus d’effet actif ou sa caractéristique n’est pas renseignée.");
+            return;
+        }
+        return this._rollD20(row.modifier, mode, `Jet de ${foundry.utils.escapeHTML(row.name)}`,
+            { type: "skill", ability: row.ability, skillId: row.skillId, skillName: row.name });
+    }
+
     async rollAptitude(itemId, rollId, mode = this.system.rollMode ?? "normal") {
         const aptitude = this.items.get(itemId);
         if (aptitude?.type !== "aptitude" || !Object.hasOwn(aptitude.system.rolls, rollId)) return;
