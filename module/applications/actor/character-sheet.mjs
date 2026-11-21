@@ -2482,22 +2482,28 @@ export class ArcaneCharacterSheet
     ) {
         const itemId = target.dataset.itemId;
 
-        const weapon =
+        let weapon =
             this.actor.items.get(itemId);
 
-        if (!weapon || weapon.type !== "weapon") {
+        if (!this.isEditable || !weapon || weapon.type !== "weapon") {
             return;
         }
 
-        const input =
-            this.element.querySelector(
-                `[data-damage-type-input][data-item-id="${itemId}"]`
-            );
-
-        if (!input) return;
+        const name = await foundry.applications.api.DialogV2.wait({
+            window: { title: "Ajouter un type de dégâts" },
+            position: { width: 320, height: "auto" },
+            content: '<label class="form-group stacked">Nom du type<input type="text" name="damageType" placeholder="Tranchants…" required pattern=".*\\S.*" autofocus></label>',
+            buttons: [{ action: "add", label: "Ajouter", default: true,
+                callback: (_event, button) => button.form.querySelector('[name="damageType"]').value
+            }, { action: "cancel", label: "Annuler", type: "button", callback: () => false }],
+            rejectClose: false
+        });
+        if (typeof name !== "string" || !name.trim()) return;
+        weapon = this.actor.items.get(itemId);
+        if (!this.isEditable || weapon?.type !== "weapon") return;
 
         const damageType =
-            damageTypeLabel(input.value.trim());
+            damageTypeLabel(name.trim());
 
         if (!damageType) return;
 
@@ -2505,7 +2511,6 @@ export class ArcaneCharacterSheet
             new Set(weapon.system.damageTypes);
 
         if ([...damageTypes].some(type => type.toLowerCase() === damageType.toLowerCase())) {
-            input.value = "";
             return;
         }
 
