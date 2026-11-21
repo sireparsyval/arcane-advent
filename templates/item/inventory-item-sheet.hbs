@@ -106,15 +106,23 @@
                     value=system.versatile.damageFormula}}
             </fieldset>
             <fieldset>
-                <legend>Munitions</legend>
+                <legend>Distance</legend>
                 {{> aaInventoryItemField label="Portée normale (m)" type="number" name="system.ammunition.normalRange"
                     value=system.ammunition.normalRange min=0 step="any" required=true}}
                 {{> aaInventoryItemField label="Portée longue (m)" type="number" name="system.ammunition.longRange"
                     value=system.ammunition.longRange min=0 step="any" required=true}}
-                <label class="checkbox">
-                    <input type="checkbox" name="system.ammunition.loading" {{#if system.ammunition.loading}}checked{{/if}}>
-                    Chargement
-                </label>
+                <div class="aa-ammunition-settings">
+                    <label class="aa-checkbox-toggle"><input type="checkbox" name="system.ammunition.loading" {{#if system.ammunition.loading}}checked{{/if}}><span>Chargement</span></label>
+                    <label class="aa-checkbox-toggle"><input type="checkbox" name="system.ammunition.enabled" {{#if system.ammunition.enabled}}checked{{/if}}><span>Munitions</span></label>
+                    <div class="aa-ammunition-choices">
+                        <label>Stock de munitions<select name="system.ammunition.itemId">
+                            <option value="">Choisir dans l’inventaire…</option>
+                            {{#each ammunitionChoices}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}} ({{quantity}})</option>{{/each}}
+                        </select></label>
+                        {{> aaInventoryItemField label="Quantité par attaque" type="number" name="system.ammunition.quantity" value=system.ammunition.quantity min=1 step=1 required=true}}
+                        <p class="hint">Objets possédés de classe « Munitions ». Pour une arme du répertoire, choisissez le stock une fois l’arme ajoutée au personnage.</p>
+                    </div>
+                </div>
             </fieldset>
         </fieldset>
     {{/if}}

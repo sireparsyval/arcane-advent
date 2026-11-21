@@ -266,6 +266,22 @@ Dans **Altérations d’État**, les boutons **−** et **+** entourent la duré
 et la modifient d’une unité, sans changer l’unité choisie ni descendre sous zéro.
 
 ### Aptitudes
+Une barre compacte entre **Statut** et **Aptitudes** regroupe les dégâts à mains
+nues et les jets des armes équipées, dans leur ordre d’équipement. **👊** configure
+Force, Dextérité ou le meilleur des deux, les Expertises ajoutées aux dégâts et
+l’affichage du bonus : dégâts normaux = 1 + modificateur + Expertises ; dégâts en
+action bonus = 1 + Expertises. Le bouton bonus à mains nues est un simple repère.
+Les attaques d’arme affichent leur bonus total ; les dégâts affichent seulement
+leur formule de base. **Légère + Polyvalente** propose aussi les dégâts polyvalents
+en action bonus, sur la barre et dans l’équipement.
+
+La propriété **Distance** conserve la clé interne historique `ammunition` pour
+préserver les armes et filtres d’Expertise existants. Ses portées et **Chargement**
+sont conservés. Le toggle séparé **Munitions** permet de choisir un Objet possédé
+de classe **Munitions** et une quantité par attaque. Le jet d’attaque consomme ce
+stock (y compris depuis les raccourcis) ; un stock épuisé est retiré. Un stock
+manquant ou insuffisant bloque le tir. Les jets de dégâts ne consomment rien.
+
 Les Passifs n'affichent pas de niveau ; les autres Aptitudes conservent leur
 niveau comme coût en PdF (aucun coût ou effet critique n'est automatiquement appliqué).
 La Description déroulante reste libre pour préciser les effets conditionnels.

@@ -8,7 +8,7 @@ export const WEAPON_PROPERTIES = Object.freeze({
     light: "Légère",
     heavy: "Lourde",
     versatile: "Polyvalente",
-    ammunition: "Munitions"
+    ammunition: "Distance"
 });
 
 export const EXPERTISE_DOMAINS = Object.freeze({

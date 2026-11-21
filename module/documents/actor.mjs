@@ -4,6 +4,7 @@ import { guardValues, equipmentAllowsGuard, canRollGuard } from "../guard.mjs";
 import { signedModifier } from "../modifiers.mjs";
 import { expertiseMatches, matchingExpertiseBonus } from "../expertise.mjs";
 import { STORAGE_IMAGE } from "../storage.mjs";
+import { withWeaponAmmunition } from "../weapon-ammunition.mjs";
 import { activeCharacterEffects, conditionActor, resolveRollEffects, sourceConditionsSatisfied } from "../character-effects.mjs";
 
 const SORT_SPACING = 100000;
@@ -486,6 +487,13 @@ export class ArcaneActor extends Actor {
         weaponId,
         mode = this.system.rollMode ?? "normal"
     ) {
+        return withWeaponAmmunition(this, weaponId, () => this._rollWeaponAttack(weaponId, mode));
+    }
+
+    async _rollWeaponAttack(
+        weaponId,
+        mode = this.system.rollMode ?? "normal"
+    ) {
         const weapon = this.items.get(weaponId);
 
         if (!weapon || weapon.type !== "weapon") {
@@ -578,7 +586,10 @@ export class ArcaneActor extends Actor {
 
         let flavor = `Dégâts — ${weapon.name}`;
 
-        if (versatile) {
+        if (versatile && bonusAction) {
+            flavor = `Dégâts polyvalents d’attaque bonus — ${weapon.name}`;
+        }
+        else if (versatile) {
             flavor =
                 `Dégâts polyvalents — ${weapon.name}`;
         }

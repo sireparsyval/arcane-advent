@@ -323,6 +323,24 @@ body.detached > .aa-detached-sheet .window-content {
     border-bottom: 1px solid var(--aa-border);
 }
 
+.aa-combat-shortcuts {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    overflow-x: auto;
+}
+.aa-combat-shortcut-group { display: flex; flex: 0 0 auto; align-items: center; gap: 3px; }
+.aa-combat-shortcut-group + .aa-combat-shortcut-group { border-inline-start: 1px solid var(--aa-border); padding-inline-start: 8px; }
+.aa-combat-shortcuts button { width: auto; min-height: 26px; margin: 0; padding: 2px 5px; white-space: nowrap; }
+.aa-checkbox-toggle { position: relative; display: inline-flex; cursor: pointer; }
+.aa-checkbox-toggle > input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.aa-checkbox-toggle > span { border: 1px solid var(--aa-border, #897050); border-radius: 3px; padding: 4px 8px; }
+.aa-checkbox-toggle:has(input:checked) > span { color: var(--aa-accent, #d9bc91); border-color: currentColor; background: rgba(217,188,145,.15); }
+.aa-checkbox-toggle:has(input:focus-visible) > span { outline: 2px solid var(--aa-accent, #d9bc91); }
+.aa-ammunition-choices { display: none; }
+.aa-ammunition-settings:has(input[name="system.ammunition.enabled"]:checked) .aa-ammunition-choices { display: grid; gap: 6px; margin-block-start: 6px; }
+
 .aa-aptitude-heading h2 {
     margin: 0;
     padding: 0;

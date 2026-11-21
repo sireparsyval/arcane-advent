@@ -450,6 +450,7 @@
 
                 </section>
 
+                {{> "systems/arcane-advent/templates/actor/parts/combat-shortcuts.hbs"}}
                 {{> "systems/arcane-advent/templates/actor/parts/aptitudes.hbs"}}
 
 
@@ -1190,7 +1191,7 @@
                                         <button type="button" aria-pressed="{{#if properties.versatile}}true{{else}}false{{/if}}"
                                             data-action="toggleEquipmentProperty" data-item-id="{{id}}" data-property="versatile">Polyvalente</button>
                                         <button type="button" aria-pressed="{{#if properties.ammunition}}true{{else}}false{{/if}}"
-                                            data-action="toggleEquipmentProperty" data-item-id="{{id}}" data-property="ammunition">Munitions</button>
+                                            data-action="toggleEquipmentProperty" data-item-id="{{id}}" data-property="ammunition">Distance</button>
                                     </div>
                                 </div>
 
@@ -1240,11 +1241,13 @@
                                             </label>
                                             <button type="button" data-action="rollWeaponVersatileDamage" data-item-id="{{id}}"
                                                 aria-label="Jet de dégâts polyvalents" title="Jet de dégâts polyvalents">🎲</button>
+                                            {{#if properties.light}}<button type="button" data-action="rollWeaponBonusDamage" data-item-id="{{id}}" data-versatile="true"
+                                                title="Dégâts polyvalents d’action bonus">➕</button>{{/if}}
                                         </div>
                                     {{/if}}
                                     {{#if properties.ammunition}}
                                         <div class="aa-weapon-property-config">
-                                            <strong>Munitions</strong>
+                                            <strong>Distance</strong>
                                             <label class="aa-equipment-inline">
                                                 <span>Portée normale</span>
                                                 <input type="number" value="{{system.ammunition.normalRange}}"
@@ -1257,11 +1260,18 @@
                                                     data-equipment-edit data-item-id="{{id}}" data-item-field="system.ammunition.longRange">
                                                 <span>m</span>
                                             </label>
-                                            <label class="aa-equipment-inline">
-                                                <input type="checkbox" {{#if system.ammunition.loading}}checked{{/if}}
-                                                    data-equipment-edit data-item-id="{{id}}" data-item-field="system.ammunition.loading">
-                                                <span>Chargement</span>
-                                            </label>
+                                            <button type="button" data-action="toggleWeaponSetting" data-setting="loading" data-item-id="{{id}}"
+                                                aria-pressed="{{system.ammunition.loading}}" {{#unless @root.canEditState}}disabled{{/unless}}>Chargement</button>
+                                            <button type="button" data-action="toggleWeaponSetting" data-setting="enabled" data-item-id="{{id}}"
+                                                aria-pressed="{{system.ammunition.enabled}}" {{#unless @root.canEditState}}disabled{{/unless}}>Munitions</button>
+                                            {{#if system.ammunition.enabled}}
+                                                <select data-equipment-edit data-item-id="{{id}}" data-item-field="system.ammunition.itemId" aria-label="Stock de munitions" {{#unless @root.canEditState}}disabled{{/unless}}>
+                                                    <option value="">Choisir des munitions…</option>
+                                                    {{#each ammunitionChoices}}<option value="{{id}}" {{#if selected}}selected{{/if}}>{{name}} ({{quantity}})</option>{{/each}}
+                                                </select>
+                                                <label class="aa-equipment-inline">Par attaque<input type="number" min="1" step="1" required value="{{system.ammunition.quantity}}"
+                                                    data-equipment-edit data-item-id="{{id}}" data-item-field="system.ammunition.quantity" {{#unless @root.canEditState}}readonly{{/unless}}></label>
+                                            {{/if}}
                                         </div>
                                     {{/if}}
                                 </div>

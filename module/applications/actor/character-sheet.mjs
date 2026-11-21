@@ -1,5 +1,7 @@
 import { ARCANE_ALIGNMENTS, ARCANE_NEEDS } from "../../config.mjs";
 import { bindDefenseReductionTooltips } from "../../defense-reductions.mjs";
+import { unarmedDamage, equippedAttackShortcuts } from "../../combat-shortcuts.mjs";
+import { ammunitionItems } from "../../weapon-ammunition.mjs";
 import { APTITUDE_RANGE_MODES, aptitudeRangeMode, aptitudeRangeSummary,
     bindAptitudeRangeToggle, refreshAptitudeTargetingFields } from "../../aptitude-targeting.mjs";
 import { inventoryActionDialog } from "../inventory-transfer.mjs";
@@ -249,6 +251,8 @@ export class ArcaneCharacterSheet
             removeDamageReduction: this._onRemoveDamageReduction,
 
             rollWeaponAttack: this._onRollWeaponAttack,
+            editUnarmedDamage: this._onEditUnarmedDamage,
+            toggleWeaponSetting: this._onToggleWeaponSetting,
             rollWeaponDamage: this._onRollWeaponDamage,
 
             toggleEquipmentProperty: this._onToggleEquipmentProperty,
@@ -288,7 +292,7 @@ export class ArcaneCharacterSheet
         body: {
             template:
                 "systems/arcane-advent/templates/actor/character-sheet.hbs",
-            templates: ["aptitudes", "conditions", "traits", "effect-quick-view", "manual-modifiers", "sheet-mode", "combat-stances"]
+            templates: ["aptitudes", "conditions", "traits", "effect-quick-view", "manual-modifiers", "sheet-mode", "combat-stances", "combat-shortcuts"]
                 .map(name => `systems/arcane-advent/templates/actor/parts/${name}.hbs`),
             scrollable: [""]
         }
@@ -316,6 +320,8 @@ export class ArcaneCharacterSheet
         context.activeSheetTab = this._activeTab ?? "core";
 
         context.canEditState = this.isEditable;
+        context.unarmed = unarmedDamage(this.actor);
+        context.weaponShortcuts = equippedAttackShortcuts(this.actor);
         context.arcanologyHTML = context.compactNPC ? "" : await foundry.applications.handlebars.renderTemplate(
             "systems/arcane-advent/templates/actor/arcanology-notebook.hbs",
             this._arcanology.prepare()
@@ -609,6 +615,8 @@ export class ArcaneCharacterSheet
 
                     return {
                         ...equipmentView(item),
+                        ammunitionChoices: ammunitionItems(this.actor).map(ammo => ({ id: ammo.id, name: ammo.name,
+                            quantity: ammo.system.quantity, selected: ammo.id === item.system.ammunition.itemId })),
 
                         attackAbility:
                             ability.label,
@@ -2231,10 +2239,34 @@ export class ArcaneCharacterSheet
         const weaponId = target.dataset.itemId;
         const rollMode = this._getRollMode();
 
-        await this.actor.rollWeaponAttack(
+        try { await this.actor.rollWeaponAttack(
             weaponId,
             rollMode
-        );
+        ); } catch (error) { ui.notifications.error(error.message); }
+    }
+
+    static async _onEditUnarmedDamage() {
+        if (!this.isEditable) return;
+        const saved = unarmedDamage(this.actor), escape = foundry.utils.escapeHTML;
+        const choices = [...this.actor.items].filter(item => item.type === "expertise");
+        return foundry.applications.api.DialogV2.wait({ window: { title: "Dégâts à mains nues" },
+            content: `<div class="standard-form"><label>Modificateur<select name="ability">${Object.entries({ strength: "Force", dexterity: "Dextérité", best: "Meilleur de Force / Dextérité" }).map(([key,label]) => `<option value="${key}" ${saved.ability === key ? "selected" : ""}>${label}</option>`).join("")}</select></label>
+            <fieldset><legend>Expertises prises en compte</legend>${choices.map(item => `<label class="checkbox"><input type="checkbox" data-unarmed-expertise="${escape(item.id)}" ${saved.expertiseIds.includes(item.id) ? "checked" : ""}>${escape(item.name)} (${item.system.bonus})</label>`).join("") || "<p>Aucune Expertise.</p>"}</fieldset>
+            <label class="checkbox"><input name="bonusAction" type="checkbox" ${saved.bonusAction ? "checked" : ""}>Afficher les dégâts en action bonus (1 + Expertises, sans modificateur)</label></div>`,
+            buttons: [{ action: "save", label: "Enregistrer", callback: async (_event, button) => {
+                const form = button.form;
+                await this.actor.setFlag("arcane-advent", "unarmedDamage", {
+                    ability: form.querySelector('[name="ability"]').value,
+                    expertiseIds: [...form.querySelectorAll("[data-unarmed-expertise]:checked")].map(field => field.dataset.unarmedExpertise),
+                    bonusAction: form.querySelector('[name="bonusAction"]').checked
+                });
+            } }, { action: "cancel", label: "Annuler", default: true, callback: () => false }], rejectClose: false });
+    }
+
+    static async _onToggleWeaponSetting(_event, target) {
+        const item = this.actor.items.get(target.dataset.itemId), key = target.dataset.setting;
+        if (!this.isEditable || item?.type !== "weapon" || !["loading", "enabled"].includes(key)) return;
+        await this.actor.updateInventoryItem(item.id, { [`system.ammunition.${key}`]: !item.system.ammunition[key] });
     }
 
 
@@ -2288,7 +2320,8 @@ export class ArcaneCharacterSheet
         await this.actor.rollWeaponDamage(
             weaponId,
             {
-                bonusAction: true
+                bonusAction: true,
+                versatile: target.dataset.versatile === "true"
             }
         );
     }

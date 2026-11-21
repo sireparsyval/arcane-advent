@@ -150,11 +150,13 @@
                             <button type="button" data-action="rollWeaponDamage" data-item-id="{{id}}">Dégâts {{system.damageFormula}}</button>
                             {{#if properties.light}}<button type="button" data-action="rollWeaponBonusDamage" data-item-id="{{id}}">Dégâts bonus</button>{{/if}}
                             {{#if properties.versatile}}<button type="button" data-action="rollWeaponVersatileDamage" data-item-id="{{id}}">À deux mains {{system.versatile.damageFormula}}</button>{{/if}}
+                            {{#if properties.versatile}}{{#if properties.light}}<button type="button" data-action="rollWeaponBonusDamage" data-item-id="{{id}}" data-versatile="true">Dégâts bonus polyvalents</button>{{/if}}{{/if}}
                         </div>
                         {{#if damageTypes.length}}<small>{{#each damageTypes}}{{#unless @first}} · {{/unless}}{{label}}{{/each}}</small>{{/if}}
                     </div>
                 {{else}}<p class="aa-condition-empty">Aucune arme équipée.</p>{{/each}}
             </section>
+            {{> "systems/arcane-advent/templates/actor/parts/combat-shortcuts.hbs"}}
             {{> "systems/arcane-advent/templates/actor/parts/aptitudes.hbs"}}
             {{> "systems/arcane-advent/templates/actor/parts/traits.hbs"}}
         </div>

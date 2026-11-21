@@ -1,0 +1,21 @@
+<section class="aa-panel aa-combat-shortcuts" aria-label="Attaques et dégâts">
+    <div class="aa-combat-shortcut-group">
+        <button type="button" data-action="editUnarmedDamage" title="Configurer les dégâts à mains nues"
+            aria-label="Dégâts à mains nues : {{unarmed.damage}}. Configurer" {{#unless canEditState}}disabled{{/unless}}>👊{{unarmed.damage}}</button>
+        {{#if unarmed.bonusAction}}<button type="button" title="Dégâts à mains nues en action bonus : 1 + Expertises, sans modificateur"
+            aria-label="Dégâts à mains nues en action bonus : {{unarmed.bonusDamage}}">➕{{unarmed.bonusDamage}}</button>{{/if}}
+    </div>
+    {{#each weaponShortcuts}}
+        <div class="aa-combat-shortcut-group" aria-label="{{name}}">
+            <button type="button" data-action="rollWeaponAttack" data-item-id="{{id}}" title="Attaque — {{name}}" aria-label="Attaque — {{name}} : {{attack}}">{{icon}}{{attack}}</button>
+            {{#if formula}}
+                <button type="button" data-action="rollWeaponDamage" data-item-id="{{id}}" title="Dégâts — {{name}}">💥{{formula}}</button>
+                {{#if light}}<button type="button" data-action="rollWeaponBonusDamage" data-item-id="{{id}}" title="Dégâts d’action bonus — {{name}}">➕</button>{{/if}}
+            {{/if}}
+            {{#if versatile}}
+                <button type="button" data-action="rollWeaponVersatileDamage" data-item-id="{{id}}" title="Dégâts polyvalents — {{name}}">💥{{versatile}}</button>
+                {{#if light}}<button type="button" data-action="rollWeaponBonusDamage" data-item-id="{{id}}" data-versatile="true" title="Dégâts polyvalents d’action bonus — {{name}}">➕</button>{{/if}}
+            {{/if}}
+        </div>
+    {{/each}}
+</section>

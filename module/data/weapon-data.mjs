@@ -109,8 +109,11 @@ export class WeaponData extends EquipmentData {
             }),
 
 
-            // Munitions + Chargement regroupés.
+            // Distance (clé historique conservée), chargement et consommation.
             ammunition: new SchemaField({
+                enabled: new BooleanField({ initial: false }),
+                itemId: new StringField({ initial: "", blank: true }),
+                quantity: new NumberField({ initial: 1, min: 1, integer: true, required: true, nullable: false }),
 
                 normalRange: new NumberField({
                     required: true,

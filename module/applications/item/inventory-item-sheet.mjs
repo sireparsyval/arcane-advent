@@ -1,6 +1,7 @@
 import { isInventoryContainer, luqaCounters } from "../../inventory.mjs";
 import { WEAPON_PROPERTIES } from "../../expertise.mjs";
 import { storageInventoryOwner } from "../../storage-inventory.mjs";
+import { ammunitionItems } from "../../weapon-ammunition.mjs";
 
 const { DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -94,6 +95,8 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
             isProtection: type === "protection",
             hasReductions: type === "shield" || type === "protection",
             weaponProperties: type === "weapon" ? choices(WEAPON_PROPERTIES, system.properties) : [],
+            ammunitionChoices: ammunitionItems(this.document.actor).map(item => ({ id: item.id, name: item.name,
+                quantity: item.system.quantity, selected: item.id === system.ammunition?.itemId })),
             damageTypes: type === "weapon" ? [...system.damageTypes].join("\n") : "",
             protectionZones: type === "protection" ? choices(PROTECTION_ZONES, system.zones) : [],
             reductions: Object.entries(system.damageReductions ?? {}).map(([type, value]) => ({ type, value }))
