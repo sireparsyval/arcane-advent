@@ -1233,6 +1233,8 @@ body.detached > .aa-detached-sheet .window-content {
 }
 
 .aa-inventory-row > .aa-inventory-weight {
+    flex: 0 0 calc(7ch + 2em + 8px);
+    min-inline-size: calc(7ch + 2em + 8px);
     margin-inline-start: auto;
 }
 
