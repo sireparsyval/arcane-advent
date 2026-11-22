@@ -62,6 +62,32 @@ test("native movement hooks also resolve ground inventories through their proxy 
     assert.equal(options.animate, false);
 });
 
+test("manual item movement disables native auto-rotation without freezing intentional rotations or animation settings", () => {
+    const hooks = new Map();
+    globalThis.Hooks = { on: (name, callback) => hooks.set(name, callback), once() {} };
+    globalThis.CONFIG = { queries: {} };
+    globalThis.game = { items: new Map([["ground", { documentName: "Item", type: "storage" }]]) };
+    registerObjectMotion();
+    const ground = { documentName: "Token", actor: { type: "storage" }, getFlag: () => "ground" };
+    const movement = { autoRotate: true };
+    // Foundry v14 freezes the other movement properties before preMoveToken,
+    // while keeping autoRotate writable until after the hook.
+    Object.defineProperty(movement, "passed", { value: Object.freeze({ waypoints: [] }), writable: false });
+    hooks.get("preMoveToken")(ground, movement, {});
+    assert.equal(movement.autoRotate, false);
+    const rotation = { rotation: 135 };
+    hooks.get("preUpdateToken")(ground, rotation, {});
+    assert.equal(rotation.rotation, 135);
+    const animated = { autoRotate: true };
+    hooks.get("preMoveToken")(ground, animated, { animate: false, sceneObjectSync: true });
+    assert.equal(animated.autoRotate, true);
+    for (const type of ["character", "npc"]) {
+        const native = { autoRotate: true }, options = {};
+        hooks.get("preMoveToken")({ documentName: "Token", actor: { type } }, native, options);
+        assert.equal(native.autoRotate, true); assert.deepEqual(options, {});
+    }
+});
+
 for (const type of ["storage", "character", "npc"]) test(`${type} token rendering follows the shared clock and restores position on completion`,()=>{
     const hooks=new Map(),ticks=new Set(),position=()=>({set(x,y){this.x=x;this.y=y;}});
     globalThis.Hooks={on:(name,fn)=>hooks.set(name,fn),once(){}};

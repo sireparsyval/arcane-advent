@@ -543,6 +543,7 @@ l’orientation synchronisés ; le MJ actif termine aussi les mouvements hors sc
 Les jets, dégâts, esquives et collisions restent décidés par le MJ.
 
 Les déplacements ordinaires des objets au sol et des tuiles sont instantanés par
-défaut, y compris au glisser-déposer. Les déplacements choisis dans **Animations**
-conservent leur durée et leurs réglages ; les animations natives des personnages
-restent inchangées.
+défaut, y compris au glisser-déposer, et conservent leur orientation. Une rotation
+manuelle reste possible. Les déplacements choisis dans **Animations** conservent
+leur durée et leurs réglages ; les animations natives des personnages restent
+inchangées.

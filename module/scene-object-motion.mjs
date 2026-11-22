@@ -59,7 +59,12 @@ export async function requestObjectMotion(doc, points, settings) {
 }
 
 export function registerObjectMotion() {
-    Hooks.on("preMoveToken", defaultSceneObjectMovement);
+    Hooks.on("preMoveToken", (doc, movement, options) => {
+        defaultSceneObjectMovement(doc, movement, options);
+        // v14 has already resolved the core auto-rotation setting here. Change
+        // the writable movement instruction before it updates the token angle.
+        if (inventoryForToken(doc)?.type === "storage" && !options.sceneObjectSync) movement.autoRotate = false;
+    });
     Hooks.on("preUpdateToken", defaultSceneObjectMovement);
     Hooks.on("preUpdateTile", defaultSceneObjectMovement);
     let queue=Promise.resolve();
