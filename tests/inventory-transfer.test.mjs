@@ -184,3 +184,10 @@ test("each transfer and rollback write gets an operation free of Foundry's previ
         }
     }
 });
+
+test("a container cannot bypass the lock of a bodily weapon hidden among its descendants",()=>{
+    const bag=item("bag","container"),body=item("body","weapon",{corporeal:true,containerId:"bag"});
+    const items=collection([bag,body]);
+    assert.throws(()=>transferPlan(items,[{id:bag.id,quantity:1}],randomID),/corporelle/);
+    assert.equal(items.size,2);assert.equal(body.system.containerId,bag.id);
+});

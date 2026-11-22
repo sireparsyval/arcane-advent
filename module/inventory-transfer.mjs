@@ -34,6 +34,7 @@ export function transferPlan(items, selections, randomID) {
     const creates = [], deletes = [], updates = [], originals = [];
     for (const id of included) {
         const item = byId.get(id);
+        if (item.type === "weapon" && item.system.corporeal) throw Error("Déverrouillez l’arme corporelle avant de la déplacer.");
         const data = inventorySource(item.toObject());
         originals.push(data);
         const parentIncluded = included.has(item.system.containerId)

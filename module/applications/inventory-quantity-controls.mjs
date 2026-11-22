@@ -46,3 +46,75 @@ export function bindTransferAmounts(root) {
         else control.addEventListener("click", () => setTransferAmount(control, transferAmount(control) === 0));
     }
 }
+
+
+export function transferSelectionButtons() {
+    const row = document.createElement("div"); row.className = "aa-transfer-selection";
+    const clear = document.createElement("button"), all = document.createElement("button");
+    clear.type = all.type = "button";
+    clear.dataset.transferSelectNone = ""; clear.textContent = "Annuler la sélection";
+    all.dataset.transferSelectAll = ""; all.textContent = "Tout sélectionner";
+    row.append(clear, all);
+    return row;
+}
+export function bindTransferSelection(root, refresh = () => {}) {
+    const select = selected => {
+        for (const control of root.querySelectorAll("[data-transfer-quantity], [data-transfer-toggle]")) {
+            if (!control.disabled || control.dataset.transferParentLocked === "true") setTransferAmount(control, selected);
+        }
+        refresh();
+    };
+    root.querySelector("[data-transfer-select-none]")?.addEventListener("click", () => select(false));
+    root.querySelector("[data-transfer-select-all]")?.addEventListener("click", () => select(true));
+}
+export function bindTransferHierarchy(root, items) {
+    const controls = [...root.querySelectorAll("[data-transfer-item]")];
+    const byId = new Map(controls.map(control => [control.dataset.transferItem, control]));
+    const refresh = () => {
+        // Clear inherited choices first: a deselected container also clears
+        // nested containers, instead of turning them into independent choices.
+        for (const control of controls) if (control.dataset.transferParentLocked === "true") {
+            setTransferAmount(control, false); control.disabled = false;
+            delete control.dataset.transferParentLocked;
+            control.removeAttribute("aria-disabled"); control.removeAttribute("title");
+            control.closest(".aa-transfer-choice")?.removeAttribute("data-transfer-included");
+        }
+        for (const control of controls) {
+            const seen = new Set([control.dataset.transferItem]);
+            let parent = items.get(control.dataset.transferItem)?.system.containerId;
+            while (parent && !seen.has(parent)) {
+                seen.add(parent);
+                const ancestor = byId.get(parent);
+                if (ancestor && items.get(parent)?.type === "container" && transferAmount(ancestor) > 0) {
+                    setTransferAmount(control, true); control.disabled = true;
+                    control.dataset.transferParentLocked = "true";
+                    control.setAttribute("aria-disabled", "true"); control.title = "Inclus dans le contenant sélectionné";
+                    control.closest(".aa-transfer-choice")?.setAttribute("data-transfer-included", "");
+                    break;
+                }
+                parent = items.get(parent)?.system.containerId;
+            }
+        }
+    };
+    for (const control of controls) {
+        control.addEventListener(control.type === "number" ? "input" : "click", refresh);
+        if (control.type === "number") control.addEventListener("change", refresh);
+    }
+    refresh();
+    return refresh;
+}
+
+export function bindTransferSubmit(root, isValid) {
+    const refresh = () => {
+        const valid = isValid();
+        for (const button of root.querySelectorAll(".form-footer button[data-action]")) {
+            if (button.dataset.action !== "cancel") button.disabled = !valid;
+        }
+    };
+    for (const control of root.querySelectorAll("[data-transfer-quantity], [data-transfer-toggle]")) {
+        control.addEventListener(control.type === "number" ? "input" : "click", refresh);
+        if (control.type === "number") control.addEventListener("change", refresh);
+    }
+    refresh();
+    return refresh;
+}

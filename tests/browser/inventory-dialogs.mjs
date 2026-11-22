@@ -70,7 +70,8 @@ await test("select all and deselect all work after rendering", async () => {
         const all = form.querySelector("[data-transfer-select-all]");
         all.click(); equal(form.querySelector('[data-transfer-item="object"]').value, "4");
         equal(form.querySelector('[data-transfer-item="bag"]').getAttribute("aria-pressed"), "true");
-        all.click(); equal(form.querySelector('[data-transfer-item="object"]').value, "0");
+        all.click(); equal(form.querySelector('[data-transfer-item="object"]').value, "4");
+        form.querySelector("[data-transfer-select-none]").click(); equal(form.querySelector('[data-transfer-item="object"]').value, "0");
         equal(form.querySelector('[data-transfer-item="bag"]').getAttribute("aria-pressed"), "false");
         all.click();
     };
@@ -224,6 +225,9 @@ await runGroundImagePreviewTests({ test, assert, equal });
 
 const { runGroundAnimationHUDTests } = await import("./ground-animation-hud.mjs");
 await runGroundAnimationHUDTests({ test, assert, equal });
+
+const { runTransferSelectionTests } = await import("./transfer-selection.mjs");
+await runTransferSelectionTests({ test, assert, equal });
 
 document.querySelector("pre").textContent = JSON.stringify(results);
 document.body.dataset.status = results.every(result => result.passed) ? "passed" : "failed";

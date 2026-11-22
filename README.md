@@ -604,3 +604,19 @@ Les dimensions des dépôts utilisent les cases de la scène :
 Les objets et équipements permettent un réglage de profondeur Z ; laissé vide,
 il suit la taille sur scène. Les tailles personnalisées des modèles sont
 conservées. Les pièces utilisent les dimensions automatiques ci-dessus.
+
+
+### Sélection des transferts et opérations sur les Luqa
+
+**Opérations sur les Luqa** ouvre directement les montants disponibles, avec
+**Annuler**, **Transférer** et **Déposer** en bas. Les montants commencent à zéro.
+Juste au-dessus, **Annuler la sélection** remet tout à zéro à gauche et
+**Tout sélectionner** remplit les montants disponibles à droite. Les mêmes
+commandes sont placées sous la liste dans les sélections d’objets.
+
+Les sélections d’objets masquent les armes corporelles et présentent le contenu
+des contenants en retrait, y compris leurs champs de quantité et leurs coches.
+Sélectionner un contenant sélectionne tout son contenu au maximum et en verrouille
+les champs ; le désélectionner remet son contenu à zéro et le déverrouille.
+Le transfert n’envoie que les contenants sélectionnés et les objets indépendants :
+leur contenu est repris automatiquement sans doublons.

@@ -4,7 +4,7 @@ import { requestInventoryAction, storageAccess, isGroundDeposit } from "../stora
 import { inventoryForToken } from "../storage-inventory.mjs";
 import { inventorySelectionRows } from "../ground-items.mjs";
 import { targetedInventoryRecipient, chooseInventoryRecipient } from "./inventory-recipient.mjs";
-import { transferAmountControl, transferAmount, setTransferAmount, bindTransferAmounts } from "./inventory-quantity-controls.mjs";
+import { transferAmountControl, transferAmount, bindTransferAmounts, transferSelectionButtons, bindTransferSelection, bindTransferHierarchy, bindTransferSubmit } from "./inventory-quantity-controls.mjs";
 
 // Shared by character inventories and storage sheets. DOM construction keeps
 // player-authored item names out of HTML strings.
@@ -42,23 +42,28 @@ export async function inventoryActionDialog(actor, action, _initialId = null, { 
             label.append(check, " Supprimer le dépôt s’il est vide après le transfert");
             picker.append(label);
         }
-        const entries = inventorySelectionRows(actor.items).filter(entry => isInventoryItem(entry.item) && !excludeIds.includes(entry.item.id));
-        if (!entries.length) throw new Error("Cet inventaire est vide.");
-        const selectAll = document.createElement("button");
-        selectAll.type = "button";
-        selectAll.dataset.transferSelectAll = "";
-        selectAll.textContent = "Tout sélectionner / désélectionner";
+        const entries = inventorySelectionRows(actor.items).filter(({ item }) => isInventoryItem(item) && !excludeIds.includes(item.id)
+            && !(item.type === "weapon" && item.system.corporeal)
+            && !(actor.type === "storage" && item.type === "container" && item.system.fixedOnScene));
+        const visibleIds = new Set(entries.map(entry => entry.item.id));
+        if (!entries.length) throw new Error("Aucun objet transférable dans cet inventaire.");
         const list = document.createElement("div");
         list.className = "aa-transfer-choices";
-        picker.append(selectAll, list);
+        picker.append(list, transferSelectionButtons());
         for (const entry of entries) {
             const { item } = entry;
             const row = document.createElement("div");
             row.className = "aa-transfer-choice";
+            let depth = 0, parent = item.system.containerId;
+            const seen = new Set([item.id]);
+            while (parent && !seen.has(parent)) {
+                seen.add(parent); if (visibleIds.has(parent)) depth++;
+                parent = actor.items.get(parent)?.system.containerId;
+            }
+            row.style.setProperty("--aa-transfer-depth", String(depth));
             const available = item.type === "object" ? item.system.quantity : 1;
             row.dataset.unitWeight = String(item.type === "object" ? item.system.weight ?? 0 : entry.weight);
-            const amount = transferAmountControl({ id: item.id, available, numeric: available > 1,
-                disabled: item.type === "weapon" && item.system.corporeal });
+            const amount = transferAmountControl({ id: item.id, available, numeric: available > 1 });
             amount.children[0].setAttribute("aria-label", available > 1 ? `Quantité de ${item.name}` : `Sélectionner ${item.name}`);
             const icon = document.createElement("span");
             icon.className = "aa-transfer-icon";
@@ -66,7 +71,6 @@ export async function inventoryActionDialog(actor, action, _initialId = null, { 
             else if (item.img) { const image = document.createElement("img"); image.src = item.img; image.alt = ""; icon.append(image); }
             const name = document.createElement("span");
             name.className = "aa-transfer-name";
-            name.style.paddingInlineStart = `${entry.depth * 12}px`;
             name.textContent = `${item.name}${item.system.equipped ? " · équipé" : ""}`;
             const weight = document.createElement("span");
             weight.className = "aa-transfer-weight";
@@ -74,20 +78,27 @@ export async function inventoryActionDialog(actor, action, _initialId = null, { 
             row.append(amount, icon, name, weight);
             list.append(row);
         }
+        let refreshHierarchy;
         const choice = await formDialog.prompt({
             window: { title: title ?? (action === "transfer" ? "Transférer des objets" : action === "drop" ? "Déposer au sol" : "Sélectionner des objets") },
             position: { width: 600 }, content, rejectClose: false,
             render: (_event, dialog) => {
                 const form = dialog.element;
                 bindTransferAmounts(form);
-                form.querySelector("[data-transfer-select-all]").addEventListener("click", () => {
+                refreshHierarchy = bindTransferHierarchy(form, actor.items);
+                const refreshSubmit = bindTransferSubmit(form, () => {
                     const controls = [...form.querySelectorAll("[data-transfer-item]:not(:disabled)")];
-                    const selected = controls.some(control => !(transferAmount(control) > 0));
-                    controls.forEach(control => setTransferAmount(control, selected));
+                    return controls.some(control => transferAmount(control) > 0) && controls.every(control => {
+                        const item = actor.items.get(control.dataset.transferItem), quantity = transferAmount(control);
+                        return item && Number.isSafeInteger(quantity) && quantity >= 0
+                            && quantity <= (item.type === "object" ? item.system.quantity : 1);
+                    });
                 });
+                bindTransferSelection(form, () => { refreshHierarchy(); refreshSubmit(); });
             },
-            buttons: [{ action: "cancel", label: "Annuler", callback: () => null }],
+            buttons: [{ action: "cancel", label: "Annuler", callback: () => false }],
             ok: { label: action === "transfer" ? "Transférer" : action === "drop" ? "Déposer" : "Valider", callback: (_event, button) => {
+                refreshHierarchy?.();
                 const selections = [...button.form.querySelectorAll("[data-transfer-item]:not(:disabled)")].map(control => {
                     const item = actor.items.get(control.dataset.transferItem);
                     if (!item) throw new Error("Un objet sélectionné n’est plus disponible.");

@@ -1134,7 +1134,10 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-storage-directory-row > span { flex: 1; overflow-wrap: anywhere; }
 .aa-transfer-choices { max-height: 45vh; overflow-y: auto; margin-top: 8px; }
 .aa-transfer-cleanup { display: flex; align-items: center; gap: 6px; margin-block: 10px; }
-.aa-transfer-choice { display: grid; grid-template-columns: 124px 24px minmax(100px,1fr) 80px; align-items: center; gap: 8px; padding: 6px; border: 1px solid var(--color-border-light-primary); border-radius: 4px; margin-block: 4px; }
+.aa-transfer-selection { display: flex; gap: 8px; margin-top: 12px; }
+.aa-transfer-selection > button { flex: 1; margin: 0; }
+.aa-transfer-choice[data-transfer-included] { opacity: 0.8; }
+.aa-transfer-choice { margin-inline-start: calc(var(--aa-transfer-depth, 0) * 20px); display: grid; grid-template-columns: 124px 24px minmax(100px,1fr) 80px; align-items: center; gap: 8px; padding: 6px; border: 1px solid var(--color-border-light-primary); border-radius: 4px; margin-block: 4px; }
 .aa-transfer-amount { display: inline-grid; grid-template-columns: 64px 52px; align-items: center; gap: 8px; width: 124px; vertical-align: middle; }
 .aa-transfer-amount > input, .aa-transfer-amount > button { box-sizing: border-box; width: 64px; min-width: 0; height: 32px; margin: 0; text-align: center; }
 .aa-transfer-toggle[aria-pressed="true"] { border-color: var(--color-border-highlight); }

@@ -4,7 +4,7 @@ import { groundMenu, mainGroundContainer, checkedCoins, hasCoins } from "../grou
 import { LUQA_DENOMINATIONS } from "../inventory.mjs";
 import { chooseInventoryItems } from "./inventory-transfer.mjs";
 import { targetedInventoryRecipient, chooseInventoryRecipient, inventorySourceToken } from "./inventory-recipient.mjs";
-import { transferAmountControl, bindTransferAmounts } from "./inventory-quantity-controls.mjs";
+import { transferAmountControl, bindTransferAmounts, transferSelectionButtons, bindTransferSelection, bindTransferSubmit } from "./inventory-quantity-controls.mjs";
 
 const busy = new Set();
 export const groundActionBusy = source => busy.has(source.uuid);
@@ -24,9 +24,9 @@ async function quantityDialog(item, { split = false } = {}) {
         } } });
 }
 
-export async function chooseLuqa(purse, title) {
+export async function chooseLuqa(purse, title, { operations = false } = {}) {
     const coins = checkedCoins(purse.system.coins);
-    if (!hasCoins(coins)) throw Error("Cette bourse ne contient aucun Luqa.");
+    if (!hasCoins(coins) && !operations) throw Error("Cette bourse ne contient aucun Luqa.");
     const content = document.createElement("div"), list = document.createElement("div");
     list.className = "aa-transfer-picker";
     for (const { key, symbol, label } of LUQA_DENOMINATIONS) {
@@ -38,20 +38,38 @@ export async function chooseLuqa(purse, title) {
         const weight = document.createElement("span"); weight.className = "aa-transfer-weight"; weight.textContent = "0 kg";
         row.append(amount, icon, name, weight); list.append(row);
     }
-    content.append(list);
-    return formDialog.prompt({ window: { title }, position: { width: 600 }, content, rejectClose: false,
-        render: (_event, dialog) => bindTransferAmounts(dialog.element),
-        buttons: [{ action: "cancel", label: "Annuler", callback: () => null }],
-        ok: { label: "Valider", callback: (_event, button) => {
-            const selected = Object.fromEntries(LUQA_DENOMINATIONS.map(({ key }) => [key,
-                button.form.elements[key].valueAsNumber]));
-            checkedCoins(selected);
-            if (!hasCoins(selected) || Object.keys(selected).some(key => selected[key] > coins[key])) throw Error("Sélection de Luqa invalide.");
-            return selected;
-        } } });
+    content.append(list, transferSelectionButtons());
+    const read = (_event, button) => {
+        const selected = Object.fromEntries(LUQA_DENOMINATIONS.map(({ key }) => [key,
+            button.form.elements[key].valueAsNumber]));
+        checkedCoins(selected);
+        if (!hasCoins(selected) || Object.keys(selected).some(key => selected[key] > coins[key])) throw Error("Sélection de Luqa invalide.");
+        return selected;
+    };
+    const options = { window: { title }, position: { width: 600 }, content, rejectClose: false,
+        render: (_event, dialog) => {
+            const root = dialog.element;
+            bindTransferAmounts(root);
+            const refresh = bindTransferSubmit(root, () => {
+                const values = LUQA_DENOMINATIONS.map(({ key }) => [key, root.querySelector('[name="' + key + '"]').valueAsNumber]);
+                return values.some(([, value]) => value > 0) && values.every(([key, value]) => Number.isSafeInteger(value) && value >= 0 && value <= coins[key]);
+            });
+            bindTransferSelection(root, refresh);
+        } };
+    const cancel = { action: "cancel", label: "Annuler", type: "button", callback: () => false };
+    if (operations) return formDialog.wait({ ...options, buttons: [
+        cancel,
+        { action: "transfer", label: "Transférer", default: true, callback: (event, button) => {
+            const selected = read(event, button);
+            return { action: Object.keys(coins).every(key => selected[key] === coins[key]) ? "coinsAll" : "coinsPart", coins: selected };
+        } },
+        { action: "drop", label: purse.system.coinPile ? "Scinder" : "Déposer",
+            callback: (event, button) => ({ action: purse.system.coinPile ? "coinsSplit" : "coinsDrop", coins: read(event, button) }) }
+    ] });
+    return formDialog.prompt({ ...options, buttons: [cancel], ok: { label: "Valider", callback: read } });
 }
 
-export async function performGroundAction(source, action, { token, itemId } = {}) {
+export async function performGroundAction(source, action, { token, itemId, coins: selectedCoins } = {}) {
     if (busy.has(source.uuid)) return;
     if (!inventoryActor(source) || !(source.type === "storage" ? storageAccess(source) : source.isOwner)) throw Error("Cet inventaire est inaccessible.");
     busy.add(source.uuid);
@@ -75,7 +93,7 @@ export async function performGroundAction(source, action, { token, itemId } = {}
             if (item?.type !== "purse") throw Error("Choisissez une bourse.");
             options.action = { coinsAll: "coinAll", coinsPart: "coinPart", coinsDrop: "coinDrop", coinsSplit: "coinSplit" }[action];
             options.purseId = item.id;
-            if (action !== "coinsAll") { options.coins = await chooseLuqa(item, action === "coinsDrop" ? "Déposer des Luqa" : action === "coinsSplit" ? "Scinder le tas de Luqa" : "Transférer des Luqa"); if (!options.coins) return; }
+            if (action !== "coinsAll") { options.coins = selectedCoins ?? await chooseLuqa(item, action === "coinsDrop" ? "Déposer des Luqa" : action === "coinsSplit" ? "Scinder le tas de Luqa" : "Transférer des Luqa"); if (!options.coins) return; }
             if (["coinsDrop", "coinsSplit"].includes(action)) options.sourceToken = (token ?? inventorySourceToken(source)).uuid;
         } else if (action === "takeStorage") options.action = "takeStorage";
         else if (action === "contents") { options.action = "transferContents"; options.deleteEmptyGround = false; }
@@ -97,12 +115,6 @@ export async function performGroundAction(source, action, { token, itemId } = {}
 export async function openPurseActions(source, itemId, token) {
     const purse = source.items.get(itemId);
     if (purse?.type !== "purse") return;
-    const action = await formDialog.wait({ window: { title: `Luqa — ${purse.name}` }, rejectClose: false,
-        buttons: [
-            { action: "coinsAll", label: purse.system.coinPile ? "Transférer tout" : "Transférer le contenu", callback: () => "coinsAll" },
-            { action: "coinsPart", label: "Transférer une partie", callback: () => "coinsPart" },
-            { action: "coinsDrop", label: purse.system.coinPile ? "Scinder" : "Déposer", callback: () => purse.system.coinPile ? "coinsSplit" : "coinsDrop" },
-            { action: "cancel", label: "Annuler", type: "button", callback: () => null }
-        ] });
-    if (["coinsAll", "coinsPart", "coinsDrop", "coinsSplit"].includes(action)) return performGroundAction(source, action, { token, itemId });
+    const choice = await chooseLuqa(purse, `Luqa — ${purse.name}`, { operations: true });
+    if (choice) return performGroundAction(source, choice.action, { token, itemId, coins: choice.coins });
 }
