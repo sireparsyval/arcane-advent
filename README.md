@@ -110,7 +110,7 @@ La barre de Points de Fièvre des fiches complètes utilise également un dégra
 ## Objets au sol et stockages
 
 Après une mise à jour du système, redémarrer le monde pour charger le nouveau
-type d’objet **Stockage / dépôt au sol** dans le répertoire **Objets**.
+type d’objet **Stockage** dans le répertoire **Objets**.
 Les anciens acteurs de stockage sont convertis au chargement par le MJ : leur
 contenu, leurs permissions et leurs jetons sont conservés.
 
@@ -193,12 +193,21 @@ les paramètres du système regroupent les stockages accessibles. Le MJ peut en
 créer, les placer sur la scène, les renommer, changer leur image et verrouiller
 les échanges des joueurs. Le répertoire distingue les **Stockages permanents**
 et les **Dépôts au sol**. Chacun est un Objet qui possède ses propres copies des
-items contenus. Glisser un stockage du répertoire Objets sur la scène, ou utiliser
-**Placer**. Plusieurs jetons du même Objet donnent accès au même contenu ; dupliquer
-l’Objet crée un inventaire indépendant, contenant compris. Un unique Actor technique,
+items contenus. **Placer** permet de créer plusieurs accès au même stockage ;
+ces jetons donnent accès au même contenu. Le glisser-déposer depuis le répertoire
+crée au contraire une copie indépendante du modèle, avec ses propres contenus.
+Un unique Actor technique,
 masqué dans le répertoire Acteurs, fournit les jetons natifs ciblables avec **T**.
 Le MJ peut ajouter des objets depuis cette fiche ou y glisser des Items du
 répertoire/compendium. Utiliser **Transférer…** pour les objets d’un personnage.
+
+Le MJ peut glisser directement sur la scène les modèles **Accessoire, Arme,
+Bouclier, Bourse, Contenant, Objet, Protection et Stockage**, ainsi que les
+**Effets Visuels, Éléments du Décor et Éléments Interactifs**. Les modèles du
+répertoire et des compendiums sont réutilisables : chaque dépôt conserve leurs
+paramètres, quantités et Luqa sans les modifier. Les stockages copient aussi leurs
+contenus imbriqués, verrouillages et réglages. Les équipements déposés arrivent
+non équipés ; les armes corporelles restent réservées aux inventaires de personnages.
 
 Les images par défaut se trouvent dans `assets/arcane-advent/entities/objects/` :
 
@@ -217,6 +226,12 @@ restent prioritaires pour les autres dépôts ; les tailles personnalisées déj
 enregistrées sont conservées. Le jeton reste carré. Le réglage **Image des dépôts
 au sol** définit l’image des nouveaux stockages créés manuellement. Changer
 l’image d’un stockage met aussi à jour ses jetons.
+
+L’image au sol renseignée sert aussi d’icône dans le répertoire et l’inventaire.
+Pour les décors et effets, c’est l’image de placement ; une vidéo reçoit une
+miniature statique. Les modèles déjà créés sont repris au chargement du monde par
+le MJ. Sans image au sol renseignée, une icône personnalisée reste conservée ;
+les sacs blancs par défaut sont remplacés par l’image par défaut du type d’objet.
 
 Survoler le nom d’un objet ou d’un équipement, dans l’inventaire, les équipements
 portés ou un stockage, affiche un petit aperçu de son **image au sol**. Sans image

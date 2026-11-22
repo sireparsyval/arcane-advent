@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { registerItemSceneDrops } from "../module/item-scene-placement.mjs";
 import {
     sceneObjectPlan, sceneObject, sceneObjectChildren, sceneObjectChildData,
     placeSceneObject, syncSceneObject, removeSceneObjectChildren, sceneObjectAccess,
@@ -225,6 +226,7 @@ function register() {
     globalThis.Hooks = { on(name, handler) { hooks.set(name, handler); return name; }, off() {} };
     globalThis.ui = { notifications: { error(message) { throw Error(message); } } };
     registerSceneObjects({ openPanel() {}, openInteraction() {} });
+    registerItemSceneDrops();
     return hooks;
 }
 
@@ -265,7 +267,7 @@ test("dragging an unloaded compendium model resolves asynchronously and uses the
 
 test("unsupported Items and player drops create no scene documents", async () => {
     const scene = setup(), hooks = register();
-    globalThis.fromUuid = async () => model("weapon");
+    globalThis.fromUuid = async () => model("trait");
     hooks.get("dropCanvasData")(canvas, { type: "Item", uuid: "Item.weapon", ...position });
     await new Promise(resolve => setImmediate(resolve));
     game.user = player();

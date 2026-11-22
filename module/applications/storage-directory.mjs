@@ -77,13 +77,6 @@ export function registerStorageDirectory() {
             if (isGroundTemplate(game.actors.get(row.dataset.entryId))) row.remove();
         }
     });
-    Hooks.on("dropCanvasData", (_canvas, data) => {
-        if (data.type !== "Item" || !game.user.isGM) return;
-        const item = fromUuidSync(data.uuid);
-        if (item?.type !== "storage" || item.pack || item.actor) return;
-        placeStorage(item, canvas.scene, { x: data.x, y: data.y }).catch(error => ui.notifications.error(error.message));
-        return false;
-    });
     Hooks.on("deleteItem", item => {
         if (item.type !== "storage" || !game.users.activeGM?.isSelf) return;
         for (const scene of game.scenes) {

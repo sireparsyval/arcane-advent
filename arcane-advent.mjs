@@ -9,6 +9,8 @@ import { StorageData, StorageItemData } from "./module/data/storage-data.mjs";
 import { ArcaneStorageSheet, ArcaneStorageItemSheet } from "./module/applications/actor/storage-sheet.mjs";
 import { registerStorageService, registerCoinPileAppearance } from "./module/storage.mjs";
 import { registerGroundTokenHUD } from "./module/token-ground-hud.mjs";
+import { registerItemSceneDrops } from "./module/item-scene-placement.mjs";
+import { migrateDirectoryImages } from "./module/item-images.mjs";
 import { migrateStorageActors, migrateStorageImages } from "./module/storage-migration.mjs";
 import { registerStorageDirectory, StorageDirectory } from "./module/applications/storage-directory.mjs";
 
@@ -49,6 +51,7 @@ Hooks.once("init", () => {
     game.arcaneAdvent.openStorages = () => new StorageDirectory().render({ force: true });
     registerStorageService();
     registerStorageDirectory();
+    registerItemSceneDrops();
     game.arcaneAdvent.openSceneObjects = () => new SceneObjectsPanel().render({ force: true });
     game.arcaneAdvent.openAnimations = game.arcaneAdvent.openSceneObjects;
     registerSceneObjects({ openPanel: game.arcaneAdvent.openSceneObjects, openInteraction: openSceneObjectInteraction });
@@ -163,4 +166,5 @@ Hooks.once("ready", async () => {
     await configureDefaultTurnMarker();
     await migrateStorageActors();
     await migrateStorageImages();
+    await migrateDirectoryImages();
 });

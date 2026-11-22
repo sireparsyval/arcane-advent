@@ -1,5 +1,6 @@
 import { canPlaceInContainer, EQUIPMENT_TYPES, isInventoryContainer, isInventoryItem } from "../inventory.mjs";
 import { equipmentAllowsGuard, equippedGuardItems } from "../guard.mjs";
+import { directoryImageChanges, syncItemSourceImage } from "../item-images.mjs";
 
 // Autorisation locale et temporaire pour une suppression initiée depuis les options du Trait.
 const authorizedLinkedDeletes = new WeakMap();
@@ -54,15 +55,20 @@ export class ArcaneItem extends Item {
 
     async _preCreate(data, operation, user) {
         if (await super._preCreate(data, operation, user) === false) return false;
-        if (this.type !== "storage") return;
-        if (this.actor) {
+        if (this.type === "storage" && this.actor) {
             ui.notifications.warn("Placez le stockage sur la scène depuis le répertoire Objets.");
             return false;
         }
-        this.updateSource({
+        if (this.type === "storage") this.updateSource({
             img: data.img || game.settings.get("arcane-advent", "storageImage"),
             "ownership.default": data.ownership?.default ?? CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER
         });
+        this.updateSource(await directoryImageChanges(this));
+        if (this.type === "storage" && this.system.contents?.length) {
+            const contents = JSON.parse(JSON.stringify(this.system.contents));
+            for (const source of contents) await syncItemSourceImage(source);
+            this.updateSource({ "system.contents": contents });
+        }
     }
 
     async _preUpdate(changes, operation, user) {
@@ -72,6 +78,9 @@ export class ArcaneItem extends Item {
             ui.notifications.warn("Un transfert est en cours sur cet inventaire.");
             return false;
         }
+        Object.assign(changes, await directoryImageChanges(this, changes));
+        const contents = changes.system?.contents ?? changes["system.contents"];
+        if (this.type === "storage" && Array.isArray(contents)) for (const source of contents) await syncItemSourceImage(source);
         if (!EQUIPMENT_TYPES.includes(this.type) || !changes.system) return;
         const system = changes.system;
 

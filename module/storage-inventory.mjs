@@ -1,5 +1,6 @@
 import { canPlaceInContainer, EQUIPMENT_TYPES, isInventoryItem } from "./inventory.mjs";
 import { inventorySource } from "./inventory-source.mjs";
+import { syncItemSourceImage } from "./item-images.mjs";
 
 const inventories = new WeakMap();
 const contentOwners = new WeakMap();
@@ -70,6 +71,7 @@ export class StorageInventory {
             if (!isInventoryItem(source) || projected.has(source._id)) throw new Error("Contenu de stockage invalide.");
             source.system ??= {};
             if (EQUIPMENT_TYPES.includes(source.type)) source.system.equipped = false;
+            await syncItemSourceImage(source);
             const item = new CONFIG.Item.documentClass(source, { strict: true });
             item.validate({ strict: true });
             projected.set(item.id, item);

@@ -6,7 +6,7 @@
             "storage": "Stockage"
         },
         "Item": {
-            "storage": "Stockage / Dépôt au Sol",
+            "storage": "Stockage",
             "weapon": "Arme",
             "shield": "Bouclier",
             "protection": "Protection",

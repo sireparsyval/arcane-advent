@@ -272,14 +272,6 @@ export function registerSceneObjects({ openPanel, openInteraction }) {
         operations = result.then(() => {});
         return result;
     };
-    Hooks.on("dropCanvasData", (_canvas, data) => {
-        if (data.type !== "Item" || !data.uuid || !game.user.isGM) return;
-        const scene = canvas.scene;
-        // Resolve asynchronously so unopened compendium models work as well as world Items.
-        fromUuid(data.uuid).then(item => {
-            if (SCENE_OBJECT_TYPES.includes(item?.type)) return placeSceneObject(item, scene, { x: data.x, y: data.y });
-        }).catch(error => ui.notifications.error(error.message));
-    });
     Hooks.on("createTile", (tile, options) => {
         if (!sceneObject(tile) || options.sceneObjectSync || !game.users.activeGM?.isSelf) return;
         syncSceneObject(tile).catch(error => ui.notifications.error(error.message));

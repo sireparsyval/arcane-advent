@@ -4,6 +4,7 @@ import { isDeepStrictEqual } from "node:util";
 import { registerStorageService, STORAGE_QUERY, storageAccess, requestInventoryAction, createStorage, placeStorage, isGroundTemplate, syncCoinPileAppearance } from "../module/storage.mjs";
 import { inventoryForDocument, inventoryForToken } from "../module/storage-inventory.mjs";
 import { migrateStorageActors } from "../module/storage-migration.mjs";
+import { placeItemPreset, registerItemSceneDrops } from "../module/item-scene-placement.mjs";
 
 class Collection extends Map {
     [Symbol.iterator]() { return this.values(); }
@@ -873,4 +874,84 @@ test("currency operations still enforce inventory ownership and locked target st
     const allowed = actor("coin-security-source", "alice"); allowed.items.set("wallet", wallet("wallet", { gold: 2 }));
     assert.match((await query(request(allowed, target, { action: "coinPart", selections: [], purseId: "wallet", coins: { gold: 1 } }))).error, /verrouillé/);
     assert.equal(allowed.items.get("wallet").system.coins.gold, 2);
+});
+
+test("directory inventory presets produce independent ground items with their full parameters and stock", async () => {
+    game.user = gm;
+    for (const type of ["accessory", "weapon", "shield", "purse", "container", "object", "protection"]) {
+        const preset = new StoredItem({ name: `Preset ${type}`, type, img: "directory.png", folder: "presets-folder", system: {
+            quantity: 7, groundTokenImage: "assets/ground.png", groundTokenSize: 0.75, description: "Preset", equipped: true,
+            damageFormula: "2d8", coins: { gold: 5 }, containerId: null
+        } });
+        const before = preset.toObject();
+        const first = await placeItemPreset(preset, scene, { x: 300, y: 400 });
+        const second = await placeItemPreset(preset, scene, { x: 500, y: 400 });
+        assert.notEqual(first.uuid, second.uuid);
+        assert.notEqual([...first.items][0].id, [...second.items][0].id);
+        assert.deepEqual(preset.toObject(), before);
+        const copy = [...first.items][0];
+        assert.equal(copy.toObject().folder, null);
+        assert.equal(copy.type, type); assert.equal(copy.system.quantity, 7); assert.equal(copy.system.damageFormula, "2d8");
+        assert.equal(copy.system.description, "Preset"); assert.equal(copy.system.coins.gold, 5);
+        if (["weapon", "shield", "protection", "accessory"].includes(type)) assert.equal(copy.system.equipped, false);
+        const placed = groundToken(first); assert.equal(placed.width, 0.75); assert.equal(placed.texture.src, "assets/ground.png");
+        await first.updateInventoryItem(copy.id, { "system.quantity": 1 });
+        assert.equal([...second.items][0].system.quantity, 7);
+    }
+});
+
+test("storage presets retain nested content and settings in independent copies, including compendium models", async () => {
+    game.user = gm;
+    const preset = new StoredItem({ type: "storage", name: "Coffre", img: "chest.png", system: {
+        ground: false, locked: true, fixedOnScene: true, groundTokenSize: 2, description: "Coffre fermé",
+        contents: [{ _id: "bag", name: "Sac", type: "container", system: { containerId: null } },
+            { _id: "stock", name: "Pommes", type: "object", system: { containerId: "bag", quantity: 6 } }]
+    } });
+    preset.pack = "presets.models";
+    const before = preset.toObject();
+    const first = await placeItemPreset(preset, scene, { x: 100, y: 800 });
+    const second = await placeItemPreset(preset, scene, { x: 400, y: 800 });
+    assert.deepEqual(preset.toObject(), before); assert.notEqual(first.uuid, second.uuid);
+    assert.equal(first.system.locked, true); assert.equal(first.system.fixedOnScene, true); assert.equal(groundToken(first).width, 2);
+    const bag = [...first.items].find(entry => entry.type === "container");
+    const apple = [...first.items].find(entry => entry.type === "object");
+    assert.notEqual(bag.id, "bag"); assert.equal(apple.system.containerId, bag.id);
+    assert.notEqual([...second.items][0].id, bag.id);
+});
+
+test("a failed preset placement cleans the new copy and leaves the reusable model unchanged", async () => {
+    game.user = gm;
+    const preset = new StoredItem({ type: "object", name: "Failed", system: { quantity: 5, groundTokenSize: 1 } });
+    const before = preset.toObject(), itemsBefore = game.items.size, tokensBefore = scene.tokens.size;
+    const save = StoredItem.prototype.update;
+    StoredItem.prototype.update = async function (changes, ...args) {
+        if (Object.hasOwn(changes, "system.contents")) throw Error("preset write rejected");
+        return save.call(this, changes, ...args);
+    };
+    try { await assert.rejects(placeItemPreset(preset, scene, { x: 100, y: 100 }), /preset write/); }
+    finally { StoredItem.prototype.update = save; }
+    assert.equal(game.items.size, itemsBefore); assert.equal(scene.tokens.size, tokensBefore);
+    assert.deepEqual(preset.toObject(), before);
+    game.user = alice;
+    await assert.rejects(placeItemPreset(preset, scene), /MJ/);
+    game.user = gm;
+    preset.actor = actor("owned-preset-source", "gm");
+    await assert.rejects(placeItemPreset(preset, scene), /inventaire/);
+});
+
+test("canvas drops resolve unloaded presets asynchronously and keep the original scene even if the user changes scenes", async () => {
+    game.user = gm;
+    const callbacks = new Map(), originalResolve = globalThis.fromUuid;
+    globalThis.Hooks = { on: (name, callback) => callbacks.set(name, callback) };
+    const preset = new StoredItem({ type: "object", name: "Drag", system: { quantity: 3 } });
+    let resolve;
+    globalThis.fromUuid = () => new Promise(done => { resolve = done; });
+    globalThis.ui.notifications.error = message => assert.fail(message);
+    registerItemSceneDrops();
+    const count = scene.tokens.size;
+    callbacks.get("dropCanvasData")(canvas, { type: "Item", uuid: "Compendium.presets.Item.drag", x: 700, y: 700 });
+    const originalScene = canvas.scene; canvas.scene = null;
+    try { resolve(preset); await new Promise(done => setTimeout(done, 10)); }
+    finally { canvas.scene = originalScene; globalThis.fromUuid = originalResolve; }
+    assert.equal(scene.tokens.size, count + 1);
 });
