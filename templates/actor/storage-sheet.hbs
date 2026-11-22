@@ -43,7 +43,6 @@
                         title="Déposer au sol" aria-label="Déposer {{name}} au sol"><i class="fa-solid fa-arrow-down-to-line" aria-hidden="true"></i></button>
                 {{/if}}
                 {{#if @root.isGM}}
-                    <button type="button" data-action="moveItem" data-item-id="{{id}}" title="Déplacer vers un contenant" aria-label="Déplacer {{name}}">↪</button>
                     <button type="button" data-action="editItem" data-item-id="{{id}}" title="Modifier {{name}}" aria-label="Modifier {{name}}">⚙</button>
                 {{/if}}
             </div>

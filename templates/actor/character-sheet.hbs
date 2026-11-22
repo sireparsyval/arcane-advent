@@ -69,12 +69,10 @@
     <div class="aa-equipment-actions">
         {{#if @root.canEditState}}
             {{#unless system.corporeal}}
-            {{> quickInventoryControls}}
             <button type="button" data-action="toggleEquipment" data-item-id="{{id}}"
-                aria-label="Déséquiper" title="Déséquiper">{{#if unequipText}}{{unequipText}}{{else}}↓{{/if}}</button>
-            <button type="button" data-action="moveInventoryItem" data-item-id="{{id}}"
                 data-inventory-drag="{{id}}" draggable="true"
-                aria-label="Déplacer vers un contenant" title="Déplacer vers… (ou glisser)">↪</button>
+                aria-label="Déséquiper" title="Déséquiper (ou glisser pour ranger)">{{#if unequipText}}{{unequipText}}{{else}}↓{{/if}}</button>
+            {{> quickInventoryControls}}
             {{/unless}}
             <button type="button" data-action="editInventoryItem" data-item-id="{{id}}"
                 aria-label="Modifier {{name}}" title="Modifier">⚙</button>
@@ -1394,19 +1392,14 @@
                                     {{/if}}
                                     {{#if @root.canEditState}}
                                         <div class="aa-equipment-actions">
-                                            {{> quickInventoryControls}}
                                             {{#if isPurse}}
                                                 <button type="button" data-action="purseActions" data-item-id="{{id}}" title="Opérations sur les Luqa" aria-label="Transférer ou déposer des Luqa"><i class="fa-solid fa-coins" aria-hidden="true"></i></button>
                                             {{/if}}
                                             {{#if canEquip}}
-                                                <button type="button" data-action="toggleEquipment" data-item-id="{{id}}">↑ Équiper</button>
+                                                <button type="button" data-action="toggleEquipment" data-item-id="{{id}}"
+                                                    aria-label="Équiper {{name}}" title="Équiper">↑</button>
                                             {{/if}}
-                                            {{#if nested}}
-                                                <button type="button" data-action="moveInventoryItemToRoot" data-item-id="{{id}}"
-                                                    aria-label="Sortir {{name}} du contenant" title="Remettre hors contenant">↰</button>
-                                            {{/if}}
-                                            <button type="button" data-action="moveInventoryItem" data-item-id="{{id}}"
-                                                aria-label="Déplacer {{name}}" title="Déplacer vers…">↪</button>
+                                            {{> quickInventoryControls}}
                                             <button type="button" data-action="editInventoryItem" data-item-id="{{id}}"
                                                 aria-label="Modifier {{name}}" title="Modifier">⚙</button>
                                         </div>
