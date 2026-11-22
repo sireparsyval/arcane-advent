@@ -14,7 +14,7 @@ function animationsFor(negative) {
 
 export class SceneryElementSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     static DEFAULT_OPTIONS = {
-        classes: ["arcane-advent", "aa-scenery-sheet"],
+        classes: ["arcane-advent", "aa-fixed-actions", "aa-scenery-sheet"],
         position: { width: 610, height: 720 },
         window: { resizable: true },
         form: { submitOnChange: false, closeOnSubmit: true },
@@ -22,7 +22,7 @@ export class SceneryElementSheet extends HandlebarsApplicationMixin(ItemSheetV2)
     };
 
     static PARTS = {
-        editor: { template: "systems/arcane-advent/templates/item/scenery-sheet.hbs", scrollable: [""] }
+        editor: { template: "systems/arcane-advent/templates/item/scenery-sheet.hbs", scrollable: [".aa-menu-content"] }
     };
 
     async _prepareContext(options) {

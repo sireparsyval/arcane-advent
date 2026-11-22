@@ -7,14 +7,14 @@ const { ItemSheetV2 } = foundry.applications.sheets;
 
 export class GlyphSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     static DEFAULT_OPTIONS = {
-        classes: ["arcane-advent", "aa-glyph-sheet"],
+        classes: ["arcane-advent", "aa-fixed-actions", "aa-glyph-sheet"],
         position: { width: 560, height: "auto" },
         form: { submitOnChange: false, closeOnSubmit: true },
         actions: { showGlyph: this._showGlyph }
     };
 
     static PARTS = {
-        editor: { template: "systems/arcane-advent/templates/item/glyph-sheet.hbs" }
+        editor: { template: "systems/arcane-advent/templates/item/glyph-sheet.hbs", scrollable: [".aa-menu-content"] }
     };
 
     async _onRender(context, options) {

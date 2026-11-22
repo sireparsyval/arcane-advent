@@ -105,3 +105,17 @@ for (const type of ["storage", "character", "npc"]) test(`${type} token renderin
     game.time.serverTime=3150;for(const tick of ticks)tick();
     assert.equal(ticks.size,0);assert.equal(token.object.position.y,500);assert.equal(token.object.mesh.position.y,550);
 });
+
+
+test("projectiles set to disappear are removed after arrival; persistent projectile art stays", async()=>{
+    const savedInterval=globalThis.setInterval,savedWindow=globalThis.window;let cleanup;
+    const removed=[],updated=[];
+    const tile=(id,expiresAt)=>({documentName:"Tile",id,getFlag(_scope,key){return key==="weaponProjectile"?{expiresAt}:null;},async update(data){updated.push(data);}});
+    const expired=tile("expired",900),future=tile("future",1500),persistent=tile("persistent",null);
+    const activeScene={tiles:[expired,future,persistent],tokens:[],async deleteEmbeddedDocuments(type,ids){assert.equal(type,"Tile");removed.push(...ids);}};
+    globalThis.game={user:{isGM:true},users:{activeGM:{isSelf:true}},time:{serverTime:1000},scenes:[activeScene]};
+    globalThis.Hooks={on(){},once(_event,callback){callback();}};globalThis.CONFIG={queries:{}};
+    globalThis.window={addEventListener(){}};globalThis.setInterval=callback=>{cleanup=callback;return 1;};
+    try{registerObjectMotion();await cleanup();assert.deepEqual(removed,["expired"]);assert.deepEqual(updated,[]);}
+    finally{globalThis.setInterval=savedInterval;globalThis.window=savedWindow;}
+});

@@ -6,6 +6,7 @@ import { bindFieldEnter, formDialog } from "../form-interactions.mjs";
 import { storageAccess, looseGroundItem } from "../../storage.mjs";
 import { groundMenu } from "../../ground-items.mjs";
 import { openPurseActions, performGroundAction } from "../ground-actions.mjs";
+import { motionFields, bindMotionFields, readMotionFields } from "../scene-object-motion-controls.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -56,7 +57,7 @@ function reductionChanges(form, previous) {
 
 export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemSheetV2) {
     static DEFAULT_OPTIONS = {
-        classes: ["arcane-advent", "aa-inventory-item-sheet"],
+        classes: ["arcane-advent", "aa-fixed-actions", "aa-inventory-item-sheet"],
         position: { width: 520, height: "auto" },
         form: { submitOnChange: false, closeOnSubmit: true },
         actions: {
@@ -84,7 +85,7 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
     static PARTS = {
         editor: {
             template: "systems/arcane-advent/templates/item/inventory-item-sheet.hbs",
-            scrollable: [""]
+            scrollable: [".aa-menu-content"]
         }
     };
 
@@ -118,6 +119,7 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
     async _onRender(context, options) {
         await super._onRender(context, options);
         bindFieldEnter(this.element);
+        if (this.document.type === "weapon") bindMotionFields(this.element, "system.projection");
         const storage = storageInventoryOwner(this.document);
         if (storage?.document && !this._storageHooks.length) {
             this._storageHooks.push(["updateItem", Hooks.on("updateItem", item => {
@@ -144,6 +146,7 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
             isContainer: isInventoryContainer(this.document),
             coins: luqaCounters(this.document),
             isWeapon: type === "weapon",
+            weaponMotionFields: type === "weapon" ? motionFields(system.projection ?? { rotation: "direction" }, "system.projection") : "",
             isShield: type === "shield",
             isProtection: type === "protection",
             hasReductions: type === "shield" || type === "protection",
@@ -163,6 +166,7 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
         if (!data.name) throw new Error("Donnez un nom à l’objet.");
 
         if (item.type === "weapon") {
+            data.system.projection = { ...readMotionFields(form, { prefix: "system.projection" }), disappear: data.system.projection?.disappear === true };
             data.system.properties = selectedChoices(form, "data-weapon-property", WEAPON_PROPERTIES, item.system.properties);
             const types = form.querySelector("[data-weapon-damage-types]").value.split("\n");
             data.system.damageTypes = [...new Set(types.map(type => type.trim()).filter(Boolean))];

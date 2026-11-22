@@ -82,7 +82,10 @@ test("la fiche d'arme propose Garde et enregistre le choix sans exiger Deux main
     for (const checked of [[], ["guard"]]) {
         const form = {
             querySelectorAll: () => checked.map(value => ({ value })),
-            querySelector: () => ({ value: "Tranchants" })
+            querySelector: selector => {
+                const key=selector.match(/system\.projection\.(\w+)/)?.[1];
+                return { value: key ? { duration: "1", rotation: "direction", offset: "0", turns: "1", direction: "1" }[key] : "Tranchants" };
+            }
         };
         const data = sheet._processFormData(null, form, { name: "Épée", system: {} });
         assert.deepEqual(data.system.properties, ["custom", ...checked]);

@@ -40,9 +40,25 @@ export function bindFieldEnter(root) {
     }, true);
 }
 
+// Keep selection shortcuts with the actions, inside the same native form.
+export function dockDialogActions(root) {
+    const form = root?.querySelector?.(".dialog-form");
+    const content = form?.querySelector?.(":scope > .dialog-content");
+    const footer = form?.querySelector?.(":scope > .form-footer");
+    if (!content || !footer) return;
+    for (const selection of content.querySelectorAll?.(".aa-transfer-selection") ?? []) {
+        form.insertBefore(selection, footer);
+    }
+}
+
+function fixedActionOptions(options) {
+    return { ...options, classes: [...(options.classes ?? []), "aa-fixed-actions"] };
+}
+
 function optionsWithFieldEnter(options) {
     const render = options.render;
-    return { ...options, render: (event, dialog) => {
+    return { ...fixedActionOptions(options), render: (event, dialog) => {
+        dockDialogActions(dialog.element);
         bindFieldEnter(dialog.element);
         orderDialogButtons(dialog.element);
         return render?.(event, dialog);
@@ -54,8 +70,9 @@ function optionsWithFieldEnter(options) {
 // application's Dialog class or change Foundry/third-party dialogs globally.
 export const formDialog = {
     create(options) {
-        const dialog = new foundry.applications.api.DialogV2(options);
+        const dialog = new foundry.applications.api.DialogV2(fixedActionOptions(options));
         dialog.addEventListener("render", () => {
+            dockDialogActions(dialog.element);
             bindFieldEnter(dialog.element);
             orderDialogButtons(dialog.element);
         });

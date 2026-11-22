@@ -3147,3 +3147,43 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-animation-options .hint { color: var(--color-text-subtle); font-size: var(--font-size-12); }
 
 .aa-animation-options [hidden] { display: none; }
+
+/* System editors and dialogs: only the body scrolls; actions stay in view. */
+.application.aa-fixed-actions .window-content {
+    min-height: 0;
+    overflow: hidden;
+}
+.application.aa-fixed-actions .aa-menu-shell,
+.application.aa-fixed-actions .dialog-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+.application.aa-fixed-actions .aa-menu-content,
+.application.aa-fixed-actions .dialog-form > .dialog-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--form-gap, 12px);
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 5px;
+}
+.application.aa-fixed-actions .aa-menu-content > *,
+.application.aa-fixed-actions .dialog-content > * {
+    flex-shrink: 0;
+}
+.application.aa-fixed-actions .aa-menu-shell > .form-footer,
+.application.aa-fixed-actions .dialog-form > .form-footer,
+.application.aa-fixed-actions .dialog-form > .aa-transfer-selection {
+    flex: 0 0 auto;
+    margin: 0;
+    padding-top: 10px;
+}
+.application.aa-fixed-actions .aa-menu-shell > .form-footer,
+.application.aa-fixed-actions .dialog-form > .form-footer {
+    border-top: 1px solid var(--color-border-light-primary, #75634c);
+}

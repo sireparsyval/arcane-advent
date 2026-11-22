@@ -1,4 +1,5 @@
-<section class="aa-glyph-editor standard-form">
+<section class="aa-glyph-editor standard-form aa-menu-shell">
+    <div class="aa-menu-content scrollable">
     <div class="aa-glyph-reference-heading">
         <label>Identifiant du glyphe
             <input type="text" name="system.glyphId" value="{{system.glyphId}}" required
@@ -24,6 +25,7 @@
     <label>Notes MJ
         <textarea rows="4" name="system.description" {{#unless canEdit}}disabled{{/unless}}>{{system.description}}</textarea>
     </label>
+    </div>
     <footer class="form-footer">
         <button type="button" data-action="showGlyph">Montrer le symbole au chat</button>
         {{#if canEdit}}<button type="submit"><i class="fa-solid fa-save" aria-hidden="true"></i> Enregistrer</button>{{/if}}

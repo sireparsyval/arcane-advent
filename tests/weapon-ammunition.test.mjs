@@ -6,7 +6,7 @@ function setup(quantity = 3) {
     const ammo = { id: "stock", type: "object", name: "Flèches", system: { objectClass: " MUNITIONS ", quantity },
         toObject() { return { _id: this.id, type: this.type, name: this.name, system: { ...this.system } }; },
         async update(data) { this.system.quantity = data["system.quantity"]; } };
-    const weapon = { id: "bow", type: "weapon", system: { properties: new Set(["ammunition"]), ammunition: { enabled: true, itemId: ammo.id, quantity: 1 } } };
+    const weapon = { id: "bow", type: "weapon", flags: {}, getFlag(_scope,key) { return this.flags[key]; }, async setFlag(_scope,key,value) { this.flags[key]=value; }, system: { properties: new Set(["ammunition"]), ammunition: { enabled: true, itemId: ammo.id, quantity: 1 } } };
     const actor = { isOwner: true, items: new Items([[ammo.id, ammo], [weapon.id, weapon]]),
         async deleteEmbeddedDocuments(_type, ids) { for (const id of ids) this.items.delete(id); },
         async createEmbeddedDocuments(_type, sources, options) { assert.equal(options.keepId, true); for (const source of sources) this.items.set(source._id, { ...ammo, system: source.system }); } };
@@ -51,4 +51,15 @@ test("rapid attacks sharing the last projectile produce only one roll", async ()
 test("only inventory objects of class Munitions are offered", () => {
     const env = setup(); env.actor.items.set("other", { id:"other", type:"weapon", system:{objectClass:"Munitions"} });
     assert.deepEqual(ammunitionItems(env.actor).map(i => i.id), ["stock"]);
+});
+
+
+test("the last projectile keeps its ground artwork for a later visual shot, without retaining inventory quantity",async()=>{
+    const {actor,ammo,weapon,attack}=setup(1);
+    ammo.system.groundTokenImage="arrow.png";ammo.system.groundTokenSize=.35;ammo.system.imageAngleOffset=45;
+    await attack();assert.equal(actor.items.has(ammo.id),false);
+    const {weaponProjectile}=await import("../module/weapon-projectiles.mjs");
+    assert.deepEqual(weaponProjectile(actor,weapon),{stockId:"stock",name:"Flèches",img:"arrow.png",size:.35,offset:45});
+    weapon.system.ammunition.itemId="another-stock";
+    assert.throws(()=>weaponProjectile(actor,weapon),/stock/);
 });

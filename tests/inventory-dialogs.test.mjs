@@ -42,9 +42,9 @@ test("inventory dialogs, token HUD, aptitude targeting and defense tooltips in a
             "--no-first-run", "--disable-background-networking", `--user-data-dir=${profile}`,
             "--dump-dom", "--virtual-time-budget=5000", `http://127.0.0.1:${server.address().port}/`],
         { windowsHide: true, timeout: 35000, maxBuffer: 1024 * 1024 });
-        assert.match(stdout, /data-status="passed"/, stdout);
+        assert.match(stdout, /data-status="passed"/, stdout.match(/<pre>(.*?)<\/pre>/s)?.[1] ?? stdout.slice(-4000));
         const results = JSON.parse(stdout.match(/<pre>(.*?)<\/pre>/s)[1]);
-        assert.equal(results.length, 46);
+        assert.equal(results.length, 52);
         assert.ok(results.every(result => result.passed), JSON.stringify(results));
     } finally {
         server.closeAllConnections();

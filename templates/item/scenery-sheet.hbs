@@ -1,4 +1,5 @@
-<section class="standard-form scrollable aa-scene-object-editor">
+<section class="standard-form aa-scene-object-editor aa-menu-shell">
+    <div class="aa-menu-content scrollable">
     <fieldset {{#unless editable}}disabled{{/unless}}>
         <legend>{{typeLabel}}</legend>
         <label class="form-group"><span class="label">Nom</span><span class="form-fields">
@@ -108,6 +109,7 @@
             <label class="form-group stacked"><span class="label">Interactions</span><textarea name="system.interactions" rows="3">{{system.interactions}}</textarea></label>
         </fieldset>
     {{/if}}
+    </div>
     {{#if editable}}
         <footer class="form-footer">
             {{#if canPlace}}<button type="button" data-action="placeSceneObject">Enregistrer et placer sur la scène</button>{{/if}}

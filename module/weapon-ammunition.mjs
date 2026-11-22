@@ -1,3 +1,12 @@
+import { groundItemAppearance } from "./ground-items.mjs";
+
+export function projectileArtwork(item) {
+    const appearance = groundItemAppearance(item);
+    return { stockId: item.id, name: item.name, img: appearance.img, size: appearance.size,
+        offset: item.system.imageAngleOffset ?? 0 };
+}
+
+
 const queues = new WeakMap();
 export function ammunitionItems(actor) {
     return [...(actor?.items ?? [])].filter(item => item.type === "object"
@@ -14,6 +23,11 @@ export function withWeaponAmmunition(actor, weaponId, roll) {
         const item = ammunitionItems(actor).find(item => item.id === ammo.itemId), cost = ammo.quantity;
         if (!item || !Number.isSafeInteger(cost) || cost < 1 || !Number.isSafeInteger(item.system.quantity)
             || item.system.quantity < cost) throw Error("Munitions manquantes ou insuffisantes : choisissez un stock et une quantité dans l’arme.");
+        // Keep the artwork available even after the last projectile is consumed.
+        const artwork = projectileArtwork(item);
+        if (JSON.stringify(weapon.getFlag("arcane-advent", "lastProjectile")) !== JSON.stringify(artwork)) {
+            await weapon.setFlag("arcane-advent", "lastProjectile", artwork);
+        }
         const quantity = item.system.quantity, source = item.toObject();
         const empty = quantity === cost;
         if (empty) await actor.deleteEmbeddedDocuments("Item", [item.id]);

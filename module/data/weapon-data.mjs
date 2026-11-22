@@ -23,6 +23,14 @@ export class WeaponData extends EquipmentData {
         return {
             ...super.defineSchema(),
             corporeal: new BooleanField({ initial: false }),
+            projection: new SchemaField({
+                duration: new NumberField({ initial: 1, min: 0.1, max: 60, required: true, nullable: false }),
+                rotation: new StringField({ initial: "direction", choices: ["locked", "direction", "continuous"], blank: false }),
+                offset: new NumberField({ initial: 0, min: -3600, max: 3600, required: true, nullable: false }),
+                turns: new NumberField({ initial: 1, min: 0, max: 100, required: true, nullable: false }),
+                direction: new NumberField({ initial: 1, choices: [1, -1], required: true, nullable: false }),
+                disappear: new BooleanField({ initial: true })
+            }),
 
             weaponClass: new StringField({
                 required: true,

@@ -6,6 +6,7 @@ import { groundItemAppearance, mainGroundContainer, storageContentItems, firstIn
 import { coinPlan, packStoragePlan } from "./inventory-ground-plans.mjs";
 import { animateInventoryTransfer } from "./inventory-transfer-animation.mjs";
 import { mergeStackPlan } from "./inventory-stacks.mjs";
+import { animateWeaponShot } from "./weapon-projectiles.mjs";
 
 export const STORAGE_IMAGE = "assets/arcane-advent/entities/objects/bag-item.png";
 export const STORAGE_QUERY = "arcane-advent.inventory";
@@ -168,6 +169,11 @@ async function processRequest(data, user) {
     if (!inventoryActor(source) || source.pack
         || !(source.type === "storage" ? storageAccess(source, user) : source.testUserPermission(user, "OWNER"))) {
         throw new Error("Vous n’avez pas accès à cet inventaire.");
+    }
+    if (data.action === "shot") {
+        const token = await fromUuid(data.sourceToken);
+        requireSceneToken(token, source, user);
+        return animateWeaponShot(source, source.items.get(data.selections?.[0]?.id), token, data.points);
     }
     if (data.action === "transfer" && data.selections?.length === 1) {
         const pile = source.items.get(data.selections[0].id);

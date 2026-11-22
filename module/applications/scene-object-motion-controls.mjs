@@ -2,22 +2,23 @@ import { formDialog } from "./form-interactions.mjs";
 import { chooseAnimationPath } from "../scene-animation-path.mjs";
 import { objectCenter, requestObjectMotion, motionSettings } from "../scene-object-motion.mjs";
 import { requestInventoryAction } from "../storage.mjs";
+import { weaponProjectile } from "../weapon-projectiles.mjs";
 
-export function motionFields(settings = {}) {
+export function motionFields(settings = {}, prefix = "motion") {
     return `<div class="aa-object-motion-settings">
-        <label>Vitesse <input name="motion.duration" type="number" min="0.1" max="60" step="0.1" value="${settings.duration??1}" required> s</label>
-        <label>Rotation <select name="motion.rotation"><option value="locked" ${settings.rotation==="locked"||!settings.rotation?"selected":""}>Verrouillée</option><option value="direction" ${settings.rotation==="direction"?"selected":""}>Selon le trajet</option><option value="continuous" ${settings.rotation==="continuous"?"selected":""}>Continue</option></select></label>
-        <label data-motion-direction>Offset <input name="motion.offset" type="number" min="-3600" max="3600" step="any" value="${settings.offset??0}" required>°</label>
-        <label data-motion-continuous>Tours <input name="motion.turns" type="number" min="0" max="100" step="any" value="${settings.turns??1}" required><select name="motion.direction"><option value="1" ${settings.direction!==-1?"selected":""}>↻ Horaire</option><option value="-1" ${settings.direction===-1?"selected":""}>↺ Antihoraire</option></select></label>
+        <label>Vitesse <input name="${prefix}.duration" type="number" min="0.1" max="60" step="0.1" value="${settings.duration??1}" required> s</label>
+        <label>Rotation <select name="${prefix}.rotation"><option value="locked" ${settings.rotation==="locked"||!settings.rotation?"selected":""}>Verrouillée</option><option value="direction" ${settings.rotation==="direction"?"selected":""}>Selon le trajet</option><option value="continuous" ${settings.rotation==="continuous"?"selected":""}>Continue</option></select></label>
+        <label data-motion-direction>Offset <input name="${prefix}.offset" type="number" min="-3600" max="3600" step="any" value="${settings.offset??0}" required>°</label>
+        <label data-motion-continuous>Tours <input name="${prefix}.turns" type="number" min="0" max="100" step="any" value="${settings.turns??1}" required><select name="${prefix}.direction"><option value="1" ${settings.direction!==-1?"selected":""}>↻ Horaire</option><option value="-1" ${settings.direction===-1?"selected":""}>↺ Antihoraire</option></select></label>
     </div>`;
 }
-export function readMotionFields(root, { validate = true } = {}) {
-    const value=key=>root.querySelector(`[name="motion.${key}"]`)?.value;
+export function readMotionFields(root, { validate = true, prefix = "motion" } = {}) {
+    const value=key=>root.querySelector(`[name="${prefix}.${key}"]`)?.value;
     const settings={duration:Number(value("duration")),rotation:value("rotation"),offset:Number(value("offset")),turns:Number(value("turns")),direction:Number(value("direction"))};
     return validate ? motionSettings(settings) : settings;
 }
-export function bindMotionFields(root) {
-    const mode=root.querySelector('[name="motion.rotation"]');
+export function bindMotionFields(root, prefix = "motion") {
+    const mode=root.querySelector(`[name="${prefix}.rotation"]`);
     const refresh=()=>{
         for(const [selector,expected] of [["[data-motion-direction]","direction"],["[data-motion-continuous]","continuous"]]) {
             for(const node of root.querySelectorAll(selector)) {
@@ -76,21 +77,16 @@ export async function animatePickedObject(settings) {
 }
 export async function throwInventoryWeapon(actor,weaponId) {
     const weapon=actor.items.get(weaponId);
-    if(!actor.isOwner||weapon?.type!=="weapon"||weapon.system.corporeal||!weapon.system.equipped||!weapon.system.properties.has("thrown"))return;
+    if(!actor.isOwner||weapon?.type!=="weapon"||!weapon.system.equipped)return;
+    const thrown = weapon.system.properties.has("thrown");
+    if (thrown ? weapon.system.corporeal : !weapon.system.properties.has("ammunition")) return;
+    if (!thrown) weaponProjectile(actor, weapon);
     const token=actor.token?.parent?.id===canvas.scene?.id?actor.token:actor.getActiveTokens()?.find(t=>t.document.parent.id===canvas.scene?.id)?.document;
     if(!token)throw Error("Placez le personnage sur la scène active.");
-    let settings,draft={rotation:"direction"};
-    while(!settings) {
-        draft=await formDialog.wait({window:{title:"Lancer l’arme"},position:{width:620},
-            content:motionFields(draft),render:(_event,dialog)=>bindMotionFields(dialog.element),
-            buttons:[{action:"launch",label:"Tracer et lancer",callback:(_event,_button,dialog)=>readMotionFields(dialog.element,{validate:false})},
-                {action:"cancel",label:"Annuler",type:"button",default:true,callback:()=>false}],rejectClose:false});
-        if(!draft)return;
-        try{settings=motionSettings(draft);}catch(error){ui.notifications.error(error.message);}
-    }
+    const settings = motionSettings(weapon.system.projection ?? { rotation: "direction" });
     const scene=canvas.scene,route=await chooseAnimationPath({start:objectCenter(token)});if(!route)return;
     try{if(canvas.scene?.id!==scene.id)throw Error("La scène a changé.");
-        const result=await requestInventoryAction(actor,[{id:weaponId,quantity:1}],{action:"throw",sourceToken:token.uuid,points:route.points,motion:settings});
+        const result=await requestInventoryAction(actor,[{id:weaponId,quantity:1}],{action:thrown ? "throw" : "shot",sourceToken:token.uuid,points:route.points,motion:settings});
         if(result.warning)ui.notifications.warn(result.warning);return result;
     }finally{route.cleanup();}
 }

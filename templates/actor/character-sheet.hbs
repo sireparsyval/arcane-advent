@@ -1158,7 +1158,7 @@
                                         {{#if properties.ammunition}}{{#unless properties.thrown}}<span>• n.</span>{{else}}<span>• Distance n.</span>{{/unless}}<input type="number" min="0" value="{{system.ammunition.normalRange}}" data-equipment-edit data-item-id="{{id}}" data-item-field="system.ammunition.normalRange" aria-label="Portée normale à distance"><span>l.</span><input type="number" min="0" value="{{system.ammunition.longRange}}" data-equipment-edit data-item-id="{{id}}" data-item-field="system.ammunition.longRange" aria-label="Portée longue à distance">{{/if}}
                                         <span>m</span>
                                     </div>
-                                    {{#if properties.thrown}}<button class="aa-weapon-motion" type="button" data-action="throwWeapon" data-item-id="{{id}}" title="Lancer et déposer cette arme" {{#if system.corporeal}}disabled{{/if}}>🎯</button>{{else}}{{#if properties.ammunition}}<button class="aa-weapon-motion" type="button" data-action="weaponAmmunitionMenu" data-item-id="{{id}}" title="Chargement et munitions">♻️</button>{{/if}}{{/if}}
+                                    {{#if properties.thrown}}<button class="aa-weapon-motion" type="button" data-action="throwWeapon" data-item-id="{{id}}" title="Lancer et déposer cette arme" {{#if system.corporeal}}disabled{{/if}}>🎯</button>{{else}}{{#if properties.ammunition}}<button class="aa-weapon-motion" type="button" data-action="throwWeapon" data-item-id="{{id}}" title="Tracer et animer le tir">🎯</button>{{/if}}{{/if}}
                                 </div>
 
                                 <div class="aa-equipment-detail">

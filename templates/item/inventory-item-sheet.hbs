@@ -25,7 +25,8 @@
     </div>
 {{/inline}}
 
-<section class="standard-form scrollable">
+<section class="standard-form aa-menu-shell">
+    <div class="aa-menu-content scrollable">
     {{#if groundActions.length}}<div class="aa-storage-toolbar">
         {{#each groundActions}}<button type="button" data-action="groundAction" data-ground-action="{{action}}" {{#unless @root.canGroundTransfer}}disabled{{/unless}}><i class="fa-solid {{icon}}" aria-hidden="true"></i> {{label}}</button>{{/each}}
     </div>{{/if}}
@@ -115,6 +116,13 @@
                     value=system.thrown.longRange min=0 step="any" required=true}}
             </fieldset>
             <fieldset>
+                <legend>Animation du lancer / tir</legend>
+                {{{weaponMotionFields}}}
+                <p class="hint">🎯 trace la trajectoire puis lance immédiatement l’arme ou le projectile avec ces réglages. L’orientation de l’image est compensée pendant le trajet.</p>
+                <label class="checkbox"><input type="checkbox" name="system.projection.disappear" {{#if system.projection.disappear}}checked{{/if}}> Faire disparaître la munition à l’arrivée (tir à distance)</label>
+                <p class="hint">Le tir anime la munition sélectionnée sans la consommer une seconde fois : le jet d’attaque gère le stock. Si elle reste à l’arrivée, elle reste une image sur scène.</p>
+            </fieldset>
+            <fieldset>
                 <legend>Lourde et Polyvalente</legend>
                 {{> aaInventoryItemField label="Caractéristique minimum" type="number" name="system.heavy.strengthRequirement"
                     value=system.heavy.strengthRequirement min=0 step="1" required=true}}
@@ -193,6 +201,7 @@
         </fieldset>
     {{/if}}
 
+    </div>
     {{#if editable}}
         <footer class="form-footer">
             <button type="button" data-action="deleteInventoryItem">

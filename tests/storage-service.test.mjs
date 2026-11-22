@@ -1097,3 +1097,32 @@ test("preset placement and ordinary drops retain explicit Z values independently
     const drop=[...scene.tokens].find(token=>!previous.has(token.id));
     assert.deepEqual([drop.width,drop.height,drop.depth],[1.25,1.25,0.2]);
 });
+
+
+test("ranged animation uses weapon settings and ammo art without consuming stock or moving the bow",async()=>{
+    const source=actor("archer-visual","alice"),origin=token(source),ammo=item("arrows",4);
+    ammo.system={...ammo.system,objectClass:"Munitions",groundTokenImage:"arrows.png",groundTokenSize:0.5,imageAngleOffset:45};
+    const bow={id:"bow",type:"weapon",system:{equipped:true,properties:new Set(["ammunition"]),ammunition:{itemId:ammo.id},
+        projection:{duration:2,rotation:"direction",offset:0,disappear:true}}};
+    source.items.set(ammo.id,ammo);source.items.set(bow.id,bow);
+    const previous=scene.createEmbeddedDocuments,tiles=[];
+    scene.createEmbeddedDocuments=async(type,data)=>{assert.equal(type,"Tile");tiles.push(...data);return data.map((entry,i)=>({...entry,id:"shot"+i}));};
+    const data={action:"shot",source:source.uuid,sourceToken:origin.uuid,selections:[{id:bow.id,quantity:1}],
+        points:[{x:150,y:150},{x:650,y:150}]};
+    try{
+        const result=await query(data);assert.equal(result.error,undefined);assert.equal(result.count,1);
+        assert.equal(tiles.length,1);assert.equal(tiles[0].texture.src,"arrows.png");
+        assert.deepEqual([tiles[0].x,tiles[0].y,tiles[0].width],[650,150,50]);
+        const flags=tiles[0].flags["arcane-advent"],flight=flags.objectMotion;
+        assert.equal(flight.duration,2000);assert.equal(flight.visual.offset,-45);
+        assert.equal(flags.weaponProjectile.expiresAt,flight.startedAt+flight.duration);
+        bow.system.projection.disappear=false;await query(data);
+        assert.equal(tiles[1].flags["arcane-advent"].weaponProjectile.expiresAt,null);
+        assert.equal(ammo.system.quantity,4);assert.equal(source.items.get("bow"),bow);
+        assert.deepEqual([origin.x,origin.y],[100,100]);
+        assert.match((await query(data,bob)).error,/accès/);
+        const wrong=token(actor("wrong-archer","alice"));
+        assert.match((await query({...data,sourceToken:wrong.uuid})).error,/accessible/);
+        assert.equal(tiles.length,2);
+    }finally{scene.createEmbeddedDocuments=previous;}
+});

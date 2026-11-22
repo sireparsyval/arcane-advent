@@ -229,5 +229,8 @@ await runGroundAnimationHUDTests({ test, assert, equal });
 const { runTransferSelectionTests } = await import("./transfer-selection.mjs");
 await runTransferSelectionTests({ test, assert, equal });
 
+const { runFixedActionTests } = await import("./fixed-actions.mjs");
+await runFixedActionTests({ test, assert, equal });
+
 document.querySelector("pre").textContent = JSON.stringify(results);
 document.body.dataset.status = results.every(result => result.passed) ? "passed" : "failed";

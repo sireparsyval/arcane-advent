@@ -122,7 +122,8 @@ export function registerObjectMotion() {
         const timer=setInterval(async()=>{
             if(busy||!game.users.activeGM?.isSelf)return;busy=true;
             try{for(const scene of game.scenes)for(const doc of [...scene.tiles,...scene.tokens]){
-                const expires = doc.getFlag("arcane-advent", "transferVisual")?.expiresAt;
+                const expires = doc.getFlag("arcane-advent", "transferVisual")?.expiresAt
+                    ?? doc.getFlag("arcane-advent", "weaponProjectile")?.expiresAt;
                 if (expires && sceneClock() >= expires) { await scene.deleteEmbeddedDocuments("Tile", [doc.id]); continue; }
                 const flight=doc.getFlag("arcane-advent","objectMotion");
                 if(flight&&(!projectileFrame(flight)||projectileFrame(flight).done))await doc.update({"flags.arcane-advent.objectMotion":null},{animate:false,sceneObjectSync:true});

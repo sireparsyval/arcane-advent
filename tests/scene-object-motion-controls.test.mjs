@@ -111,3 +111,33 @@ test("non-GM users cannot start this animation workflow", async () => {
     assert.equal(view.events.size, 0);
     assert.equal(writes.length, 0);
 });
+
+
+test("throwing an equipped weapon traces immediately with its stored motion settings, without opening a dialog", async () => {
+    const { view, keyboard, actor, token } = environment();
+    const weapon={ id:"knife",type:"weapon",system:{equipped:true,corporeal:false,properties:new Set(["thrown"]),
+        projection:{duration:2.5,rotation:"continuous",turns:3,direction:-1,offset:45}} };
+    actor.isOwner=true;actor.uuid="Actor.source";actor.items=new Map([[weapon.id,weapon]]);actor.getActiveTokens=()=>[{document:token}];
+    const requests=[];game.users.activeGM={query:async(_name,data)=>{requests.push(data);return {count:1};}};
+    foundry.applications={api:{DialogV2:{wait(){assert.fail("No intermediate settings dialog");}}}};
+    const {throwInventoryWeapon}=await import("../module/applications/scene-object-motion-controls.mjs");
+    const thrown=throwInventoryWeapon(actor,weapon.id);
+    view.emit("pointerdown",{clientX:400,clientY:250,ctrlKey:true});
+    view.emit("pointerdown",{clientX:450,clientY:450});await thrown;
+    assert.equal(requests.length,1);assert.equal(requests[0].action,"throw");
+    assert.equal(requests[0].sourceToken,token.uuid);
+    assert.deepEqual(requests[0].points,[{x:200,y:250},{x:400,y:250},{x:450,y:450}]);
+    assert.deepEqual(requests[0].motion,weapon.system.projection);
+    assert.equal(view.events.size,0);assert.equal(keyboard.events.size,0);
+});
+
+test("cancelling a direct throw or using a corporeal weapon never sends an inventory request", async () => {
+    const {view,keyboard,actor,token}=environment();
+    const weapon={id:"knife",type:"weapon",system:{equipped:true,properties:new Set(["thrown"])}};
+    actor.isOwner=true;actor.items=new Map([[weapon.id,weapon]]);actor.getActiveTokens=()=>[{document:token}];
+    game.users.activeGM={query:()=>assert.fail("No transfer on cancellation")};
+    const {throwInventoryWeapon}=await import("../module/applications/scene-object-motion-controls.mjs");
+    const thrown=throwInventoryWeapon(actor,weapon.id);keyboard.emit("keydown",{key:"Escape"});
+    assert.equal(await thrown,undefined);weapon.system.corporeal=true;
+    assert.equal(await throwInventoryWeapon(actor,weapon.id),undefined);assert.equal(view.events.size,0);
+});
