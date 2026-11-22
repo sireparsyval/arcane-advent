@@ -147,7 +147,9 @@ un token simplement sélectionné n’est jamais utilisé comme cible implicite.
 Les contenants et stockages conservent leur inventaire complet et leur sélection
 de transfert. Les sélections multiples affichent un toggle **✔️/❌** pour chaque
 exemplaire unique, ou un champ **quantité / disponible** pour une pile et pour la
-monnaie : **0** exclut la ligne du transfert. Les deux contrôles occupent la même
+monnaie : **0** exclut la ligne du transfert. À chaque ouverture d’une sélection
+multiple, toutes les quantités sont à **0** et tous les toggles sont désactivés,
+y compris pour les Luqa. Les deux contrôles occupent la même
 largeur, avec l’icône d’inventaire, le nom et le poids à leur droite. La hiérarchie
 des contenants est conservée. La scission et les transferts rapides affichent
 également la quantité disponible à droite du champ.

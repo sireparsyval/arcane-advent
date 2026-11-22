@@ -31,11 +31,11 @@ export async function chooseLuqa(purse, title) {
     list.className = "aa-transfer-picker";
     for (const { key, symbol, label } of LUQA_DENOMINATIONS) {
         const row = document.createElement("div"); row.className = "aa-transfer-choice aa-luqa-choice"; row.dataset.unitWeight = "0.01";
-        const amount = transferAmountControl({ name: key, available: coins[key], value: coins[key], disabled: coins[key] === 0 });
+        const amount = transferAmountControl({ name: key, available: coins[key], disabled: coins[key] === 0 });
         amount.children[0].setAttribute("aria-label", `Quantité de ${label}`);
         const icon = document.createElement("span"); icon.className = "aa-transfer-icon"; icon.textContent = symbol;
         const name = document.createElement("span"); name.className = "aa-transfer-name"; name.textContent = label;
-        const weight = document.createElement("span"); weight.className = "aa-transfer-weight"; weight.textContent = `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(coins[key] * 0.01)} kg`;
+        const weight = document.createElement("span"); weight.className = "aa-transfer-weight"; weight.textContent = "0 kg";
         row.append(amount, icon, name, weight); list.append(row);
     }
     content.append(list);

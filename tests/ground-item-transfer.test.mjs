@@ -32,12 +32,12 @@ test("currency actions accept a targeted ground purse from either a carried or a
     }
 });
 
-test("currency selection defaults to all available denominations and reads the submitted selection", async () => {
+test("currency selection starts at zero, shows the available balances and reads the submitted selection", async () => {
     environment();
     const purse = { system: { coins: { copper: 7, gold: 2 } } };
     foundry.applications.api.DialogV2.prompt = async config => {
         const rows = config.content.children[0].children;
-        assert.deepEqual(rows.map(row => row.children[0].children[0].defaultValue), ["7", "0", "2", "0"]);
+        assert.deepEqual(rows.map(row => row.children[0].children[0].defaultValue), ["0", "0", "0", "0"]);
         assert.deepEqual(rows.map(row => row.children[0].children[1].textContent), ["/ 7", "/ 0", "/ 2", "/ 0"]);
         assert.ok(rows.every(row => row.children.every(child => child.type !== "checkbox")));
         return config.ok.callback(null, { form: { elements: Object.fromEntries(["copper", "silver", "gold", "platinum"].map(key =>

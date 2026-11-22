@@ -79,14 +79,17 @@ await test("select all and deselect all work after rendering", async () => {
     equal(requests[0].selections, [{ id: "object", quantity: 4 }, { id: "bag", quantity: 1 }]);
 });
 
-await test("initial item selection survives serialization", async () => {
-    scenario = form => {
-        equal(form.querySelector('[data-transfer-item="object"]').value, "4");
-        equal(form.querySelector('[data-transfer-item="bag"]').getAttribute("aria-pressed"), "false");
-    };
-    await inventoryActionDialog(source, "transfer", "object");
-    equal(errors, []);
-    equal(requests[0].selections, [{ id: "object", quantity: 4 }]);
+await test("every bulk selection opens at zero with toggles off, even with an old preselection hint", async () => {
+    for (const hint of ["object", "bag"]) {
+        scenario = form => {
+            equal(form.querySelector('[data-transfer-item="object"]').value, "0");
+            equal(form.querySelector('[data-transfer-item="bag"]').getAttribute("aria-pressed"), "false");
+            assert([...form.querySelectorAll('.aa-transfer-weight')].every(weight => weight.textContent === "0 kg"), "Initial transfer weights must be zero");
+            return "cancel";
+        };
+        await inventoryActionDialog(source, "transfer", hint);
+        equal(errors, []); equal(requests.length, 0);
+    }
 });
 
 await test("a unique object uses a serialized yes/no toggle in the same slot as stack amounts", async () => {
@@ -121,7 +124,8 @@ await test("stack quantities are selected directly without a checkbox and show t
 await test("currency amounts and available balances survive serialization; zero means no transfer", async () => {
     scenario = form => {
         assert(!form.querySelector('input[type="checkbox"]'), "Currency must use amounts only");
-        equal(form.elements.copper.value, "24");
+        equal(form.elements.copper.value, "0"); equal(form.elements.silver.value, "0");
+        assert([...form.querySelectorAll('.aa-transfer-weight')].every(weight => weight.textContent === "0 kg"), "Initial currency weights must be zero");
         equal(form.elements.copper.closest('.aa-transfer-amount').querySelector('.aa-transfer-available').textContent, "/ 24");
         form.elements.copper.value = "5"; form.elements.copper.dispatchEvent(new Event("input"));
         equal(form.elements.copper.closest('.aa-transfer-choice').querySelector('.aa-transfer-weight').textContent, "0,05 kg");

@@ -8,7 +8,7 @@ import { transferAmountControl, transferAmount, setTransferAmount, bindTransferA
 
 // Shared by character inventories and storage sheets. DOM construction keeps
 // player-authored item names out of HTML strings.
-export async function inventoryActionDialog(actor, action, initialId = null, { excludeIds = [], title } = {}) {
+export async function inventoryActionDialog(actor, action, _initialId = null, { excludeIds = [], title } = {}) {
     try {
         if (!(actor.type === "storage" ? storageAccess(actor) : actor.isOwner)) return;
         if (!game.users.activeGM) throw new Error("Un MJ doit être connecté pour déplacer les objets.");
@@ -58,7 +58,7 @@ export async function inventoryActionDialog(actor, action, initialId = null, { e
             const available = item.type === "object" ? item.system.quantity : 1;
             row.dataset.unitWeight = String(item.type === "object" ? item.system.weight ?? 0 : entry.weight);
             const amount = transferAmountControl({ id: item.id, available, numeric: available > 1,
-                selected: item.id === initialId, disabled: item.type === "weapon" && item.system.corporeal });
+                disabled: item.type === "weapon" && item.system.corporeal });
             amount.children[0].setAttribute("aria-label", available > 1 ? `Quantité de ${item.name}` : `Sélectionner ${item.name}`);
             const icon = document.createElement("span");
             icon.className = "aa-transfer-icon";
@@ -70,7 +70,7 @@ export async function inventoryActionDialog(actor, action, initialId = null, { e
             name.textContent = `${item.name}${item.system.equipped ? " · équipé" : ""}`;
             const weight = document.createElement("span");
             weight.className = "aa-transfer-weight";
-            weight.textContent = `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(item.id === initialId ? entry.weight : 0)} kg`;
+            weight.textContent = "0 kg";
             row.append(amount, icon, name, weight);
             list.append(row);
         }
