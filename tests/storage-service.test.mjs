@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { isDeepStrictEqual } from "node:util";
-import { registerStorageService, STORAGE_QUERY, storageAccess, requestInventoryAction, createStorage, placeStorage, isGroundTemplate, syncCoinPileAppearance } from "../module/storage.mjs";
+import { registerStorageService, STORAGE_QUERY, storageAccess, requestInventoryAction, createStorage, placeStorage, isGroundTemplate, syncCoinPileAppearance, isSceneInventoryCopy } from "../module/storage.mjs";
 import { inventoryForDocument, inventoryForToken } from "../module/storage-inventory.mjs";
 import { migrateStorageActors } from "../module/storage-migration.mjs";
 import { placeItemPreset, registerItemSceneDrops } from "../module/item-scene-placement.mjs";
@@ -887,6 +887,8 @@ test("directory inventory presets produce independent ground items with their fu
         const first = await placeItemPreset(preset, scene, { x: 300, y: 400 });
         const second = await placeItemPreset(preset, scene, { x: 500, y: 400 });
         assert.notEqual(first.uuid, second.uuid);
+        assert.equal(isSceneInventoryCopy(first), true); assert.equal(isSceneInventoryCopy(second), true);
+        assert.equal(isSceneInventoryCopy(preset), false);
         assert.notEqual([...first.items][0].id, [...second.items][0].id);
         assert.deepEqual(preset.toObject(), before);
         const copy = [...first.items][0];
@@ -912,6 +914,9 @@ test("storage presets retain nested content and settings in independent copies, 
     const first = await placeItemPreset(preset, scene, { x: 100, y: 800 });
     const second = await placeItemPreset(preset, scene, { x: 400, y: 800 });
     assert.deepEqual(preset.toObject(), before); assert.notEqual(first.uuid, second.uuid);
+    assert.equal(isSceneInventoryCopy(first), true); assert.equal(isSceneInventoryCopy(second), true);
+    assert.equal(isSceneInventoryCopy(preset), false);
+    assert.equal(first.getFlag("arcane-advent", "sourceUuid"), preset.uuid);
     assert.equal(first.system.locked, true); assert.equal(first.system.fixedOnScene, true); assert.equal(groundToken(first).width, 2);
     const bag = [...first.items].find(entry => entry.type === "container");
     const apple = [...first.items].find(entry => entry.type === "object");

@@ -13,7 +13,7 @@ globalThis.Hooks = {
     on(name, callback) { const id = ++serial; callbacks.set(id, { name, callback }); return id; },
     off(_name, id) { callbacks.delete(id); }
 };
-const { StorageDirectory } = await import("../module/applications/storage-directory.mjs");
+const { StorageDirectory, registerStorageDirectory } = await import("../module/applications/storage-directory.mjs");
 
 test("the storage directory refreshes on scene changes, cleans hooks on close and works when reopened", async () => {
     const app = new StorageDirectory();
@@ -40,10 +40,37 @@ test("the directory separates storage Items and legacy deposits without listing 
     const template = stored("Actor.model", true, { groundTemplate: true });
     const copy = { ...stored("Item.ground", true, { inventoryBusy: "interrupted" }), documentName: "Item" };
     const chest = { ...stored("Item.chest", false), documentName: "Item" };
+    const placed = { ...stored("Item.placed-chest", false, { sceneInventoryInstance: true }), documentName: "Item" };
     globalThis.game = { user: { isGM: true, viewedScene: "current" }, actors: [permanent, legacy, template],
-        items: [chest, copy], scenes: new Map() };
+        items: [chest, copy, placed], scenes: new Map() };
     const context = await new StorageDirectory()._prepareContext({});
     assert.deepEqual(context.actors.map(entry => entry.uuid), [chest.uuid, permanent.uuid]);
-    assert.deepEqual(context.groundDeposits.map(entry => entry.uuid), [copy.uuid, legacy.uuid]);
+    assert.deepEqual(context.groundDeposits.map(entry => entry.uuid), [copy.uuid, placed.uuid, legacy.uuid]);
     assert.deepEqual(context.interrupted.map(entry => entry.uuid), [copy.uuid]);
+});
+
+test("the Items sidebar hides existing ground inventories and marked scene copies while retaining reusable models", () => {
+    const entry = (type, ground = false, instance = false) => ({ type, system: { ground },
+        getFlag: (_scope, key) => key === "sceneInventoryInstance" && instance });
+    const items = new Map([
+        ["model", entry("weapon")], ["storage-model", entry("storage")],
+        ["old-ground", entry("storage", true)], ["new-copy", entry("storage", false, true)]
+    ]);
+    globalThis.game = { items, settings: { registerMenu() {} } };
+    class Surface {
+        constructor(existingFooter) { this.rows = [...items.keys()].map(id => ({ dataset: { entryId: id }, remove() { this.removed = true; } })); this.existingFooter = existingFooter; }
+        querySelectorAll(selector) { assert.equal(selector, ".directory-item[data-entry-id]"); return this.rows; }
+        querySelector(selector) { assert.equal(selector, ".directory-footer"); return this.existingFooter ? { querySelector: () => ({}) } : null; }
+    }
+    globalThis.HTMLElement = Surface;
+    registerStorageDirectory();
+    const render = [...callbacks.values()].find(callback => callback.name === "renderItemDirectory").callback;
+    // Filtering must still happen for partial renders and when the Stockages
+    // footer button already exists, rather than returning before hiding rows.
+    for (const existingFooter of [false, true]) {
+        const surface = new Surface(existingFooter);
+        render({}, surface);
+        assert.deepEqual(surface.rows.filter(row => !row.removed).map(row => row.dataset.entryId), ["model", "storage-model"]);
+    }
+    assert.equal(items.size, 4, "Filtering must never delete persistent scene inventories");
 });

@@ -1,5 +1,5 @@
 import { formDialog } from "./form-interactions.mjs";
-import { createStorage, placeStorage, storageAccess, isGroundTemplate, isGroundDeposit } from "../storage.mjs";
+import { createStorage, placeStorage, storageAccess, isGroundTemplate, isGroundDeposit, isSceneInventoryCopy } from "../storage.mjs";
 import { inventoryForDocument } from "../storage-inventory.mjs";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -45,8 +45,8 @@ export class StorageDirectory extends HandlebarsApplicationMixin(ApplicationV2) 
         const visible = actors.filter(actor => storageAccess(actor) || game.user.isGM);
         const entry = actor => ({ uuid: actor.uuid, name: actor.name, img: actor.img, locked: actor.system.locked });
         return { ...await super._prepareContext(options), isGM: game.user.isGM,
-            actors: visible.filter(actor => !isGroundDeposit(actor)).map(entry),
-            groundDeposits: visible.filter(isGroundDeposit).map(entry),
+            actors: visible.filter(actor => !isGroundDeposit(actor) && !isSceneInventoryCopy(actor)).map(entry),
+            groundDeposits: visible.filter(actor => isGroundDeposit(actor) || isSceneInventoryCopy(actor)).map(entry),
             interrupted: game.user.isGM ? [...actors, ...game.actors.filter(actor => actor.type !== "storage")]
                 .filter(actor => actor.getFlag("arcane-advent", "inventoryBusy")).map(entry) : [] };
     }
@@ -62,6 +62,11 @@ export function registerStorageDirectory() {
         hint: "Sacs au sol, coffres et inventaires partagés.", icon: "fa-solid fa-box-open", type: StorageDirectory, restricted: false });
     Hooks.on("renderItemDirectory", (_app, html) => {
         const root = html instanceof HTMLElement ? html : html[0];
+        // These documents persist scene inventories, not reusable models.
+        // Removing only their sidebar rows keeps every token and its contents.
+        for (const row of root?.querySelectorAll(".directory-item[data-entry-id]") ?? []) {
+            if (isSceneInventoryCopy(game.items.get(row.dataset.entryId))) row.remove();
+        }
         const footer = root?.querySelector(".directory-footer");
         if (!footer || footer.querySelector(".aa-open-storages")) return;
         const button = document.createElement("button");

@@ -33,6 +33,7 @@ export async function placeItemPreset(item, scene, position = {}) {
             system.contents = cloneContents(system.contents ?? []);
             for (const entry of system.contents) await syncItemSourceImage(entry);
             const document = await Item.create({ type: "storage", name: item.name, img: item.img, system,
+                flags: { "arcane-advent": { sceneInventoryInstance: true, sourceUuid: item.uuid } },
                 ownership: inventorySource(item.ownership ?? { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER }) });
             if (!document) throw Error("Le stockage n’a pas pu être copié.");
             copy = inventoryForDocument(document);

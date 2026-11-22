@@ -11,6 +11,8 @@ export const inventoryActor = actor => ["character", "npc", "storage"].includes(
 export const isGroundTemplate = actor => actor?.type === "storage" && !actor.isToken
     && actor.getFlag("arcane-advent", "groundTemplate") === true;
 export const isGroundDeposit = actor => actor?.type === "storage" && actor.system.ground && !isGroundTemplate(actor);
+export const isSceneInventoryCopy = item => item?.type === "storage"
+    && (item.system?.ground === true || item.getFlag?.("arcane-advent", "sceneInventoryInstance") === true);
 export function looseGroundItem(actor) {
     if (!isGroundDeposit(actor)) return null;
     const items = [...actor.items];
@@ -78,6 +80,7 @@ export async function createStorage({ name = "Objets au sol", scene = null, x, y
     img ||= game.settings.get("arcane-advent", "storageImage") || STORAGE_IMAGE;
     if (ground && !scene) throw new Error("Choisissez une scène pour le dépôt au sol.");
     const document = await Item.create({ name, type: "storage", img,
+        ...(ground ? { flags: { "arcane-advent": { sceneInventoryInstance: true } } } : {}),
         ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER },
         system: { ground, locked: false, contents: [], groundTokenSize: size } });
     if (!document) throw new Error("Le stockage n’a pas pu être créé dans le répertoire Objets.");

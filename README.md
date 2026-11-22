@@ -196,6 +196,10 @@ et les **Dépôts au sol**. Chacun est un Objet qui possède ses propres copies 
 items contenus. **Placer** permet de créer plusieurs accès au même stockage ;
 ces jetons donnent accès au même contenu. Le glisser-déposer depuis le répertoire
 crée au contraire une copie indépendante du modèle, avec ses propres contenus.
+Les copies techniques de scène sont masquées dans le répertoire **Objets** pour
+laisser la liste des modèles lisible. Elles restent consultables sur la scène et
+dans **Stockages → Dépôts au sol**, avec leur contenu conservé. Les anciens dépôts
+au sol sont également masqués, sans suppression de leurs données.
 Un unique Actor technique,
 masqué dans le répertoire Acteurs, fournit les jetons natifs ciblables avec **T**.
 Le MJ peut ajouter des objets depuis cette fiche ou y glisser des Items du
