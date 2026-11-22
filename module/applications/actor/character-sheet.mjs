@@ -1,5 +1,6 @@
 import { ARCANE_ALIGNMENTS, ARCANE_NEEDS } from "../../config.mjs";
 import { bindDefenseReductionTooltips } from "../../defense-reductions.mjs";
+import { bindGroundImagePreviews } from "../../ground-image-previews.mjs";
 import { unarmedDamage, equippedAttackShortcuts, weaponAttackIcon } from "../../combat-shortcuts.mjs";
 import { ammunitionItems } from "../../weapon-ammunition.mjs";
 import { weaponAttackRestrictions } from "../../weapon-usage.mjs";
@@ -1636,6 +1637,7 @@ export class ArcaneCharacterSheet
         bindFieldEnter(this.element);
         if (this._inventoryQuickBusy) for (const button of this.element.querySelectorAll('[data-action="quickInventory"]')) button.disabled = true;
         bindDefenseReductionTooltips(this.element, this.actor.items, activeCharacterEffects(this.actor));
+        bindGroundImagePreviews(this.element, this.actor.items);
         this._arcanology.bind(this.element.querySelector(".aa-arcanology"));
         const isDetached = this.window.windowId === this.id;
         this.element.classList.toggle("aa-detached-sheet", isDetached);

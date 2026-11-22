@@ -5,6 +5,7 @@ import { inventoryForDocument, inventoryForToken } from "../../storage-inventory
 import { runQuickInventoryAction } from "../ground-item-transfer.mjs";
 import { openPurseActions } from "../ground-actions.mjs";
 import { mainGroundContainer } from "../../ground-items.mjs";
+import { bindGroundImagePreviews } from "../../ground-image-previews.mjs";
 import { bindFieldEnter, formDialog } from "../form-interactions.mjs";
 
 const { ActorSheetV2, ItemSheetV2 } = foundry.applications.sheets;
@@ -112,6 +113,7 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
     async _onRender(context, options) {
         await super._onRender(context, options);
         bindFieldEnter(this.element);
+        bindGroundImagePreviews(this.element, this.inventoryHost.items);
         if (this._looseLayout !== Boolean(context.looseItem)) {
             this._looseLayout = Boolean(context.looseItem);
             this.setPosition(this._looseLayout ? { width: 360, height: "auto" } : { width: 720, height: 570 });

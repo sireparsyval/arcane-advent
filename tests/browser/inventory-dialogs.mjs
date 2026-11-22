@@ -219,6 +219,8 @@ const { runDefenseReductionTests } = await import("./defense-reductions.mjs");
 await runDefenseReductionTests({ test, assert, equal });
 const { runCharacterEffectsTests } = await import("./character-effects.mjs");
 await runCharacterEffectsTests({ test, assert, equal });
+const { runGroundImagePreviewTests } = await import("./ground-image-previews.mjs");
+await runGroundImagePreviewTests({ test, assert, equal });
 
 document.querySelector("pre").textContent = JSON.stringify(results);
 document.body.dataset.status = results.every(result => result.passed) ? "passed" : "failed";

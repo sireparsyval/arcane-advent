@@ -1218,6 +1218,15 @@ body.detached > .aa-detached-sheet .window-content {
     overflow-wrap: anywhere;
 }
 
+.aa-ground-preview-tooltip img {
+    display: block;
+    width: 144px;
+    height: 144px;
+    object-fit: contain;
+    border: 0;
+    margin: 0;
+}
+
 .aa-inventory-container > .aa-inventory-name {
     font-weight: bold;
 }

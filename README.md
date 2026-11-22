@@ -218,6 +218,10 @@ enregistrées sont conservées. Le jeton reste carré. Le réglage **Image des d
 au sol** définit l’image des nouveaux stockages créés manuellement. Changer
 l’image d’un stockage met aussi à jour ses jetons.
 
+Survoler le nom d’un objet ou d’un équipement, dans l’inventaire, les équipements
+portés ou un stockage, affiche un petit aperçu de son **image au sol**. Sans image
+personnalisée, l’aperçu reprend l’image par défaut utilisée lors du dépôt.
+
 Les transferts sont traités un à un par le MJ, avec remappage des identifiants
 de contenants, verrouillage temporaire et compensation des écritures échouées.
 Une coupure complète du MJ pendant l’écriture nécessite une vérification des

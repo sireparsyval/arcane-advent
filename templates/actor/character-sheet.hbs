@@ -1126,7 +1126,7 @@
                                     <label class="aa-equipment-field">
                                         <span>Nom</span>
                                         <input type="text" value="{{name}}"
-                                            data-equipment-edit data-item-id="{{id}}" data-item-field="name">
+                                            data-equipment-edit data-item-id="{{id}}" data-item-field="name" data-ground-preview="{{id}}">
                                     </label>
                                     <label class="aa-equipment-field">
                                         <span>Classe</span>
@@ -1219,7 +1219,7 @@
                                     <label class="aa-equipment-field">
                                         <span>Nom</span>
                                         <input type="text" value="{{name}}"
-                                            data-equipment-edit data-item-id="{{id}}" data-item-field="name">
+                                            data-equipment-edit data-item-id="{{id}}" data-item-field="name" data-ground-preview="{{id}}">
                                     </label>
                                     <label class="aa-equipment-field">
                                         <span>Classe</span>
@@ -1258,7 +1258,7 @@
                                     <label class="aa-equipment-field">
                                         <span>Nom</span>
                                         <input type="text" value="{{name}}"
-                                            data-equipment-edit data-item-id="{{id}}" data-item-field="name">
+                                            data-equipment-edit data-item-id="{{id}}" data-item-field="name" data-ground-preview="{{id}}">
                                     </label>
                                     <label class="aa-equipment-field">
                                         <span>Classe</span>
@@ -1305,7 +1305,7 @@
                             <div class="aa-equipment-row" data-sheet-sort-drop="{{id}}">
                                 {{#if @root.canEditState}}<span class="aa-sort-handle" draggable="true" data-sheet-sort-drag="{{id}}" aria-label="Réordonner {{name}}" title="Glisser pour réordonner">⠿</span>{{/if}}
                                 <input type="text" value="{{name}}" aria-label="Nom de l'accessoire"
-                                    data-equipment-edit data-item-id="{{id}}" data-item-field="name">
+                                    data-equipment-edit data-item-id="{{id}}" data-item-field="name" data-ground-preview="{{id}}">
                                 {{> equippedInventoryControls unequipText="Déséquiper"}}
                             </div>
                         {{else}}
@@ -1377,7 +1377,7 @@
                                     {{/if}}
                                     {{#if isPurse}}<span class="aa-inventory-purse-icon" aria-hidden="true">💰</span>{{/if}}
                                     {{#if equipmentIcon}}<span class="aa-inventory-equipment-icon" aria-hidden="true">{{equipmentIcon}}</span>{{/if}}
-                                    <span class="aa-inventory-name">{{name}}</span>
+                                    <span class="aa-inventory-name" data-ground-preview="{{id}}">{{name}}</span>
                                     {{#if coins.length}}
                                         <span class="aa-inventory-coins">
                                             {{#each coins}}

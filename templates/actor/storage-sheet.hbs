@@ -2,7 +2,7 @@
     {{#if looseItem}}
     <header class="aa-storage-header aa-ground-item-header">
         <img src="{{looseItem.img}}" alt="{{looseItem.name}}">
-        <div><strong>{{looseItem.name}}</strong><span>× {{looseItem.quantity}}</span></div>
+        <div><strong data-ground-preview="{{looseItem.id}}">{{looseItem.name}}</strong><span>× {{looseItem.quantity}}</span></div>
     </header>
     <button type="button" data-action="quickInventory" data-inventory-action="transfer" data-item-id="{{looseItem.id}}" {{#unless canTransfer}}disabled{{/unless}}><i class="fa-solid fa-right-left"></i> Transférer</button>
     {{#if looseItem.isPurse}}<button type="button" data-action="purseActions" data-item-id="{{looseItem.id}}" {{#unless canTransfer}}disabled{{/unless}}><i class="fa-solid fa-coins"></i> Luqa</button>{{/if}}
@@ -33,7 +33,7 @@
     <div class="aa-storage-items">
         {{#each rows}}
             <div class="aa-storage-row" style="--aa-inventory-depth: {{depth}}">
-                <span>{{#if container}}📦 {{/if}}{{name}}</span>
+                <span data-ground-preview="{{id}}">{{#if container}}📦 {{/if}}{{name}}</span>
                 <span>× {{quantity}}</span><span>{{weight}} kg</span>
                 {{#if @root.canTransfer}}
                     {{#if isPurse}}<button type="button" data-action="purseActions" data-item-id="{{id}}" title="Opérations sur les Luqa" aria-label="Transférer ou déposer des Luqa"><i class="fa-solid fa-coins" aria-hidden="true"></i></button>{{/if}}
