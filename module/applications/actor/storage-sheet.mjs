@@ -114,6 +114,7 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
                 quantity: loose.type === "object" ? loose.system.quantity : 1, isPurse: loose.type === "purse" } : null,
             fixedOnScene: this.inventoryHost.system.fixedOnScene || mainGroundContainer(this.inventoryHost)?.system.fixedOnScene,
             ground: isGroundDeposit(this.inventoryHost), canPlace: game.user.isGM && !isGroundDeposit(this.inventoryHost),
+            groundTokenDepth: main?.system.groundTokenDepth ?? this.inventoryHost.system.groundTokenDepth ?? this.inventoryHost.system.groundTokenSize ?? 1.5,
             imageAngleOffset: main?.system.imageAngleOffset ?? this.inventoryHost.system.imageAngleOffset ?? 0,
             locked: this.inventoryHost.system.locked, canTransfer: storageAccess(this.inventoryHost),
             totalWeight: new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(inventory.totalWeight) };
@@ -142,11 +143,11 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
             input.addEventListener("change", async () => {
                 if (!game.user.isGM) return;
                 const field = input.dataset.storageField;
-                const value = ["system.locked", "system.fixedOnScene"].includes(field) ? input.checked : field === "system.imageAngleOffset" ? input.valueAsNumber : input.value.trim();
-                if (!["name", "img", "system.locked", "system.fixedOnScene", "system.imageAngleOffset"].includes(field) || value === "") return;
+                const value = ["system.locked", "system.fixedOnScene"].includes(field) ? input.checked : ["system.imageAngleOffset", "system.groundTokenDepth"].includes(field) ? (input.value === "" && field === "system.groundTokenDepth" ? null : input.valueAsNumber) : input.value.trim();
+                if (!["name", "img", "system.locked", "system.fixedOnScene", "system.imageAngleOffset", "system.groundTokenDepth"].includes(field) || value === "") return;
                 try {
                     const main = mainGroundContainer(this.inventoryHost);
-                    if (["system.fixedOnScene", "system.imageAngleOffset"].includes(field) && main) await this.inventoryHost.updateInventoryItem(main.id, { [field]: value });
+                    if (["system.fixedOnScene", "system.imageAngleOffset", "system.groundTokenDepth"].includes(field) && main) await this.inventoryHost.updateInventoryItem(main.id, { [field]: value });
                     const changes = { [field]: value };
                     if (!this.inventoryHost.document) {
                         if (field === "img") changes["prototypeToken.texture.src"] = value;

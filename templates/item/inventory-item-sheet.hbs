@@ -41,6 +41,8 @@
         <p class="hint">Utilisée pour le dépôt sur scène. Laissez vide pour l’image par défaut du type d’objet.</p>
         {{> aaInventoryItemField label="Taille sur scène (cases)" type="number" name="system.groundTokenSize"
             value=system.groundTokenSize min=0.1 step="any" required=true}}
+        {{> aaInventoryItemField label="Profondeur sur scène (Z, cases)" type="number" name="system.groundTokenDepth" value=system.groundTokenDepth min=0 step="any"}}
+        <p class="hint">Profondeur vide : même valeur que la taille ; les pièces et tas de Luqa utilisent leurs dimensions propres.</p>
         <p class="hint">Jeton carré : 1 = une case de côté ; 0,5 = une demi-case. Utilisée lors du dépôt ou du lancer.</p>
         {{> aaInventoryItemField label="Orientation de l’image (offset en °)" type="number" name="system.imageAngleOffset"
             value=system.imageAngleOffset min=-360 step="any"}}

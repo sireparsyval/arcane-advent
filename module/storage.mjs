@@ -59,14 +59,14 @@ function groundPositions(token, roots) {
         for (let radius = 0; radius <= max; radius++) {
             for (let dx = -radius; dx <= radius; dx++) for (const dy of radius ? [-radius, radius] : [0]) {
                 if (available(baseX + dx, baseY + dy)) {
-                    const position = { x: (baseX + dx) * grid, y: (baseY + dy) * grid, size: side };
+                    const position = { x: (baseX + dx) * grid, y: (baseY + dy) * grid, size: side, depth: groundItemAppearance(root).depth };
                     occupied.push({ ...position, width: extent, height: extent });
                     return position;
                 }
             }
             for (let dy = -radius + 1; dy < radius; dy++) for (const dx of [-radius, radius]) {
                 if (available(baseX + dx, baseY + dy)) {
-                    const position = { x: (baseX + dx) * grid, y: (baseY + dy) * grid, size: side };
+                    const position = { x: (baseX + dx) * grid, y: (baseY + dy) * grid, size: side, depth: groundItemAppearance(root).depth };
                     occupied.push({ ...position, width: extent, height: extent });
                     return position;
                 }
@@ -76,15 +76,16 @@ function groundPositions(token, roots) {
     });
 }
 
-export async function createStorage({ name = "Objets au sol", scene = null, x, y, ground = false, img, snap = true, size = 1.5 } = {}) {
+export async function createStorage({ name = "Objets au sol", scene = null, x, y, ground = false, img, snap = true, size = 1.5, depth = size } = {}) {
     if (!game.user.isGM) throw new Error("La création d’un stockage nécessite le MJ.");
     size = groundTokenSize(size);
+    if (!Number.isFinite(depth) || depth < 0) throw Error("Profondeur sur scène invalide.");
     img ||= game.settings.get("arcane-advent", "storageImage") || STORAGE_IMAGE;
     if (ground && !scene) throw new Error("Choisissez une scène pour le dépôt au sol.");
     const document = await Item.create({ name, type: "storage", img,
         ...(ground ? { flags: { "arcane-advent": { sceneInventoryInstance: true } } } : {}),
         ownership: { default: CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER },
-        system: { ground, locked: false, contents: [], groundTokenSize: size } });
+        system: { ground, locked: false, contents: [], groundTokenSize: size, groundTokenDepth: depth } });
     if (!document) throw new Error("Le stockage n’a pas pu être créé dans le répertoire Objets.");
     const storage = inventoryForDocument(document);
     try {
@@ -126,7 +127,8 @@ export async function placeStorage(actor, scene = canvas.scene, position = {}) {
     const coordinate = (value,max) => Math.max(0,Math.min(max,position.snap===false?value:Math.round(value/size)*size));
     const x = coordinate(position.x ?? center.x-pixelWidth/2,scene.width-pixelWidth);
     const y = coordinate(position.y ?? center.y-pixelHeight/2,scene.height-pixelHeight);
-    const token = await model.getTokenDocument({ x, y, width, height, ...(itemStorage ? {
+    const depth = itemStorage ? actor.system.groundTokenDepth ?? width : model.prototypeToken?.depth ?? width;
+    const token = await model.getTokenDocument({ x, y, width, height, depth, ...(itemStorage ? {
         name: actor.name, actorLink: false, texture: { src: actor.img },
         flags: { "arcane-advent": { storageItemId: actor.id } }, delta: { name: actor.name, img: actor.img }
     } : {}) }, { parent: scene });
@@ -267,7 +269,7 @@ async function processRequest(data, user) {
                 objectMotionPlan({ documentName: "Token", parent: token.parent, x: center.x - extent / 2, y: center.y - extent / 2,
                     width: side, height: side, rotation: 0 }, data.points, data.motion, { imageOffset: weapon.system.imageAngleOffset ?? 0 });
             }
-            const positions = thrown ? [{ x: center.x - extent / 2, y: center.y - extent / 2, size: side }] : groundPositions(token, roots);
+            const positions = thrown ? [{ x: center.x - extent / 2, y: center.y - extent / 2, size: side, depth: single ? groundItemAppearance(single).depth : side }] : groundPositions(token, roots);
             for (const [index, root] of roots.entries()) {
                 const storage = await createStorage({ name: root.name, img: groundItemAppearance(root).img,
                     scene: token.parent, ...positions[index], ground: true, snap: !thrown });
@@ -276,13 +278,21 @@ async function processRequest(data, user) {
             }
             destination = created;
         }
+        let transferAnimation;
         if (receiving) {
-            try { await animateInventoryTransfer(source, receiver, plan); }
+            const removeSource = data.action !== "transferContents"
+                && (data.deleteEmptyGround === true || coinAction || data.action === "takeStorage");
+            try { transferAnimation = await animateInventoryTransfer(source, receiver, plan, { removeSource }); }
             catch (error) { console.warn("Arcane Advent | Animation du transfert indisponible", error); }
         }
         const targetContainer = !Array.isArray(destination) && destination?.type === "storage" ? mainGroundContainer(destination) : null;
         if (targetContainer) for (const copy of plan.creates) if (!copy.system.containerId) copy.system.containerId = targetContainer.id;
-        result = await executeInventoryPlan(source, destination, plan);
+        try { result = await executeInventoryPlan(source, destination, plan); }
+        catch (error) {
+            try { await transferAnimation?.rollback(); }
+            catch (restoreError) { console.error("Arcane Advent | Restauration du jeton transféré", restoreError); }
+            throw error;
+        }
         if (data.action === "throw") {
             const token = [...game.scenes].flatMap(scene => [...scene.tokens]).find(token => inventoryForToken(token)?.uuid === created[0].uuid);
             try { if (!token) throw Error("Jeton du dépôt introuvable."); await animateSceneObject(token, data.points, data.motion); }
@@ -346,14 +356,16 @@ export async function requestInventoryAction(actor, selections, { action, source
 }
 
 export async function syncCoinPileAppearance(storage) {
-    const item = looseGroundItem(storage);
-    if (!item) return;
-    const { img, size } = groundItemAppearance(item);
-    if (storage.name !== item.name || storage.img !== img || storage.system.groundTokenSize !== size) await storage.update({ name: item.name, img, "system.groundTokenSize": size });
+    const loose = looseGroundItem(storage), main = mainGroundContainer(storage);
+    const item = loose ?? main;
+    const appearance = item ? groundItemAppearance(item) : groundItemAppearance({ type: "storage", system: storage.system });
+    const { size, depth } = appearance, img = loose ? appearance.img : storage.img, name = loose ? item.name : storage.name;
+    if (storage.name !== name || storage.img !== img || storage.system.groundTokenSize !== size || storage.system.groundTokenDepth !== depth)
+        await storage.update({ name, img, "system.groundTokenSize": size, "system.groundTokenDepth": depth });
     for (const scene of game.scenes) {
         const changes = scene.tokens.filter(token => inventoryForToken(token)?.uuid === storage.uuid
-            && (token.name !== item.name || token.texture?.src !== img || token.width !== size || token.height !== size)).map(token => ({
-            _id: token.id, name: item.name, "texture.src": img, width: size, height: size,
+            && (token.name !== name || token.texture?.src !== img || token.width !== size || token.height !== size || token.depth !== depth)).map(token => ({
+            _id: token.id, name, "texture.src": img, width: size, height: size, depth,
             x: Math.max(0, Math.min(token.x, scene.width - size * scene.grid.size)),
             y: Math.max(0, Math.min(token.y, scene.height - size * scene.grid.size))
         }));
@@ -365,7 +377,7 @@ export function registerCoinPileAppearance() {
     const queues = new Map();
     Hooks.on("updateItem", (item, changes) => {
         if (!game.users.activeGM?.isSelf || item.type !== "storage"
-            || !(Object.hasOwn(changes.system ?? {}, "contents") || Object.hasOwn(changes, "system.contents"))) return;
+            || !["contents", "groundTokenSize", "groundTokenDepth"].some(key => Object.hasOwn(changes.system ?? {}, key) || Object.hasOwn(changes, "system." + key))) return;
         const next = (queues.get(item.uuid) ?? Promise.resolve()).catch(() => {}).then(() => syncCoinPileAppearance(inventoryForDocument(item)));
         queues.set(item.uuid, next);
         next.catch(error => ui.notifications.error(error.message)).finally(() => { if (queues.get(item.uuid) === next) queues.delete(item.uuid); });

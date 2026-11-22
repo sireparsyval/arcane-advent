@@ -32,6 +32,16 @@ export async function runGroundAnimationHUDTests({ test, assert, equal }) {
             await new Promise(resolve=>setTimeout(resolve,0));
             equal(requests.length,1);equal(requests[0].action,"coinAll");equal(requests[0].targetToken,receiver.uuid);
             assert(root.querySelector(".col.left > [data-action=visibility]"),"Eye must stay below elevation");
+            bag.system.coinPile=true;
+            renderGroundTokenHUD(app,root);
+            root.querySelector("[data-ground-action=coinsAll]").click();
+            await new Promise(resolve=>setTimeout(resolve,0));
+            equal(requests.length,2);equal(requests[1].action,"coinAll");equal(requests[1].targetToken,receiver.uuid);
+            coins.system.coinPile=false;
+            renderGroundTokenHUD(app,root);
+            root.querySelector("[data-ground-action=coinsAll]").click();
+            await new Promise(resolve=>setTimeout(resolve,0));
+            equal(requests.length,3);equal(requests[2].action,"coinAll");equal(requests[2].targetToken,receiver.uuid);
         });
         await test("animation settings read the rendered form and store direction, duration and offset",async()=>{
             foundry.applications.api.DialogV2={async wait(config){

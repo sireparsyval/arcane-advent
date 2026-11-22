@@ -1,6 +1,6 @@
 import { groundItemAppearance } from "./ground-items.mjs";
 import { inventoryForToken } from "./storage-inventory.mjs";
-import { objectCenter } from "./scene-object-motion.mjs";
+import { objectCenter, animateSceneObject } from "./scene-object-motion.mjs";
 import { sceneClock, projectileAppearance } from "./scene-projectiles.mjs";
 
 export function transferVisuals(plan) {
@@ -27,7 +27,12 @@ export function transferTileData(item, donor, receiver, { clock = sceneClock, id
         elevation: donor.elevation ?? 0, levels: [...(donor.levels ?? [])],
         flags: { "arcane-advent": { objectMotion: flight, transferVisual: { expiresAt: flight.startedAt + flight.duration + 5000 } } } };
 }
-export async function animateInventoryTransfer(source, receiver, plan) {
+export function transfersEntireSource(source, plan) {
+    const items = [...source.items];
+    return source.type === "storage" && items.length > 0 && !(plan.updates?.length)
+        && items.every(item => plan.deletes?.includes(item.id)) && transferVisuals(plan).length === 1;
+}
+export async function animateInventoryTransfer(source, receiver, plan, { removeSource = false } = {}) {
     const scene = receiver?.parent;
     if (!scene?.tiles || !scene.createEmbeddedDocuments) return;
     const donor = source.token?.parent?.id === scene.id ? source.token
@@ -35,6 +40,19 @@ export async function animateInventoryTransfer(source, receiver, plan) {
     if (!donor) return;
     const from = objectCenter(donor), to = objectCenter(receiver);
     if (Math.hypot(to.x-from.x, to.y-from.y) < 1) return;
+    if (removeSource && transfersEntireSource(source, plan)) {
+        // A complete pickup moves the real token: no stationary copy remains.
+        const previous = { x: donor.x, y: donor.y, rotation: donor.rotation ?? 0,
+            "flags.arcane-advent.objectMotion": donor.getFlag("arcane-advent", "objectMotion") ?? null };
+        const rollback = async () => {
+            if (scene.tokens.has(donor.id)) await donor.update(previous, { animate: false, sceneObjectSync: true });
+        };
+        try {
+            await animateSceneObject(donor, [from, to], { duration: 0.25, rotation: "direction" });
+            await new Promise(resolve => setTimeout(resolve, 450));
+            return { rollback };
+        } catch (error) { await rollback(); throw error; }
+    }
     const data = transferVisuals(plan).map(item => transferTileData(item, donor, receiver));
     if (!data.length) return;
     const ids = [];

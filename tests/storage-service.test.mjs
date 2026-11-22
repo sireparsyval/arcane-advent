@@ -1026,12 +1026,74 @@ test("ground pickup and whole-container transfer publish motion from the actual 
             const result=await query({action:kind==="container"?"takeStorage":"transfer",
                 source:source.uuid,targetToken:target.uuid,selections:kind==="container"?[]:[{id:root.id,quantity:1}],deleteEmptyGround:true});
             assert.equal(result.error,undefined);assert.equal(result.deletedGround,true);
-            assert.equal(visuals.length,1);
-            const flight=visuals[0].flags["arcane-advent"].objectMotion;
+            assert.equal(visuals.length,0,"A complete pickup must move its real token, without creating a clone");
+            const flight=origin.getFlag("arcane-advent","objectMotion");
             assert.deepEqual(flight.from,{x:863,y:663});assert.deepEqual(flight.to,{x:543,y:443});
+            assert.equal(flight.duration,250);
             assert.equal(scene.tiles.size,0);assert.equal(scene.tokens.has(origin.id),false);
             assert.equal(recipient.items.size,kind==="container"?2:1);
         } finally {scene.createEmbeddedDocuments=create;scene.deleteEmbeddedDocuments=remove;
             if(tiles===undefined)delete scene.tiles;else scene.tiles=tiles;}
     }
+});
+
+test("loose coins merge into other loose coins, and purses can pour all or part into a ground pile",async()=>{
+    for(const [action,carried,pile]of [["coinAll",false,true],["coinAll",true,false],["coinPart",false,false]]){
+        const source=carried?actor("pour-carried","alice"):await createStorage({ground:true,scene});
+        const money=wallet("source-money",{gold:3,silver:2},{coinPile:pile});
+        await source.createEmbeddedDocuments("Item",[money.toObject()],{keepId:true});
+        const target=await createStorage({ground:true,scene});
+        await target.createEmbeddedDocuments("Item",[wallet("target-money",{gold:1},{coinPile:true}).toObject()],{keepId:true});
+        const result=await query(request(source,target,{action,purseId:money.id,selections:[],...(action==="coinPart"?{coins:{silver:1}}:{})}));
+        assert.equal(result.error,undefined);assert.equal(target.items.size,1);
+        assert.deepEqual(target.items.get("target-money").system.coins,action==="coinPart"
+            ?{copper:0,silver:1,gold:1,platinum:0}:{copper:0,silver:2,gold:4,platinum:0});
+        if(pile)assert.equal(result.deletedGround,true);
+        else{assert.equal(source.items.size,1);assert.equal(source.items.get(money.id).system.coinPile,false);
+            assert.equal(source.items.get(money.id).system.coins.silver,action==="coinPart"?1:0);}
+        await syncCoinPileAppearance(target);
+        assert.equal(groundToken(target).width,0.75);assert.equal(groundToken(target).height,0.75);assert.equal(groundToken(target).depth,0.5);
+    }
+});
+test("coin geometry follows single, homogeneous and mixed quantities, while default objects and containers have matching depth",async()=>{
+    const source=await createStorage({ground:true,scene});
+    await source.createEmbeddedDocuments("Item",[wallet("coins",{gold:1},{coinPile:true}).toObject()],{keepId:true});
+    const placed=groundToken(source);
+    for(const [coins,size,depth]of [[{gold:1},0.25,0.1],[{gold:4},0.35,0.35],[{gold:4,silver:2},0.75,0.5]]){
+        await source.updateInventoryItem("coins",{"system.coins":coins});await syncCoinPileAppearance(source);
+        assert.deepEqual([placed.width,placed.height,placed.depth],[size,size,depth]);
+    }
+    for(const [type,size]of [["object",1.25],["container",1.5],["purse",1]]){
+        const storage=await createStorage({ground:true,scene});
+        const root=type==="purse"?wallet("root",{}):item("root",1);root.type=type;
+        await storage.createEmbeddedDocuments("Item",[root.toObject()],{keepId:true});await syncCoinPileAppearance(storage);
+        const token=groundToken(storage);assert.deepEqual([token.width,token.height,token.depth],[size,size,size]);
+    }
+});
+test("failed full pickup restores the real source token without leaving a clone or moving inventory",async()=>{
+    const source=await createStorage({ground:true,scene});await stock(source,"apple",1);
+    const origin=groundToken(source);Object.assign(origin,{x:800,y:600,rotation:25});
+    const receiver=actor("failed-moving-pickup","alice"),target=token(receiver);Object.assign(target,{x:400,y:300});
+    receiver.createEmbeddedDocuments=async()=>{throw Error("Recipient write failed");};
+    const previous=scene.tiles;scene.tiles=new Collection();
+    try{
+        const result=await query({action:"transfer",source:source.uuid,targetToken:target.uuid,deleteEmptyGround:true,selections:[{id:"apple",quantity:1}]});
+        assert.match(result.error,/Recipient write failed/);
+        assert.deepEqual([origin.x,origin.y,origin.rotation],[800,600,25]);
+        assert.equal(origin.getFlag("arcane-advent","objectMotion"),null);
+        assert.equal(source.items.size,1);assert.equal(receiver.items.size,0);assert.equal(scene.tiles.size,0);
+    }finally{if(previous===undefined)delete scene.tiles;else scene.tiles=previous;}
+});
+
+test("preset placement and ordinary drops retain explicit Z values independently from the footprint",async()=>{
+    const preset=await StoredItem.create({name:"Objet plat",type:"object",system:{quantity:1,groundTokenSize:1.25,groundTokenDepth:0.1}});
+    const placed=await placeItemPreset(preset,scene,{x:1300,y:1400});
+    assert.deepEqual([groundToken(placed).width,groundToken(placed).height,groundToken(placed).depth],[1.25,1.25,0.1]);
+    const source=actor("flat-object-drop","alice"),origin=token(source);
+    const object=item("flat",1);object.system.groundTokenSize=1.25;object.system.groundTokenDepth=0.2;source.items.set(object.id,object);
+    const previous=new Set(scene.tokens.keys());
+    const result=await query({action:"drop",source:source.uuid,sourceToken:origin.uuid,selections:[{id:object.id,quantity:1}]});
+    assert.equal(result.error,undefined);
+    const drop=[...scene.tokens].find(token=>!previous.has(token.id));
+    assert.deepEqual([drop.width,drop.height,drop.depth],[1.25,1.25,0.2]);
 });

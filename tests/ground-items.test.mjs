@@ -16,20 +16,20 @@ const storage = (entries, system = { ground: true }) => ({ uuid: "Item.storage",
 test("ground defaults use the named assets and type-specific square sizes while preserving custom artwork and sizes", () => {
     for (const [type, img, size] of [["container", "bag-item.png", 1.5], ["purse", "bag-luqa.png", 1],
         ...["object", "weapon", "shield", "protection", "accessory"].map(type => [type, "item-generic.png", 1.25])]) {
-        assert.deepEqual(groundItemAppearance(item(type, type)), { img: GROUND_IMAGES + img, size });
-        assert.deepEqual(groundItemAppearance(item(type, type, { groundTokenImage: "custom.png", groundTokenSize: 2 })), { img: "custom.png", size: 2 });
+        assert.deepEqual(groundItemAppearance(item(type, type)), { img: GROUND_IMAGES + img, size, depth: size });
+        assert.deepEqual(groundItemAppearance(item(type, type, { groundTokenImage: "custom.png", groundTokenSize: 2 })), { img: "custom.png", size: 2, depth: 2 });
     }
 });
 
 test("single, homogeneous and mixed coins select the correct denomination image and size", () => {
     for (const key of ["copper", "silver", "gold", "platinum"]) {
         assert.deepEqual(groundItemAppearance(item("coins", "purse", { coinPile: true, coins: { [key]: 1 } })),
-            { img: `${GROUND_IMAGES}coin-luqa-${key}.png`, size: 0.25 });
+            { img: `${GROUND_IMAGES}coin-luqa-${key}.png`, size: 0.25, depth: 0.1 });
         assert.deepEqual(groundItemAppearance(item("coins", "purse", { coinPile: true, coins: { [key]: 2 } })),
-            { img: `${GROUND_IMAGES}stack-luqa-${key}.png`, size: 0.5 });
+            { img: `${GROUND_IMAGES}stack-luqa-${key}.png`, size: 0.35, depth: 0.35 });
     }
     assert.deepEqual(groundItemAppearance(item("coins", "purse", { coinPile: true, coins: { copper: 1, gold: 2 } })),
-        { img: GROUND_IMAGES + "stack-luqa.png", size: 0.75 });
+        { img: GROUND_IMAGES + "stack-luqa.png", size: 0.75, depth: 0.5 });
 });
 
 test("ground menus distinguish equipment, single objects, stacks and purses", () => {
@@ -117,4 +117,21 @@ test("loose Luqa have pickup/partial/split controls, never purse-content control
     assert.deepEqual(groundMenu(storage([pile])).actions.map(row=>row[0]),["coinsAll"]);
     assert.equal(firstInventoryPurse(storage([pile])),null);
     assert.throws(()=>coinPlan(storage([pile]),storage([]),pile.id,null,{all:true,randomID}),/aucune bourse/);
+});
+
+test("currency destinations accept only a real purse or a standalone pile on the ground",()=>{
+    const pile=item("pile","purse",{coinPile:true,coins:{gold:2}});
+    const origin=item("bag","purse",{coins:{gold:5,silver:3}});
+    const target={...storage([pile]),type:"storage"};
+    const plan=coinPlan(storage([origin]),target,origin.id,{gold:3,silver:1},{randomID});
+    assert.deepEqual(plan.destinationUpdates[0]["system.coins"],{copper:0,silver:1,gold:5,platinum:0});
+    assert.equal(plan.creates.length,0);assert.equal(plan.deletes.length,0);
+    assert.throws(()=>coinPlan(storage([origin]),{...target,type:"character"},origin.id,{gold:1},{randomID}),/aucune bourse/);
+    assert.throws(()=>coinPlan(storage([origin]),{...target,system:{ground:false}},origin.id,{gold:1},{randomID}),/aucune bourse/);
+});
+test("explicit Z settings are retained while empty Z defaults to the footprint",()=>{
+    const object=item("custom","object",{groundTokenSize:2,groundTokenDepth:0.2});
+    assert.deepEqual(groundItemAppearance(object),{img:GROUND_IMAGES+"item-generic.png",size:2,depth:0.2});
+    object.system.groundTokenDepth=0;assert.equal(groundItemAppearance(object).depth,0);
+    object.system.groundTokenDepth=null;assert.equal(groundItemAppearance(object).depth,2);
 });

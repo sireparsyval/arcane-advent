@@ -107,3 +107,26 @@ test("ground objects and whole containers launch from their proxy token, not a c
         assert.equal(flight.duration,250);assert.deepEqual(removed,["0"]);assert.equal(localScene.tiles.size,0);
     }
 });
+
+test("full ground pickups move the original token only, while a failed transfer can restore its origin",async()=>{
+    class Tokens extends Map { [Symbol.iterator](){return this.values();} }
+    const root={...dagger,id:"dagger"},source={uuid:"Actor.ground",type:"storage",system:{ground:true},items:new Map([[root.id,root]])};
+    source.items[Symbol.iterator]=source.items.values;
+    const localScene={...scene,tiles:new Map(),tokens:new Tokens(),
+        async createEmbeddedDocuments(){assert.fail("A complete pickup must not create a visual clone");}};
+    const origin={...donor,id:"ground",parent:localScene,actor:source,rotation:40,flags:{},
+        getFlag(scope,key){return this.flags[scope]?.[key];},
+        async update(data){for(const [key,value]of Object.entries(data)){
+            if(key.startsWith("flags.")){const [,scope,name]=key.split(".");(this.flags[scope]??={})[name]=value;}
+            else this[key]=value;
+        }return this;}};
+    const target={...receiver,parent:localScene};localScene.tokens.set(origin.id,origin);
+    globalThis.game={user:{isGM:true},time:{serverTime:1000}};
+    globalThis.foundry={utils:{randomID:()=>"real-token-flight"}};
+    const result=await animateInventoryTransfer(source,target,{creates:[dagger],updates:[],deletes:[root.id]},{removeSource:true});
+    assert.deepEqual(origin.getFlag("arcane-advent","objectMotion").from,{x:150,y:150});
+    assert.deepEqual(origin.getFlag("arcane-advent","objectMotion").to,{x:550,y:150});
+    assert.equal(origin.x,500);assert.equal(localScene.tiles.size,0);
+    await result.rollback();
+    assert.deepEqual([origin.x,origin.y,origin.rotation],[100,100,40]);assert.equal(origin.getFlag("arcane-advent","objectMotion"),null);
+});

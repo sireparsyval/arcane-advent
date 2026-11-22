@@ -45,7 +45,7 @@ export async function placeItemPreset(item, scene, position = {}) {
             await syncItemSourceImage(source);
             const appearance = groundItemAppearance(source);
             copy = await createStorage({ name: item.name, img: appearance.img, ground: true,
-                scene, ...position, size: appearance.size });
+                scene, ...position, size: appearance.size, depth: appearance.depth });
             await copy.createEmbeddedDocuments("Item", [source], { keepId: true });
         }
         return copy;

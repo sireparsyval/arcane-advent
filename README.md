@@ -571,9 +571,11 @@ Les effets visuels proposent aussi une orientation selon le trajet dans leurs
 préréglages, en plus de la rotation continue.
 
 Lors d’un transfert entre deux inventaires présents sur une même scène,
-chaque objet ou contenant indépendant est représenté pendant **0,25 seconde**
-entre donneur et receveur. Son contenu voyage avec lui. Ces visuels temporaires
-ne créent aucun objet supplémentaire dans les inventaires.
+chaque objet ou contenant indépendant voyage pendant **0,25 seconde** entre
+donneur et receveur. Un dépôt entièrement récupéré déplace son vrai jeton, sans
+copie immobile au départ ; si le transfert échoue, sa position est restaurée.
+Les transferts partiels utilisent un visuel temporaire et laissent le reliquat
+sur place. Le contenu d’un contenant voyage avec lui.
 
 Le bouton **Regrouper les piles identiques** apparaît sur la première pile
 d’objets ordinaires identiques dans un même contenant. Il additionne les
@@ -581,7 +583,24 @@ quantités en conservant leurs paramètres ; des contenants différents ou des
 paramètres différents empêchent le regroupement.
 
 Les **tas de Luqa** proposent Transférer tout, Transférer une partie et Scinder.
-Transférer tout utilise le transfert de monnaie vers la première vraie bourse
-du destinataire, y compris une bourse ciblée au sol. Sans bourse, le transfert
-est refusé. Un tas vidé disparaît. Les bourses physiques gardent leurs propres
-actions et peuvent toujours être transférées avec leur contenu.
+La monnaie peut rejoindre un autre tas de Luqa ciblé au sol ou une bourse.
+Une bourse peut verser tout ou partie de son contenu dans un tas au sol.
+Pour un personnage ou un stockage ordinaire, la monnaie rejoint toujours la
+première vraie bourse de son inventaire ; sans bourse, le versement est refusé.
+Un tas vidé disparaît. Les bourses physiques gardent leurs propres actions.
+
+
+Les dimensions des dépôts utilisent les cases de la scène :
+
+| Dépôt | X | Y | Z |
+| --- | --- | --- | --- |
+| Luqa seul | 0,25 | 0,25 | 0,1 |
+| Pile d’un seul type de Luqa | 0,35 | 0,35 | 0,35 |
+| Tas de Luqa mélangés | 0,75 | 0,75 | 0,5 |
+| Bourse | 1 | 1 | 1 |
+| Contenant | 1,5 | 1,5 | 1,5 |
+| Objet ou équipement par défaut | 1,25 | 1,25 | 1,25 |
+
+Les objets et équipements permettent un réglage de profondeur Z ; laissé vide,
+il suit la taille sur scène. Les tailles personnalisées des modèles sont
+conservées. Les pièces utilisent les dimensions automatiques ci-dessus.

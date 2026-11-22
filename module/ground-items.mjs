@@ -29,13 +29,14 @@ export function groundItemAppearance(item) {
         const coins = checkedCoins(system.coins), kinds = Object.entries(coins).filter(([, count]) => count > 0);
         if (kinds.length === 1) {
             const [key, count] = kinds[0];
-            return { img: `${GROUND_IMAGES}${count === 1 ? "coin" : "stack"}-luqa-${key}.png`, size: count === 1 ? 0.25 : 0.5 };
+            return { img: `${GROUND_IMAGES}${count === 1 ? "coin" : "stack"}-luqa-${key}.png`, size: count === 1 ? 0.25 : 0.35, depth: count === 1 ? 0.1 : 0.35 };
         }
-        return { img: `${GROUND_IMAGES}stack-luqa.png`, size: 0.75 };
+        return { img: `${GROUND_IMAGES}stack-luqa.png`, size: 0.75, depth: 0.5 };
     }
     const defaults = item.type === "container" || item.type === "storage" ? ["bag-item.png", 1.5]
         : item.type === "purse" ? ["bag-luqa.png", 1] : ["item-generic.png", 1.25];
-    return { img: system.groundTokenImage?.trim() || GROUND_IMAGES + defaults[0], size: system.groundTokenSize ?? defaults[1] };
+    const size = system.groundTokenSize ?? defaults[1];
+    return { img: system.groundTokenImage?.trim() || GROUND_IMAGES + defaults[0], size, depth: system.groundTokenDepth ?? size };
 }
 
 export function mainGroundContainer(source) {
@@ -57,6 +58,12 @@ export function firstInventoryPurse(source) {
         return null;
     };
     return visit(buildInventory(source.items).roots);
+}
+export function currencyDestination(source) {
+    const entries = [...source.items];
+    const pile = source.type === "storage" && source.system.ground && entries.length === 1
+        && entries[0].type === "purse" && entries[0].system.coinPile ? entries[0] : null;
+    return pile ?? firstInventoryPurse(source);
 }
 export function groundMenu(source) {
     const items = [...source.items], main = mainGroundContainer(source);

@@ -14,6 +14,7 @@
             {{#if isGM}}
                 <label>Nom <input data-storage-field="name" value="{{actor.name}}"></label>
                 <label>Image <input data-storage-field="img" value="{{actor.img}}"></label>
+                <label>Profondeur sur scène (Z, cases)<input type="number" min="0" step="any" data-storage-field="system.groundTokenDepth" value="{{groundTokenDepth}}"></label>
                 <label>Orientation de l’image (offset en °)<input type="number" min="-360" max="360" step="any" data-storage-field="system.imageAngleOffset" value="{{imageAngleOffset}}"></label>
                 <label><input type="checkbox" data-storage-field="system.locked" {{checked locked}}> Verrouiller les échanges des joueurs</label>
                 <label><input type="checkbox" data-storage-field="system.fixedOnScene" {{checked fixedOnScene}}> Fixe sur scène (contenant non transportable)</label>

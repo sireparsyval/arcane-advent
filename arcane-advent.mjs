@@ -4,10 +4,11 @@ import { ShieldData } from "./module/data/shield-data.mjs";
 import { ProtectionData } from "./module/data/protection-data.mjs";
 import { AccessoryData } from "./module/data/accessory-data.mjs";
 import { ObjectData, ContainerData, PurseData } from "./module/data/inventory-data.mjs";
+import { inventoryForDocument } from "./module/storage-inventory.mjs";
 import { INVENTORY_TYPES } from "./module/inventory.mjs";
 import { StorageData, StorageItemData } from "./module/data/storage-data.mjs";
 import { ArcaneStorageSheet, ArcaneStorageItemSheet } from "./module/applications/actor/storage-sheet.mjs";
-import { registerStorageService, registerCoinPileAppearance } from "./module/storage.mjs";
+import { registerStorageService, registerCoinPileAppearance, syncCoinPileAppearance } from "./module/storage.mjs";
 import { registerGroundTokenHUD } from "./module/token-ground-hud.mjs";
 import { registerItemSceneDrops } from "./module/item-scene-placement.mjs";
 import { migrateDirectoryImages } from "./module/item-images.mjs";
@@ -166,5 +167,8 @@ Hooks.once("ready", async () => {
     await configureDefaultTurnMarker();
     await migrateStorageActors();
     await migrateStorageImages();
+    if (game.users.activeGM?.isSelf) for (const item of game.items.filter(item => item.type === "storage" && (item.getFlag("arcane-advent", "sceneInventoryInstance") || item.system.ground))) {
+        try { await syncCoinPileAppearance(inventoryForDocument(item)); } catch (error) { console.error("Arcane Advent | Dimensions des objets au sol", error); }
+    }
     await migrateDirectoryImages();
 });
