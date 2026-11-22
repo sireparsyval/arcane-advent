@@ -10,6 +10,7 @@ class InventoryItemData extends BaseItemData {
             containerId: new StringField({ required: true, nullable: true, blank: false, initial: null }),
             groundTokenImage: new StringField({ required: true, nullable: false, blank: true, initial: "" }),
             groundTokenSize: new NumberField({ required: true, nullable: false, min: 0.1, initial: 1.25 }),
+            imageAngleOffset: new NumberField({ required: true, nullable: false, initial: 0, min: -360, max: 360 }),
             objectClass: new StringField({ required: true, nullable: false, blank: true, initial: "" })
         };
     }

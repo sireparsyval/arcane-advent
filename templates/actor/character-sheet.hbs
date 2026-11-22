@@ -1399,6 +1399,7 @@
                                                 <button type="button" data-action="toggleEquipment" data-item-id="{{id}}"
                                                     aria-label="Équiper {{name}}" title="Équiper">↑</button>
                                             {{/if}}
+                                            {{#if canMerge}}<button type="button" data-action="mergeInventory" data-item-id="{{id}}" title="Regrouper les piles identiques" aria-label="Regrouper les piles identiques"><i class="fa-solid fa-layer-group" aria-hidden="true"></i></button>{{/if}}
                                             {{> quickInventoryControls}}
                                             <button type="button" data-action="editInventoryItem" data-item-id="{{id}}"
                                                 aria-label="Modifier {{name}}" title="Modifier">⚙</button>

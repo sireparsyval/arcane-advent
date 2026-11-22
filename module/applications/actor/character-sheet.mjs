@@ -1,3 +1,5 @@
+import { stackGroups } from "../../inventory-stacks.mjs";
+import { requestInventoryAction } from "../../storage.mjs";
 import { ARCANE_ALIGNMENTS, ARCANE_NEEDS } from "../../config.mjs";
 import { bindDefenseReductionTooltips } from "../../defense-reductions.mjs";
 import { bindGroundImagePreviews } from "../../ground-image-previews.mjs";
@@ -252,6 +254,7 @@ export class ArcaneCharacterSheet
             addInventoryItem: this._onAddInventoryItem,
             transferInventory: function () { if (this.isEditable) return inventoryActionDialog(this.actor, "transfer"); },
             dropInventoryGround: function () { if (this.isEditable) return inventoryActionDialog(this.actor, "drop"); },
+            mergeInventory: async function (_event, target) { try { await requestInventoryAction(this.actor, [], { action: "merge", mergeItemId: target.dataset.itemId }); } catch (error) { ui.notifications.error(error.message); } },
             quickInventory: function (_event, target) { if (this.isEditable) return runQuickInventoryAction(this, this.actor, target); },
             purseActions: async function (_event, target) {
                 if (!this.isEditable) return;
@@ -591,6 +594,7 @@ export class ArcaneCharacterSheet
             effectiveSpeedLabel: new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 })
                 .format(this.actor.system.trackers.effectiveSpeed)
         };
+        const mergeIds = new Set(stackGroups(this.actor.items).map(group => group[0].id));
         context.inventory = {
             totalLabel: formatWeight(totalWeight),
             showWeights: this._showInventoryWeights,
@@ -609,7 +613,7 @@ export class ArcaneCharacterSheet
                     coins: luqaCounters(item),
                     expanded: !this._collapsedInventory.has(item.id),
                     quantity,
-                    canEquip: EQUIPMENT_TYPES.includes(item.type),
+                    canEquip: EQUIPMENT_TYPES.includes(item.type), canMerge: mergeIds.has(item.id),
                     showWeight: container || item.type === "purse" || this._showInventoryWeights,
                     weightLabel: formatWeight(weight),
                     unitWeight: weight,

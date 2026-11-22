@@ -71,7 +71,8 @@ export async function executeTransfer(source, destination, selections, randomID)
 }
 
 export async function executeInventoryPlan(source, destination, plan) {
-    const destinations = Array.isArray(destination) ? destination : [destination];
+    const destinations = destination == null ? [] : Array.isArray(destination) ? destination : [destination];
+    if (!destinations.length && (plan.creates.length || plan.destinationUpdates?.length)) throw Error("Destinataire manquant.");
     if (destinations.some(entry => source.uuid === entry.uuid)) throw new Error("Choisissez un autre destinataire.");
     if (new Set(destinations.map(entry => entry.uuid)).size !== destinations.length) throw new Error("Destinations de dépôt invalides.");
     const roots = plan.creates.filter(item => !item.system.containerId);
@@ -103,6 +104,8 @@ export async function executeInventoryPlan(source, destination, plan) {
             const updated = await source.updateEmbeddedDocuments("Item", plan.updates, options());
             if (updated.length !== plan.updates.length) throw new Error("Quantités non mises à jour.");
             verifyCoins(source, plan.updates);
+            for (const change of plan.updates) if (change["system.quantity"] != null
+                && source.items.get(change._id)?.system.quantity !== change["system.quantity"]) throw Error("Quantité non enregistrée.");
         }
         if (plan.deletes.length) {
             await source.deleteEmbeddedDocuments("Item", plan.deletes, options());

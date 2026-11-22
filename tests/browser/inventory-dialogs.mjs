@@ -222,5 +222,8 @@ await runCharacterEffectsTests({ test, assert, equal });
 const { runGroundImagePreviewTests } = await import("./ground-image-previews.mjs");
 await runGroundImagePreviewTests({ test, assert, equal });
 
+const { runGroundAnimationHUDTests } = await import("./ground-animation-hud.mjs");
+await runGroundAnimationHUDTests({ test, assert, equal });
+
 document.querySelector("pre").textContent = JSON.stringify(results);
 document.body.dataset.status = results.every(result => result.passed) ? "passed" : "failed";

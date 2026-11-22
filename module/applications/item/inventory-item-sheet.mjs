@@ -3,7 +3,9 @@ import { WEAPON_PROPERTIES } from "../../expertise.mjs";
 import { storageInventoryOwner } from "../../storage-inventory.mjs";
 import { ammunitionItems } from "../../weapon-ammunition.mjs";
 import { bindFieldEnter, formDialog } from "../form-interactions.mjs";
-import { openPurseActions } from "../ground-actions.mjs";
+import { storageAccess, looseGroundItem } from "../../storage.mjs";
+import { groundMenu } from "../../ground-items.mjs";
+import { openPurseActions, performGroundAction } from "../ground-actions.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -58,6 +60,15 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
         position: { width: 520, height: "auto" },
         form: { submitOnChange: false, closeOnSubmit: true },
         actions: {
+            groundAction: async function (_event, target) {
+                const owner = storageInventoryOwner(this.document);
+                if (!owner || this._groundBusy) return;
+                this._groundBusy = true;
+                for (const button of this.element.querySelectorAll("[data-action=groundAction]")) button.disabled = true;
+                try { await performGroundAction(owner, target.dataset.groundAction, { itemId: this.document.id }); }
+                catch (error) { ui.notifications.error(error.message); }
+                finally { this._groundBusy = false; if (this.rendered && owner.items.has(this.document.id)) this.render({ force: false }); }
+            },
             purseActions: async function () {
                 if (!this.isEditable) return;
                 const owner = this.document.actor ?? storageInventoryOwner(this.document);
@@ -84,6 +95,21 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
         return prepared;
     }
 
+    _storageHooks = [];
+    get isEditable() {
+        const storage = storageInventoryOwner(this.document);
+        return storage ? storage.isOwner && storageAccess(storage) : super.isEditable;
+    }
+    _canRender(options) {
+        const storage = storageInventoryOwner(this.document);
+        if (storage) return storageAccess(storage) ? undefined : false;
+        return super._canRender(options);
+    }
+    async _onClose(options) {
+        for (const [name, id] of this._storageHooks) Hooks.off(name, id);
+        this._storageHooks = [];
+        return super._onClose(options);
+    }
     _getFrameButtons(options) {
         const buttons = super._getFrameButtons(options);
         return storageInventoryOwner(this.document) ? buttons.filter(button => button.action !== "copyUuid") : buttons;
@@ -92,13 +118,25 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
     async _onRender(context, options) {
         await super._onRender(context, options);
         bindFieldEnter(this.element);
+        const storage = storageInventoryOwner(this.document);
+        if (storage?.document && !this._storageHooks.length) {
+            this._storageHooks.push(["updateItem", Hooks.on("updateItem", item => {
+                if (item.uuid !== storage.uuid) return;
+                if (storage.items.has(this.document.id) && storageAccess(storage)) this.render({ force: false });
+                else this.close();
+            })], ["deleteItem", Hooks.on("deleteItem", item => { if (item.uuid === storage.uuid) this.close(); })]);
+        }
     }
 
     async _prepareContext(options) {
         const context = await super._prepareContext(options);
         const { type, system } = this.document;
+        const storage = storageInventoryOwner(this.document);
+        const ground = storage && looseGroundItem(storage)?.id === this.document.id;
+        const groundActions = ground ? groundMenu(storage).actions.map(([action, label, icon]) => ({ action, label, icon })) : [];
         return {
             ...context,
+            groundActions, canGroundTransfer: ground && storageAccess(storage) && !this._groundBusy,
             system,
             isObject: type === "object",
             isPurse: type === "purse",

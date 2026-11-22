@@ -239,3 +239,17 @@ test("a visible clip waits for real playback if buffering delayed its end", asyn
     await env.service.sweep();
     assert.equal(env.scene.tiles.size, 0);
 });
+
+test("visual effects compensate the intrinsic image angle when following a route",async()=>{
+    const env=setup();
+    await env.launch({rotationMode:"direction",offset:15});
+    const tile=env.scene.tiles.get("tile1");
+    tile.flags["arcane-advent"].sceneObject.imageAngleOffset=45;
+    await env.arrive(tile);
+    await env.service.execute({action:"continue",sceneId:"scene",tileId:tile.id,
+        points:[{x:tile.x,y:tile.y},{x:tile.x+200,y:tile.y}],duration:1,rotationMode:"direction",offset:15},game.user);
+    const flight=env.model(tile).flight;
+    assert.equal(flight.visual.offset,-30);
+    assert.equal(projectileAppearance(flight,flight.startedAt+500).rotation,-120);
+    assert.equal(tile.rotation,240);
+});

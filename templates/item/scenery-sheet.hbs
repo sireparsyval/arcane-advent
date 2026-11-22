@@ -17,6 +17,8 @@
     </fieldset>
     <fieldset {{#unless editable}}disabled{{/unless}}>
         <legend>Placement</legend>
+        <label>Orientation de l’image (offset en °)<input type="number" name="system.imageAngleOffset" min="-360" max="360" step="any" value="{{system.imageAngleOffset}}"></label>
+        <p class="hint">0° = vers le bas ; sens horaire positif. Compensée pour orienter une animation selon son trajet ; ignorée au dépôt.</p>
         <p class="hint">Les dimensions utilisent l’unité de distance de la scène : des mètres si la scène est graduée en mètres.</p>
         <label class="checkbox"><input type="checkbox" name="system.light.initiallyOn" {{#if system.light.initiallyOn}}checked{{/if}}> Actif au moment du dépôt</label>
         <div class="aa-scene-object-grid">
@@ -40,6 +42,8 @@
                 <label>Durée totale du trajet (s)<input type="number" name="system.projectileDuration" min="0.1" max="60" step="0.1" value="{{system.projectileDuration}}" required></label>
                 <label>Taille initiale (% du placement)<input type="number" name="system.animation.initialSize" min="1" max="1000" step="any" value="{{animationSettings.initialSize}}" required></label>
                 <label>Taille finale (% de la taille initiale)<input type="number" name="system.animation.finalSize" min="1" max="1000" step="any" value="{{animationSettings.finalSize}}" required></label>
+                <label>Orientation<select name="system.animation.rotationMode"><option value="locked" {{#if (eq animationSettings.rotationMode "locked")}}selected{{/if}}>Conserver l’orientation</option><option value="direction" {{#if (eq animationSettings.rotationMode "direction")}}selected{{/if}}>Selon le trajet</option></select></label>
+                <label>Offset du trajet (°)<input type="number" name="system.animation.offset" min="-3600" max="3600" step="any" value="{{animationSettings.offset}}"></label>
                 <label>Rotation continue (°/s)<input type="number" name="system.animation.spin" min="-3600" max="3600" step="any" value="{{animationSettings.spin}}" required></label>
                 <label>À l’arrivée<select name="system.animation.arrival">
                     <option value="keep" {{#if (eq animationSettings.arrival "keep")}}selected{{/if}}>Garder l’effet sur place</option>

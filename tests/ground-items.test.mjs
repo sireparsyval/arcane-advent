@@ -109,3 +109,12 @@ test("selection rows retain hierarchy, stack weights and the attack icons used b
     assert.equal(rows.find(row => row.item === inside).weight, 6);
     assert.equal(rows.find(row => row.item === bag).weight, 6);
 });
+
+test("loose Luqa have pickup/partial/split controls, never purse-content controls",()=>{
+    const pile=item("coins","purse",{coinPile:true,coins:{gold:5}});
+    assert.deepEqual(groundMenu(storage([pile])).actions.map(row=>row[0]),["coinsAll","coinsPart","coinsSplit"]);
+    pile.system.coins.gold=1;
+    assert.deepEqual(groundMenu(storage([pile])).actions.map(row=>row[0]),["coinsAll"]);
+    assert.equal(firstInventoryPurse(storage([pile])),null);
+    assert.throws(()=>coinPlan(storage([pile]),storage([]),pile.id,null,{all:true,randomID}),/aucune bourse/);
+});

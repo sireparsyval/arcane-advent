@@ -26,6 +26,9 @@
 {{/inline}}
 
 <section class="standard-form scrollable">
+    {{#if groundActions.length}}<div class="aa-storage-toolbar">
+        {{#each groundActions}}<button type="button" data-action="groundAction" data-ground-action="{{action}}" {{#unless @root.canGroundTransfer}}disabled{{/unless}}><i class="fa-solid {{icon}}" aria-hidden="true"></i> {{label}}</button>{{/each}}
+    </div>{{/if}}
     <fieldset {{#unless editable}}disabled{{/unless}}>
         <legend>Propriétés</legend>
         {{> aaInventoryItemField label="Nom" type="text" name="name" value=document.name required=true}}
@@ -39,6 +42,9 @@
         {{> aaInventoryItemField label="Taille sur scène (cases)" type="number" name="system.groundTokenSize"
             value=system.groundTokenSize min=0.1 step="any" required=true}}
         <p class="hint">Jeton carré : 1 = une case de côté ; 0,5 = une demi-case. Utilisée lors du dépôt ou du lancer.</p>
+        {{> aaInventoryItemField label="Orientation de l’image (offset en °)" type="number" name="system.imageAngleOffset"
+            value=system.imageAngleOffset min=-360 step="any"}}
+        <p class="hint">0° = vers le bas ; sens horaire positif. Une dague orientée en bas à gauche vaut 45°. Compensée pendant les animations directionnelles et les transferts ; ignorée au dépôt.</p>
         {{#if isContainer}}
             <label class="checkbox"><input type="checkbox" name="system.fixedOnScene" {{#if system.fixedOnScene}}checked{{/if}}> Fixe sur scène (contenant non transportable)</label>
             <p class="hint">Poids propre du contenant&nbsp;: 0 kg. Le poids affiché dans l’inventaire correspond à son contenu.</p>

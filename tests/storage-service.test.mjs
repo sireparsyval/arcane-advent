@@ -960,3 +960,38 @@ test("canvas drops resolve unloaded presets asynchronously and keep the original
     finally { canvas.scene = originalScene; globalThis.fromUuid = originalResolve; }
     assert.equal(scene.tokens.size, count + 1);
 });
+
+test("loose currency whole pickup reuses coin transfer into a targeted ground purse", async () => {
+    for (const action of ["coinAll", "transfer"]) {
+        const source = await createStorage({ ground: true, scene });
+        await source.createEmbeddedDocuments("Item", [wallet("coins", { gold: 3, copper: 2 }, { coinPile: true }).toObject()], { keepId: true });
+        const target = await createStorage({ ground: true, scene });
+        await target.createEmbeddedDocuments("Item", [wallet("bag", { gold: 4 }).toObject()], { keepId: true });
+        const result = await query(request(source, target, { action, purseId: "coins", selections: [{ id: "coins", quantity: 1 }] }));
+        assert.equal(result.error, undefined); assert.equal(result.deletedGround,true);
+        assert.equal(target.items.size,1); assert.equal(target.items.get("bag").system.coins.gold,7);
+        assert.equal(target.items.get("bag").system.coins.copper,2);
+    }
+});
+test("loose currency requires a real destination purse and splitting preserves both piles", async () => {
+    const source=await createStorage({ground:true,scene});
+    await source.createEmbeddedDocuments("Item",[wallet("coins",{gold:5},{coinPile:true}).toObject()],{keepId:true});
+    const target=actor("no-loose-currency","alice");
+    assert.match((await query(request(source,target,{action:"coinAll",purseId:"coins",selections:[]}))).error,/aucune bourse/);
+    assert.equal(target.items.size,0);assert.equal(source.items.get("coins").system.coins.gold,5);
+    const original=groundToken(source), previous=new Set(scene.tokens.keys());
+    const split=await query({action:"coinSplit",source:source.uuid,sourceToken:original.uuid,purseId:"coins",coins:{gold:2},selections:[]});
+    assert.equal(split.error,undefined); assert.equal(source.items.get("coins").system.coins.gold,3);
+    const copy=[...scene.tokens].find(token=>!previous.has(token.id));
+    assert.equal([...inventoryForToken(copy).items][0].system.coins.gold,2);
+    assert.equal((await query({action:"coinSplit",source:source.uuid,sourceToken:original.uuid,purseId:"coins",coins:{gold:3},selections:[]})).error.includes("Conservez"),true);
+});
+test("merge runs on one inventory without a receiver and respects container boundaries",async()=>{
+    const source=actor("merge-owner","alice");
+    for(const [id,quantity,parent] of [["first",2,null],["second",3,null],["other",4,"bag"]]){
+        const entry=item(id,quantity);entry.name="Corne";entry.system.containerId=parent;source.items.set(id,entry);
+    }
+    const result=await query({action:"merge",source:source.uuid,mergeItemId:"second",selections:[]});
+    assert.equal(result.error,undefined);assert.equal(source.items.get("first").system.quantity,5);
+    assert.equal(source.items.has("second"),false);assert.equal(source.items.get("other").system.quantity,4);
+});

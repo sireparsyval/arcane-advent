@@ -28,6 +28,26 @@ export function bindMotionFields(root) {
     };
     mode?.addEventListener("change",refresh);if(mode)refresh();
 }
+export async function configureObjectMotion(doc) {
+    if (!game.user.isGM) return;
+    let draft = doc.getFlag("arcane-advent", "motionSettings") ?? { rotation: "direction" };
+    while (true) {
+        const value = await formDialog.wait({ window: { title: "Réglages d’animation — " + doc.name }, position: { width: 620 },
+            content: motionFields(draft), render: (_event, dialog) => bindMotionFields(dialog.element), rejectClose: false,
+            buttons: [{ action: "save", label: "Enregistrer", callback: (_event, _button, dialog) => readMotionFields(dialog.element, { validate: false }) },
+                { action: "cancel", label: "Annuler", type: "button", default: true, callback: () => null }] });
+        if (!value) return;
+        try { await doc.setFlag("arcane-advent", "motionSettings", motionSettings(value)); return; }
+        catch (error) { ui.notifications.error(error.message); draft = value; }
+    }
+}
+export async function quickObjectAnimation(doc) {
+    const settings = motionSettings(doc.getFlag("arcane-advent", "motionSettings") ?? { rotation: "direction" });
+    const scene = canvas.scene, route = await chooseAnimationPath({ start: objectCenter(doc) });
+    if (!route) return;
+    try { if (canvas.scene?.id !== scene.id) throw Error("La scène a changé."); return await requestObjectMotion(doc, route.points, settings); }
+    finally { route.cleanup(); }
+}
 export function selectSceneObject() {
     if(!canvas.ready)return Promise.resolve(null);
     ui.notifications.info("Cliquez sur le token ou l’objet à déplacer. Échap ou clic droit annule.");

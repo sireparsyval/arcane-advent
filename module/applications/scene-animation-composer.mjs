@@ -20,6 +20,8 @@ function fields(draft, { transition = false } = {}) {
             <input name="duration" type="number" min="0.1" max="60" step="0.1" value="${escape(draft.duration)}" required></label>
             <label>Taille initiale (% du placement)<input name="initialSize" type="number" min="1" max="1000" step="any" value="${escape(draft.initialSize ?? 100)}" required></label>
             <label>Taille finale (% de la taille initiale)<input name="finalSize" type="number" min="1" max="1000" step="any" value="${escape(draft.finalSize ?? 100)}" required></label>
+            <label>Orientation<select name="rotationMode">${option("locked", "Conserver l’orientation", draft.rotationMode ?? "locked")}${option("direction", "Selon le trajet", draft.rotationMode)}</select></label>
+            <label>Offset du trajet (°)<input name="offset" type="number" min="-3600" max="3600" step="any" value="${escape(draft.offset ?? 0)}"></label>
             <label>Rotation continue (°/s)<input name="spin" type="number" min="-3600" max="3600" step="any" value="${escape(draft.spin ?? 0)}" required></label>
             <label>À l’arrivée<select name="arrival">
                 ${option("keep", "Garder l’effet sur place", draft.arrival)}
@@ -42,6 +44,7 @@ function fields(draft, { transition = false } = {}) {
 function read(dialog, defaults) {
     const value = name => dialog.element.querySelector(`[name="${name}"]`)?.value;
     return { ...defaults, duration: value("duration") === undefined ? defaults.duration : Number(value("duration")),
+        rotationMode: value("rotationMode") ?? defaults.rotationMode ?? "locked", offset: value("offset") === undefined ? defaults.offset ?? 0 : Number(value("offset")),
         arrival: value("arrival") ?? defaults.arrival,
         finalEffectUuid: value("finalEffectUuid") ?? "", finalMode: value("finalMode") ?? "once-delete",
         finalDuration: Number(value("finalDuration")),

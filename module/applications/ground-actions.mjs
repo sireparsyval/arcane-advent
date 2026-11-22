@@ -58,7 +58,7 @@ export async function performGroundAction(source, action, { token, itemId } = {}
     try {
         const view = source.type === "storage" ? groundMenu(source) : null;
         const item = source.items.get(itemId ?? view?.item?.id);
-        const receiving = !["split", "dropSelection", "coinsDrop"].includes(action);
+        const receiving = !["split", "dropSelection", "coinsDrop", "coinsSplit"].includes(action);
         const recipientOptions = { actorOnly: action === "equip", allowLoosePurse: ["coinsAll", "coinsPart"].includes(action) };
         let target = receiving ? targetedInventoryRecipient(source, game.user.targets, recipientOptions) : null;
         const options = { action: "transfer", deleteEmptyGround: true };
@@ -71,12 +71,12 @@ export async function performGroundAction(source, action, { token, itemId } = {}
             selections = [{ id: item.id, quantity }];
             if (action === "split") { options.action = "split"; options.sourceToken = (token ?? inventorySourceToken(source)).uuid; }
             if (action === "equip") options.action = "equip";
-        } else if (["coinsAll", "coinsPart", "coinsDrop"].includes(action)) {
+        } else if (["coinsAll", "coinsPart", "coinsDrop", "coinsSplit"].includes(action)) {
             if (item?.type !== "purse") throw Error("Choisissez une bourse.");
-            options.action = { coinsAll: "coinAll", coinsPart: "coinPart", coinsDrop: "coinDrop" }[action];
+            options.action = { coinsAll: "coinAll", coinsPart: "coinPart", coinsDrop: "coinDrop", coinsSplit: "coinSplit" }[action];
             options.purseId = item.id;
-            if (action !== "coinsAll") { options.coins = await chooseLuqa(item, action === "coinsDrop" ? "Déposer des Luqa" : "Transférer des Luqa"); if (!options.coins) return; }
-            if (action === "coinsDrop") options.sourceToken = (token ?? inventorySourceToken(source)).uuid;
+            if (action !== "coinsAll") { options.coins = await chooseLuqa(item, action === "coinsDrop" ? "Déposer des Luqa" : action === "coinsSplit" ? "Scinder le tas de Luqa" : "Transférer des Luqa"); if (!options.coins) return; }
+            if (["coinsDrop", "coinsSplit"].includes(action)) options.sourceToken = (token ?? inventorySourceToken(source)).uuid;
         } else if (action === "takeStorage") options.action = "takeStorage";
         else if (action === "contents") { options.action = "transferContents"; options.deleteEmptyGround = false; }
         else if (action === "selection" || action === "dropSelection") {
@@ -88,7 +88,7 @@ export async function performGroundAction(source, action, { token, itemId } = {}
         } else throw Error("Action inconnue.");
         if (receiving) { target ??= await chooseInventoryRecipient(source, recipientOptions); if (!target) return; options.targetToken = target.uuid; }
         const result = await requestInventoryAction(source, selections, options);
-        ui.notifications.info(action === "split" ? "La pile a été scindée." : receiving ? "Transfert effectué." : "Dépôt effectué.");
+        ui.notifications.info(["split", "coinsSplit"].includes(action) ? "La pile a été scindée." : receiving ? "Transfert effectué." : "Dépôt effectué.");
         if (result.warning) ui.notifications.warn(result.warning);
         return result;
     } finally { busy.delete(source.uuid); }
@@ -99,10 +99,10 @@ export async function openPurseActions(source, itemId, token) {
     if (purse?.type !== "purse") return;
     const action = await formDialog.wait({ window: { title: `Luqa — ${purse.name}` }, rejectClose: false,
         buttons: [
-            { action: "coinsAll", label: "Transférer le contenu", callback: () => "coinsAll" },
+            { action: "coinsAll", label: purse.system.coinPile ? "Transférer tout" : "Transférer le contenu", callback: () => "coinsAll" },
             { action: "coinsPart", label: "Transférer une partie", callback: () => "coinsPart" },
-            { action: "coinsDrop", label: "Déposer", callback: () => "coinsDrop" },
+            { action: "coinsDrop", label: purse.system.coinPile ? "Scinder" : "Déposer", callback: () => purse.system.coinPile ? "coinsSplit" : "coinsDrop" },
             { action: "cancel", label: "Annuler", type: "button", callback: () => null }
         ] });
-    if (["coinsAll", "coinsPart", "coinsDrop"].includes(action)) return performGroundAction(source, action, { token, itemId });
+    if (["coinsAll", "coinsPart", "coinsDrop", "coinsSplit"].includes(action)) return performGroundAction(source, action, { token, itemId });
 }

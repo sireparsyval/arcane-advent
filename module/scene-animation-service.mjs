@@ -1,4 +1,4 @@
-import { sceneClock, projectileFrame } from "./scene-projectiles.mjs";
+import { sceneClock, projectileFrame, projectileAppearance } from "./scene-projectiles.mjs";
 import { validateAnimationAppearance } from "./scene-animation-settings.mjs";
 
 export const ANIMATION_QUERY = "arcane-advent.animations";
@@ -121,10 +121,11 @@ export function createAnimationService({ planFor, create, remove, resolve = uuid
         const visual = flight.visual = {
             width: geometry.width * appearance.initialSize / 100,
             height: geometry.height * appearance.initialSize / 100,
-            rotation: geometry.rotation ?? 0, endScale: appearance.finalSize / 100, spin: appearance.spin
+            rotation: geometry.rotation ?? 0, endScale: appearance.finalSize / 100, spin: appearance.spin,
+            rotationMode: appearance.rotationMode, offset: appearance.offset - (modelFor(geometry)?.imageAngleOffset ?? 0)
         };
         const dimensions = { width: visual.width * visual.endScale, height: visual.height * visual.endScale,
-            rotation: ((visual.rotation + visual.spin * data.duration) % 360 + 360) % 360 };
+            rotation: ((projectileAppearance(flight, startedAt + route.duration).rotation % 360) + 360) % 360 };
         const settings = { arrival: arrival.mode, finalEffectUuid: data.finalEffectUuid ?? "",
             finalMode: data.finalMode ?? "once-delete", finalDuration: data.finalDuration ?? 1, ...appearance };
         if (data.action === "launch") {

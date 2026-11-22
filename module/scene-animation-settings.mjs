@@ -1,7 +1,7 @@
 export function animationSettings(source = {}) {
     const stored = source.animation ?? {};
     return { duration: source.projectileDuration ?? 0.8, arrival: "keep", finalEffectUuid: "",
-        finalMode: "once-delete", finalDuration: 1, initialSize: 100, finalSize: 100, spin: 0, ...stored };
+        finalMode: "once-delete", finalDuration: 1, initialSize: 100, finalSize: 100, spin: 0, rotationMode: "locked", offset: 0, ...stored };
 }
 
 export function validateAnimationAppearance(data) {
@@ -13,5 +13,8 @@ export function validateAnimationAppearance(data) {
         }
         result[key] = value;
     }
+    if (!["locked", "direction"].includes(data.rotationMode ?? "locked")) throw Error("Mode de rotation invalide.");
+    if (!Number.isFinite(data.offset ?? 0) || Math.abs(data.offset ?? 0) > 3600) throw Error("Offset d’animation invalide.");
+    result.rotationMode = data.rotationMode ?? "locked"; result.offset = data.offset ?? 0;
     return result;
 }

@@ -20,7 +20,8 @@ export async function quickInventoryAction(source, itemId, action, { signal } = 
     const item = source.items.get(itemId);
     if (!isInventoryItem(item)) throw new Error("Cet objet n’est plus disponible.");
     if (item.type === "weapon" && item.system.corporeal) throw new Error("Déverrouillez l’arme corporelle avant de la déplacer.");
-    let target = action === "transfer" ? targetedInventoryRecipient(source) : null;
+    const recipientOptions = { allowLoosePurse: item.type === "purse" && item.system.coinPile };
+    let target = action === "transfer" ? targetedInventoryRecipient(source, game.user.targets, recipientOptions) : null;
     let sourceToken;
     if (action === "drop") {
         const tokens = canvas.tokens?.placeables.filter(token => inventoryForToken(token.document)?.uuid === source.uuid) ?? [];
@@ -48,7 +49,7 @@ export async function quickInventoryAction(source, itemId, action, { signal } = 
     }
     if (quantity == null || signal?.aborted) return null;
     if (action === "transfer") {
-        target ??= await chooseInventoryRecipient(source, { signal });
+        target ??= await chooseInventoryRecipient(source, { signal, ...recipientOptions });
         if (!target || signal?.aborted) return null;
     }
     const result = await requestInventoryAction(source, [{ id: item.id, quantity }], {

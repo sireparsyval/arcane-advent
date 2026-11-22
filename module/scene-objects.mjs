@@ -53,7 +53,7 @@ export function sceneObjectPlan(item, scene, position) {
         texture: { src: placement.image || (visual ? ANCHOR : item.img), anchorX: 0.5, anchorY: 0.5 },
         alpha: placement.opacity, rotation: placement.rotation, elevation: placement.elevation,
         flags: { [SCOPE]: { sceneObject: {
-            kind: item.type, sourceUuid: item.uuid, sourceImage: item.img, name: item.name,
+            kind: item.type, sourceUuid: item.uuid, sourceImage: item.img, name: item.name, imageAngleOffset: system.imageAngleOffset ?? 0,
             description: system.interactions || system.description || "", placement, light, mist,
             movable: item.type === "interactiveElement" && interaction.movable,
             toggleLight: item.type === "interactiveElement" && interaction.toggleLight,
@@ -304,7 +304,16 @@ export function registerSceneObjects({ openPanel, openInteraction }) {
             }
         }
         listener = event => {
-            if (!canvas.tokens.active || event.button !== 0) return;
+            if (!canvas.tokens.active || ![0, 2].includes(event.button)) return;
+            if (event.button === 2) {
+                if (!game.user.isGM) return;
+                const point = event.getLocalPosition(stage);
+                if (canvas.tokens.placeables.some(token => token.visible && token.bounds.contains(point.x, point.y))) return;
+                const tile = [...canvas.scene.tiles].reverse().find(tile => sceneObjectAccess(tile).visible
+                    && (!tile.levels?.size || tile.levels.has(canvas.level?.id)) && pointInsideTile(tile, point));
+                if (tile?.object) canvas.hud.tile.bind(tile.object);
+                return;
+            }
             const point = event.getLocalPosition(stage);
             const now = performance.now();
             const doubleTap = lastTap && now - lastTap.time < 400

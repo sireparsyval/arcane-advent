@@ -2,8 +2,10 @@ import { executeInventoryPlan, transferPlan } from "./inventory-transfer.mjs";
 import { inventoryForDocument, inventoryForToken, StorageInventory } from "./storage-inventory.mjs";
 import { animateSceneObject, objectCenter, objectMotionPlan } from "./scene-object-motion.mjs";
 import { EQUIPMENT_TYPES, isInventoryContainer, isInventoryItem } from "./inventory.mjs";
-import { groundItemAppearance, mainGroundContainer, storageContentItems } from "./ground-items.mjs";
+import { groundItemAppearance, mainGroundContainer, storageContentItems, firstInventoryPurse, checkedCoins } from "./ground-items.mjs";
 import { coinPlan, packStoragePlan } from "./inventory-ground-plans.mjs";
+import { animateInventoryTransfer } from "./inventory-transfer-animation.mjs";
+import { mergeStackPlan } from "./inventory-stacks.mjs";
 
 export const STORAGE_IMAGE = "assets/arcane-advent/entities/objects/bag-item.png";
 export const STORAGE_QUERY = "arcane-advent.inventory";
@@ -165,11 +167,18 @@ async function processRequest(data, user) {
         || !(source.type === "storage" ? storageAccess(source, user) : source.testUserPermission(user, "OWNER"))) {
         throw new Error("Vous n’avez pas accès à cet inventaire.");
     }
-    const coinAction = ["coinAll", "coinPart", "coinDrop"].includes(data.action);
-    const dropping = ["drop", "throw", "split", "coinDrop"].includes(data.action);
+    if (data.action === "transfer" && data.selections?.length === 1) {
+        const pile = source.items.get(data.selections[0].id);
+        if (pile?.type === "purse" && pile.system.coinPile) {
+            if (data.selections[0].quantity != null && data.selections[0].quantity !== 1) throw Error("Sélection de Luqa invalide.");
+            data = { ...data, action: "coinAll", purseId: pile.id };
+        }
+    }
+    const coinAction = ["coinAll", "coinPart", "coinDrop", "coinSplit"].includes(data.action);
+    const dropping = ["drop", "throw", "split", "coinDrop", "coinSplit"].includes(data.action);
     const receiving = ["transfer", "equip", "takeStorage", "transferContents", "coinAll", "coinPart"].includes(data.action);
-    if (!dropping && !receiving) throw new Error("Action inconnue.");
-    let selections = data.selections, destination, result;
+    if (!dropping && !receiving && data.action !== "merge") throw new Error("Action inconnue.");
+    let selections = data.selections, destination, receiver, result;
     const created = [], locked = [];
     const lock = async inventory => {
         if (locked.includes(inventory)) return;
@@ -180,7 +189,7 @@ async function processRequest(data, user) {
     try {
         await lock(source);
         if (receiving) {
-            const token = await fromUuid(data.targetToken);
+            const token = receiver = await fromUuid(data.targetToken);
             destination = inventoryForToken(token);
             if (!inventoryActor(destination) || destination.pack) throw new Error("Ciblez un personnage ou un stockage.");
             requireSceneToken(token, destination, user);
@@ -199,8 +208,9 @@ async function processRequest(data, user) {
             } else selections = storageContentItems(source).map(item => ({ id: item.id, quantity: item.type === "object" ? item.system.quantity : 1 }));
         }
         let plan;
-        if (coinAction) plan = coinPlan(source, destination, data.purseId, data.coins, {
-            all: data.action === "coinAll", drop: data.action === "coinDrop", randomID: foundry.utils.randomID
+        if (data.action === "merge") { plan = mergeStackPlan(source.items, data.mergeItemId); destination = null; }
+        else if (coinAction) plan = coinPlan(source, destination, data.purseId, data.coins, {
+            all: data.action === "coinAll", drop: ["coinDrop", "coinSplit"].includes(data.action), split: data.action === "coinSplit", randomID: foundry.utils.randomID
         });
         else if (data.action === "takeStorage" && !main) plan = packStoragePlan(source, foundry.utils.randomID);
         else {
@@ -222,6 +232,24 @@ async function processRequest(data, user) {
             }
             plan = transferPlan(source.items, selections, foundry.utils.randomID);
         }
+        // Loose currency is content, never a purse that can be carried outside
+        // another purse. Also normalize legacy mixed selections containing it.
+        if (receiving && !coinAction) {
+            const piles = plan.creates.filter(item => item.type === "purse" && item.system.coinPile);
+            if (piles.length) {
+                const purse = firstInventoryPurse(destination);
+                if (!purse) throw Error("Le destinataire ne possède aucune bourse.");
+                const coins = checkedCoins(purse.system.coins);
+                for (const pile of piles) for (const [key, value] of Object.entries(checkedCoins(pile.system.coins))) {
+                    coins[key] += value;
+                    if (!Number.isSafeInteger(coins[key])) throw Error("Cette bourse contient trop de Luqa.");
+                }
+                plan.visuals = piles;
+                plan.creates = plan.creates.filter(item => !piles.includes(item));
+                plan.destinationOriginals = [purse.toObject()];
+                plan.destinationUpdates = [{ _id: purse.id, "system.coins": coins }];
+            }
+        }
         if (dropping) {
             const token = await fromUuid(data.sourceToken);
             requireSceneToken(token, source, user);
@@ -237,7 +265,7 @@ async function processRequest(data, user) {
                     throw new Error("Le jeton de l’objet lancé doit tenir dans la scène à son point de départ.");
                 }
                 objectMotionPlan({ documentName: "Token", parent: token.parent, x: center.x - extent / 2, y: center.y - extent / 2,
-                    width: side, height: side, rotation: 0 }, data.points, data.motion);
+                    width: side, height: side, rotation: 0 }, data.points, data.motion, { imageOffset: weapon.system.imageAngleOffset ?? 0 });
             }
             const positions = thrown ? [{ x: center.x - extent / 2, y: center.y - extent / 2, size: side }] : groundPositions(token, roots);
             for (const [index, root] of roots.entries()) {
@@ -248,7 +276,11 @@ async function processRequest(data, user) {
             }
             destination = created;
         }
-        const targetContainer = !Array.isArray(destination) && destination.type === "storage" ? mainGroundContainer(destination) : null;
+        if (receiving) {
+            try { await animateInventoryTransfer(source, receiver, plan); }
+            catch (error) { console.warn("Arcane Advent | Animation du transfert indisponible", error); }
+        }
+        const targetContainer = !Array.isArray(destination) && destination?.type === "storage" ? mainGroundContainer(destination) : null;
         if (targetContainer) for (const copy of plan.creates) if (!copy.system.containerId) copy.system.containerId = targetContainer.id;
         result = await executeInventoryPlan(source, destination, plan);
         if (data.action === "throw") {
@@ -300,11 +332,11 @@ export function registerStorageService() {
     };
 }
 
-export async function requestInventoryAction(actor, selections, { action, sourceToken, targetToken, deleteEmptyGround = false, points, motion, purseId, coins }) {
+export async function requestInventoryAction(actor, selections, { action, sourceToken, targetToken, deleteEmptyGround = false, points, motion, purseId, coins, mergeItemId }) {
     const gm = game.users.activeGM;
     if (!gm) throw new Error("Un MJ doit être connecté pour déplacer les objets.");
     const data = { requestId: foundry.utils.randomID(), source: actor.uuid,
-        selections, action, sourceToken, targetToken, deleteEmptyGround: deleteEmptyGround === true, points, motion, purseId, coins };
+        selections, action, sourceToken, targetToken, deleteEmptyGround: deleteEmptyGround === true, points, motion, purseId, coins, mergeItemId };
     const result = gm.isSelf
         ? await CONFIG.queries[STORAGE_QUERY](data, { user: game.user })
         : await gm.query(STORAGE_QUERY, data, { timeout: 30000 });
@@ -315,13 +347,13 @@ export async function requestInventoryAction(actor, selections, { action, source
 
 export async function syncCoinPileAppearance(storage) {
     const item = looseGroundItem(storage);
-    if (item?.type !== "purse" || !item.system.coinPile) return;
+    if (!item) return;
     const { img, size } = groundItemAppearance(item);
-    if (storage.img !== img || storage.system.groundTokenSize !== size) await storage.update({ img, "system.groundTokenSize": size });
+    if (storage.name !== item.name || storage.img !== img || storage.system.groundTokenSize !== size) await storage.update({ name: item.name, img, "system.groundTokenSize": size });
     for (const scene of game.scenes) {
         const changes = scene.tokens.filter(token => inventoryForToken(token)?.uuid === storage.uuid
-            && (token.texture?.src !== img || token.width !== size || token.height !== size)).map(token => ({
-            _id: token.id, "texture.src": img, width: size, height: size,
+            && (token.name !== item.name || token.texture?.src !== img || token.width !== size || token.height !== size)).map(token => ({
+            _id: token.id, name: item.name, "texture.src": img, width: size, height: size,
             x: Math.max(0, Math.min(token.x, scene.width - size * scene.grid.size)),
             y: Math.max(0, Math.min(token.y, scene.height - size * scene.grid.size))
         }));

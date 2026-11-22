@@ -65,8 +65,9 @@ test("ground HUD replaces native character actions with the actions appropriate 
     ]) {
         const env = environment("storage", entries);
         renderGroundTokenHUD(env.app, env.root);
-        assert.deepEqual(env.right.children.map(button => button.dataset.groundAction), expected);
+        assert.deepEqual(env.right.children.filter(button => button.dataset.groundAction).map(button => button.dataset.groundAction), expected);
         assert.ok(env.right.children.every(button => button.type === "button" && button.attributes["aria-label"] && !button.disabled));
+        assert.deepEqual(env.right.children.filter(button => button.dataset.animationAction).map(button => button.dataset.animationAction), ["settings", "play"]);
         assert.equal(env.eye.parent, env.left);
     }
 });
@@ -74,11 +75,11 @@ test("ground HUD replaces native character actions with the actions appropriate 
 test("empty purses and empty fixed containers retain the proper controls with inapplicable actions disabled", () => {
     const purse = environment("storage", [item("purse", "purse", { coins: {} })]);
     renderGroundTokenHUD(purse.app, purse.root);
-    assert.deepEqual(purse.right.children.map(button => !!button.disabled), [false, true, true, true]);
+    assert.deepEqual(purse.right.children.filter(button => button.dataset.groundAction).map(button => !!button.disabled), [false, true, true, true]);
     const fixed = environment("storage", [item("bag", "container", { fixedOnScene: true })]);
     renderGroundTokenHUD(fixed.app, fixed.root);
-    assert.deepEqual(fixed.right.children.map(button => button.dataset.groundAction), ["contents", "selection", "dropSelection"]);
-    assert.ok(fixed.right.children.every(button => button.disabled));
+    assert.deepEqual(fixed.right.children.filter(button => button.dataset.groundAction).map(button => button.dataset.groundAction), ["contents", "selection", "dropSelection"]);
+    assert.ok(fixed.right.children.filter(button => button.dataset.groundAction).every(button => button.disabled));
 });
 
 test("an observer may use an open ground HUD but cannot edit native elevation or configuration controls", () => {

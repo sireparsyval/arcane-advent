@@ -1,9 +1,10 @@
+import { stackGroups } from "../../inventory-stacks.mjs";
 import { buildInventory, canPlaceInContainer, isInventoryContainer, isInventoryItem } from "../../inventory.mjs";
-import { storageAccess, placeStorage, isGroundTemplate, isGroundDeposit, looseGroundItem } from "../../storage.mjs";
+import { storageAccess, placeStorage, isGroundTemplate, isGroundDeposit, looseGroundItem, requestInventoryAction } from "../../storage.mjs";
 import { inventoryActionDialog } from "../inventory-transfer.mjs";
 import { inventoryForDocument, inventoryForToken } from "../../storage-inventory.mjs";
 import { runQuickInventoryAction } from "../ground-item-transfer.mjs";
-import { openPurseActions } from "../ground-actions.mjs";
+import { openPurseActions, performGroundAction } from "../ground-actions.mjs";
 import { mainGroundContainer } from "../../ground-items.mjs";
 import { bindGroundImagePreviews } from "../../ground-image-previews.mjs";
 import { bindFieldEnter, formDialog } from "../form-interactions.mjs";
@@ -17,6 +18,8 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
         position: { width: 720, height: 570 },
         window: { resizable: true },
         actions: {
+            mergeInventory: async function (_event, target) { try { await requestInventoryAction(this.inventoryHost, [], { action: "merge", mergeItemId: target.dataset.itemId }); } catch (error) { ui.notifications.error(error.message); } },
+            takeStorage: async function () { try { await performGroundAction(this.inventoryHost, "takeStorage"); } catch (error) { ui.notifications.error(error.message); } },
             quickInventory: function (_event, target) { return runQuickInventoryAction(this, this.inventoryHost, target); },
             purseActions: async function (_event, target) {
                 try { await openPurseActions(this.inventoryHost, target.dataset.itemId); }
@@ -55,7 +58,8 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
                 if (!game.user.isGM || !["object", "container", "purse"].includes(target.dataset.type)) return;
                 try {
                     const [item] = await this.inventoryHost.createEmbeddedDocuments("Item", [{ type: target.dataset.type,
-                        name: target.dataset.type === "container" ? "Nouveau contenant" : target.dataset.type === "purse" ? "Bourse" : "Nouvel objet" }]);
+                        name: target.dataset.type === "container" ? "Nouveau contenant" : target.dataset.type === "purse" ? "Bourse" : "Nouvel objet",
+                        system: { containerId: mainGroundContainer(this.inventoryHost)?.id ?? null } }]);
                     item?.sheet.render({ force: true });
                 } catch (error) { ui.notifications.error(error.message); }
             }
@@ -83,6 +87,8 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
             ui.notifications.warn("Ce stockage est verrouillé ou n’est pas accessible sur la scène active.");
             return false;
         }
+        const loose = looseGroundItem(this.inventoryHost);
+        if (loose) { loose.sheet.render({ force: true }); return false; }
         return super._canRender(options);
     }
 
@@ -90,22 +96,25 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
         const context = await super._prepareContext(options);
         const inventory = buildInventory(this.inventoryHost.items);
         const rows = [];
+        const mergeIds = new Set(stackGroups(this.inventoryHost.items).map(group => group[0].id));
         const visit = (nodes, depth = 0) => {
             for (const node of nodes) {
-                rows.push({ id: node.item.id, name: node.item.name, depth,
+                rows.push({ id: node.item.id, name: node.item.name, depth, canMerge: mergeIds.has(node.item.id),
                     quantity: node.item.type === "object" ? node.item.system.quantity : 1,
                     weight: new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(node.weight),
                     container: node.item.type === "container", isPurse: node.item.type === "purse" });
                 visit(node.children, depth + 1);
             }
         };
-        visit(inventory.roots);
+        const main = mainGroundContainer(this.inventoryHost);
+        visit(main ? inventory.roots.find(node => node.item.id === main.id)?.children ?? [] : inventory.roots);
         const loose = looseGroundItem(this.inventoryHost);
-        return { ...context, actor: this.inventoryHost, rows, isGM: game.user.isGM,
+        return { ...context, actor: this.inventoryHost, rows, isGM: game.user.isGM, canTakeStorage: Boolean(main && !main.system.fixedOnScene && !this.inventoryHost.system.fixedOnScene),
             looseItem: loose ? { id: loose.id, name: loose.name, img: loose.img || this.inventoryHost.img,
                 quantity: loose.type === "object" ? loose.system.quantity : 1, isPurse: loose.type === "purse" } : null,
             fixedOnScene: this.inventoryHost.system.fixedOnScene || mainGroundContainer(this.inventoryHost)?.system.fixedOnScene,
             ground: isGroundDeposit(this.inventoryHost), canPlace: game.user.isGM && !isGroundDeposit(this.inventoryHost),
+            imageAngleOffset: main?.system.imageAngleOffset ?? this.inventoryHost.system.imageAngleOffset ?? 0,
             locked: this.inventoryHost.system.locked, canTransfer: storageAccess(this.inventoryHost),
             totalWeight: new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(inventory.totalWeight) };
     }
@@ -133,11 +142,11 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
             input.addEventListener("change", async () => {
                 if (!game.user.isGM) return;
                 const field = input.dataset.storageField;
-                const value = ["system.locked", "system.fixedOnScene"].includes(field) ? input.checked : input.value.trim();
-                if (!["name", "img", "system.locked", "system.fixedOnScene"].includes(field) || value === "") return;
+                const value = ["system.locked", "system.fixedOnScene"].includes(field) ? input.checked : field === "system.imageAngleOffset" ? input.valueAsNumber : input.value.trim();
+                if (!["name", "img", "system.locked", "system.fixedOnScene", "system.imageAngleOffset"].includes(field) || value === "") return;
                 try {
                     const main = mainGroundContainer(this.inventoryHost);
-                    if (field === "system.fixedOnScene" && main) await this.inventoryHost.updateInventoryItem(main.id, { "system.fixedOnScene": value });
+                    if (["system.fixedOnScene", "system.imageAngleOffset"].includes(field) && main) await this.inventoryHost.updateInventoryItem(main.id, { [field]: value });
                     const changes = { [field]: value };
                     if (!this.inventoryHost.document) {
                         if (field === "img") changes["prototypeToken.texture.src"] = value;
@@ -168,7 +177,7 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
                 }
                 const copy = item.toObject();
                 delete copy._id;
-                copy.system.containerId = null;
+                copy.system.containerId = mainGroundContainer(this.inventoryHost)?.id ?? null;
                 if ("equipped" in copy.system) copy.system.equipped = false;
                 await this.inventoryHost.createEmbeddedDocuments("Item", [copy]);
             } catch (error) { ui.notifications.error(error.message); }

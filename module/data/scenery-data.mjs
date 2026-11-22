@@ -5,6 +5,7 @@ function sceneFields({ interactive = false, visual = false } = {}) {
     const { BooleanField, NumberField, SchemaField, StringField } = foundry.data.fields;
     const number = (initial, min, max) => new NumberField({ required: true, nullable: false, initial, min, max });
     return {
+        imageAngleOffset: number(0, -360, 360),
         placement: new SchemaField({
             image: new StringField({ blank: true, initial: "" }),
             width: number(1, 0.1), height: number(1, 0.1), radius: number(3, 0.1),
@@ -56,6 +57,8 @@ export class VisualEffectData extends BaseItemData {
         const number = (initial, min, max) => new NumberField({ required: true, nullable: false, initial, min, max });
         return { ...super.defineSchema(), ...sceneFields({ visual: true }),
             animation: new SchemaField({
+                rotationMode: new StringField({ initial: "locked", choices: ["locked", "direction"], blank: false }),
+                offset: number(0, -3600, 3600),
                 arrival: new StringField({ initial: "keep", choices: ["keep", "delete", "replace"], blank: false }),
                 finalEffectUuid: new StringField({ initial: "", blank: true }),
                 finalMode: new StringField({ initial: "once-delete", choices: ["once-delete", "once-keep", "loop"], blank: false }),

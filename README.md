@@ -551,3 +551,37 @@ défaut, y compris au glisser-déposer, et conservent leur orientation. Une rota
 manuelle reste possible. Les déplacements choisis dans **Animations** conservent
 leur durée et leurs réglages ; les animations natives des personnages restent
 inchangées.
+
+
+### Objets au sol, orientation et transferts
+
+Un double-clic sur un objet isolé ouvre son éditeur complet (arme, protection,
+bouclier, accessoire, objet ou bourse), avec les transferts en tête de fenêtre.
+Seuls les objets ordinaires présentent une quantité. Les observateurs peuvent
+transférer depuis un stockage accessible sans pouvoir en modifier les paramètres.
+Un contenant au sol ne liste que son contenu ; **Tout transférer** emporte aussi
+le contenant, sauf s’il est fixé sur scène.
+
+L’**orientation de l’image** indique son angle naturel : 0° vers le bas, angles
+positifs dans le sens horaire. Une dague pointant en bas à gauche vaut **45°**.
+Les animations directionnelles soustraient cet offset à l’orientation du trajet ;
+le dépôt et les déplacements manuels conservent leur orientation habituelle.
+Le clic droit propose les réglages d’animation et le lancement après tracé.
+Les effets visuels proposent aussi une orientation selon le trajet dans leurs
+préréglages, en plus de la rotation continue.
+
+Lors d’un transfert entre deux inventaires présents sur une même scène,
+chaque objet ou contenant indépendant est représenté pendant **0,25 seconde**
+entre donneur et receveur. Son contenu voyage avec lui. Ces visuels temporaires
+ne créent aucun objet supplémentaire dans les inventaires.
+
+Le bouton **Regrouper les piles identiques** apparaît sur la première pile
+d’objets ordinaires identiques dans un même contenant. Il additionne les
+quantités en conservant leurs paramètres ; des contenants différents ou des
+paramètres différents empêchent le regroupement.
+
+Les **tas de Luqa** proposent Transférer tout, Transférer une partie et Scinder.
+Transférer tout utilise le transfert de monnaie vers la première vraie bourse
+du destinataire, y compris une bourse ciblée au sol. Sans bourse, le transfert
+est refusé. Un tas vidé disparaît. Les bourses physiques gardent leurs propres
+actions et peuvent toujours être transférées avec leur contenu.

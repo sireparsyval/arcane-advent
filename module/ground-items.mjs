@@ -50,7 +50,7 @@ export function storageContentItems(source) {
 export function firstInventoryPurse(source) {
     const visit = nodes => {
         for (const node of nodes) {
-            if (node.item.type === "purse") return node.item;
+            if (node.item.type === "purse" && !node.item.system.coinPile) return node.item;
             const child = visit(node.children);
             if (child) return child;
         }
@@ -61,6 +61,13 @@ export function firstInventoryPurse(source) {
 export function groundMenu(source) {
     const items = [...source.items], main = mainGroundContainer(source);
     const loose = source.system.ground && items.length === 1 && !main ? items[0] : null;
+    if (loose?.type === "purse" && loose.system.coinPile) {
+        const total = Object.values(checkedCoins(loose.system.coins)).reduce((sum, value) => sum + value, 0);
+        return { kind: "coins", item: loose, actions: [
+            ["coinsAll", total === 1 ? "Transférer" : "Tout transférer", "fa-right-left"],
+            ...(total > 1 ? [["coinsPart", "Transférer une partie", "fa-list-check"], ["coinsSplit", "Scinder", "fa-scissors"]] : [])
+        ] };
+    }
     if (loose?.type === "purse") return { kind: "purse", item: loose, actions: [
         ["take", "Transférer tout", "fa-right-left"], ["coinsAll", "Transférer le contenu", "fa-coins"],
         ["coinsPart", "Transférer une partie", "fa-list-check"], ["coinsDrop", "Déposer des Luqa", "fa-arrow-down-to-line"]

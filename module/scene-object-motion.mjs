@@ -24,14 +24,22 @@ export function motionSettings(input = {}) {
         || ![1,-1].includes(result.direction)) throw Error("Réglages de rotation invalides.");
     return result;
 }
-export function objectMotionPlan(doc, points, input = {}, { clock = sceneClock, id = () => foundry.utils.randomID() } = {}) {
+export function sceneImageOffset(doc) {
+    const inventory = doc.documentName === "Token" ? inventoryForToken(doc) : null;
+    const roots = inventory?.type === "storage" ? [...inventory.items].filter(item => !item.system.containerId) : [];
+    const value = roots.length === 1 ? roots[0].system.imageAngleOffset
+        : inventory?.type === "storage" ? inventory.system?.imageAngleOffset
+        : doc.getFlag?.("arcane-advent", "sceneObject")?.imageAngleOffset;
+    return Number.isFinite(value) ? value : 0;
+}
+export function objectMotionPlan(doc, points, input = {}, { clock = sceneClock, id = () => foundry.utils.randomID(), imageOffset = sceneImageOffset(doc) } = {}) {
     const settings = motionSettings(input), route = validateAnimationRoute(doc.parent, points, settings.duration);
     const token = doc.documentName === "Token", center = objectCenter(doc);
     if (Math.hypot(route.points[0].x-center.x,route.points[0].y-center.y)>1) throw Error("L’objet a été déplacé. Recommencez le trajet.");
     const scale = token ? doc.parent.grid.size : 1;
     const flight = { id: id(), points: route.points, from: route.points[0], to: route.points.at(-1),
         startedAt: clock()+150, duration: route.duration, visual: { width: doc.width*scale, height: doc.height*scale,
-            rotation: doc.rotation ?? 0, endScale: 1, rotationMode: settings.rotation, offset: settings.offset,
+            rotation: doc.rotation ?? 0, endScale: 1, rotationMode: settings.rotation, offset: settings.offset - imageOffset,
             spin: settings.rotation === "continuous" ? settings.turns*360*settings.direction/settings.duration : 0 } };
     const final = projectileAppearance(flight,flight.startedAt+flight.duration);
     const x = flight.to.x - (token ? doc.width*scale/2 : 0), y = flight.to.y - (token ? doc.height*scale/2 : 0);
@@ -114,6 +122,8 @@ export function registerObjectMotion() {
         const timer=setInterval(async()=>{
             if(busy||!game.users.activeGM?.isSelf)return;busy=true;
             try{for(const scene of game.scenes)for(const doc of [...scene.tiles,...scene.tokens]){
+                const expires = doc.getFlag("arcane-advent", "transferVisual")?.expiresAt;
+                if (expires && sceneClock() >= expires) { await scene.deleteEmbeddedDocuments("Tile", [doc.id]); continue; }
                 const flight=doc.getFlag("arcane-advent","objectMotion");
                 if(flight&&(!projectileFrame(flight)||projectileFrame(flight).done))await doc.update({"flags.arcane-advent.objectMotion":null},{animate:false,sceneObjectSync:true});
             }}catch(error){ui.notifications.error(error.message);}finally{busy=false;}
