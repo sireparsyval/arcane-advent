@@ -2,7 +2,7 @@
     "id": "arcane-advent",
     "title": "Arcane Advent",
     "description": "Système de jeu Arcane Advent",
-    "version": "0.0.2",
+    "version": "0.7.0",
 
     "primaryTokenAttribute": "consciousness",
     "secondaryTokenAttribute": "fever",
