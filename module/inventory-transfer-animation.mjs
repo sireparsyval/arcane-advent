@@ -9,8 +9,14 @@ export function transferVisuals(plan) {
     return items.filter(item => !ids.has(item.system.containerId));
 }
 export function transferTileData(item, donor, receiver, { clock = sceneClock, id = () => foundry.utils.randomID() } = {}) {
-    const from = objectCenter(donor), to = objectCenter(receiver);
-    const appearance = groundItemAppearance(item), size = appearance.size * donor.parent.grid.size;
+    // BaseTile stores integer coordinates. Normalize the route as well as the
+    // persisted position so its destination still matches after native cleaning.
+    const center = token => {
+        const point = objectCenter(token);
+        return { x: Math.round(point.x), y: Math.round(point.y) };
+    };
+    const from = center(donor), to = center(receiver);
+    const appearance = groundItemAppearance(item), size = Math.max(1, Math.round(appearance.size * donor.parent.grid.size));
     const flight = { id: id(), from, to, points: [from, to], startedAt: clock() + 150, duration: 250,
         visual: { width: size, height: size, rotation: 0, endScale: 1, spin: 0, rotationMode: "direction",
             offset: -(item.system.imageAngleOffset ?? 0) } };

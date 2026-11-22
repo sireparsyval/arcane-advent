@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { inventoryForDocument } from "../module/storage-inventory.mjs";
 import { transferVisuals, transferTileData, animateInventoryTransfer } from "../module/inventory-transfer-animation.mjs";
 import { objectMotionPlan } from "../module/scene-object-motion.mjs";
 import { projectileAppearance } from "../module/scene-projectiles.mjs";
@@ -48,4 +49,61 @@ test("scenery tiles compensate the copied intrinsic angle, independent of invent
         getFlag:(_scope,key)=>key==="sceneObject"?{imageAngleOffset:45}:null};
     const result=objectMotionPlan(tile,[{x:150,y:150},{x:550,y:150}],{rotation:"direction"},{clock:()=>0,id:()=>"x"});
     assert.equal(result.rotation,225);
+});
+
+test("returning the same item resolves the new sender and current token positions, not its original owner", async () => {
+    const raviel={uuid:"Actor.raviel"},ziggy={uuid:"Actor.ziggy"},created=[];
+    const localScene={...scene,tiles:new Map(),tokens:[],
+        async createEmbeddedDocuments(type,data){
+            assert.equal(type,"Tile");created.push(...data);
+            return data.map((source,index)=>{const tile={id:String(index),...source};
+                for(const key of ["x","y","width","height"])tile[key]=Math.round(tile[key]);
+                this.tiles.set(tile.id,tile);return tile;});
+        },
+        async deleteEmbeddedDocuments(_type,ids){for(const id of ids)this.tiles.delete(id);}
+    };
+    const ravielToken={...donor,parent:localScene,actor:raviel,width:0.85,height:0.85};
+    const ziggyToken={...receiver,parent:localScene,actor:ziggy};
+    localScene.tokens.push(ravielToken,ziggyToken);
+    globalThis.foundry={utils:{randomID:()=>"handoff"}};
+    globalThis.game={time:{serverTime:1000}};
+    const plan={creates:[dagger]};
+    await animateInventoryTransfer(raviel,ziggyToken,plan);
+    ziggyToken.x=700; // Moving after reception must also affect the return path.
+    await animateInventoryTransfer(ziggy,ravielToken,plan);
+    const outward=created[0].flags["arcane-advent"].objectMotion;
+    const returning=created[1].flags["arcane-advent"].objectMotion;
+    assert.deepEqual(outward.from,{x:143,y:143});assert.deepEqual(outward.to,{x:550,y:150});
+    assert.deepEqual(returning.from,{x:750,y:150});assert.deepEqual(returning.to,{x:143,y:143});
+    assert.equal(localScene.tiles.size,0);
+});
+
+test("ground objects and whole containers launch from their proxy token, not a controlled character or the common storage model",async()=>{
+    class Tokens extends Map { [Symbol.iterator](){return this.values();} }
+    for(const type of ["object","container"]){
+        const created=[],removed=[];
+        const localScene={...scene,tiles:new Map(),tokens:new Tokens(),
+            async createEmbeddedDocuments(kind,data){
+                assert.equal(kind,"Tile");created.push(...data);
+                return data.map((source,i)=>{const tile={id:String(i),...source};this.tiles.set(tile.id,tile);return tile;});
+            },
+            async deleteEmbeddedDocuments(kind,ids){assert.equal(kind,"Tile");removed.push(...ids);for(const id of ids)this.tiles.delete(id);}
+        };
+        const storage={id:"ground",uuid:"Item.ground",documentName:"Item",type:"storage",system:{ground:true}};
+        globalThis.game={time:{serverTime:1000},items:new Map([[storage.id,storage]])};
+        globalThis.foundry={utils:{randomID:()=>"ground-handoff"}};
+        const source=inventoryForDocument(storage);
+        const target={...receiver,id:"recipient",parent:localScene,width:0.85,height:0.85,actor:{uuid:"Actor.raviel"},controlled:true};
+        const ground={...donor,id:"ground",parent:localScene,x:800,y:600,width:1.25,height:1.25,
+            actor:{uuid:"Scene.scene.Token.ground.Actor.common-model",type:"storage"},
+            getFlag:(_scope,key)=>key==="storageItemId"?storage.id:null};
+        localScene.tokens.set(target.id,target);localScene.tokens.set(ground.id,ground);
+        const root={_id:"root",name:type,type,system:{containerId:null,groundTokenSize:type==="container"?1.5:1.25}};
+        const contents={...dagger,system:{...dagger.system,containerId:root._id}};
+        await animateInventoryTransfer(source,target,{creates:type==="container"?[root,contents]:[root]});
+        assert.equal(created.length,1,"A whole container and its contents must travel as one visual");
+        const flight=created[0].flags["arcane-advent"].objectMotion;
+        assert.deepEqual(flight.from,{x:863,y:663});assert.deepEqual(flight.to,{x:543,y:143});
+        assert.equal(flight.duration,250);assert.deepEqual(removed,["0"]);assert.equal(localScene.tiles.size,0);
+    }
 });

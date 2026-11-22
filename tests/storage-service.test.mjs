@@ -995,3 +995,43 @@ test("merge runs on one inventory without a receiver and respects container boun
     assert.equal(result.error,undefined);assert.equal(source.items.get("first").system.quantity,5);
     assert.equal(source.items.has("second"),false);assert.equal(source.items.get("other").system.quantity,4);
 });
+
+test("ground pickup and whole-container transfer publish motion from the actual ground token before removing it",async()=>{
+    for(const kind of ["object","container"]){
+        const source=await createStorage({ground:true,scene});
+        const root=item("root",1);root.type=kind;root.name="Objet au sol";
+        if(kind==="container")root.system.groundTokenSize=1.5;
+        await source.createEmbeddedDocuments("Item",[root.toObject()],{keepId:true});
+        if(kind==="container"){
+            const content=item("inside",2);content.system.containerId=root.id;
+            await source.createEmbeddedDocuments("Item",[content.toObject()],{keepId:true});
+        }
+        const origin=groundToken(source);Object.assign(origin,{x:800,y:600,width:1.25,height:1.25});
+        const recipient=actor("ground-animation-"+kind,"alice"),target=token(recipient);
+        Object.assign(target,{x:500,y:400,width:0.85,height:0.85});
+        const create=scene.createEmbeddedDocuments,remove=scene.deleteEmbeddedDocuments,tiles=scene.tiles;
+        const visuals=[];
+        scene.tiles=new Collection();
+        scene.createEmbeddedDocuments=async function(type,data){
+            if(type!=="Tile")return create.call(this,type,data);
+            assert.ok(scene.tokens.has(origin.id),"The source token must exist while its transfer starts");
+            visuals.push(...data);
+            return data.map((source,index)=>{const tile={...source,id:"transfer-"+index};this.tiles.set(tile.id,tile);return tile;});
+        };
+        scene.deleteEmbeddedDocuments=async function(type,ids){
+            if(type!=="Tile")return remove.call(this,type,ids);
+            for(const id of ids)this.tiles.delete(id);
+        };
+        try {
+            const result=await query({action:kind==="container"?"takeStorage":"transfer",
+                source:source.uuid,targetToken:target.uuid,selections:kind==="container"?[]:[{id:root.id,quantity:1}],deleteEmptyGround:true});
+            assert.equal(result.error,undefined);assert.equal(result.deletedGround,true);
+            assert.equal(visuals.length,1);
+            const flight=visuals[0].flags["arcane-advent"].objectMotion;
+            assert.deepEqual(flight.from,{x:863,y:663});assert.deepEqual(flight.to,{x:543,y:443});
+            assert.equal(scene.tiles.size,0);assert.equal(scene.tokens.has(origin.id),false);
+            assert.equal(recipient.items.size,kind==="container"?2:1);
+        } finally {scene.createEmbeddedDocuments=create;scene.deleteEmbeddedDocuments=remove;
+            if(tiles===undefined)delete scene.tiles;else scene.tiles=tiles;}
+    }
+});

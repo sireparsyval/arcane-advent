@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { transferTileData } from "../module/inventory-transfer-animation.mjs";
 import { projectileFrame, sceneObjectPosition, sceneObjectFlight, registerSceneProjectiles } from "../module/scene-projectiles.mjs";
 import { processSceneObjectAction, chooseSceneObjectPosition } from "../module/scene-objects.mjs";
 
@@ -239,4 +240,33 @@ test("completed and stale trajectories are cleared by the active GM", async () =
     assert.equal(updates.length, 2);
     assert.equal(env.ticks.size, 0);
     await Promise.resolve();
+});
+
+test("item handoffs animate both directions after Foundry rounds Tile coordinates, including half-pixel token centers", () => {
+    for (const reverse of [false,true]) {
+        const env = setupRuntime();
+        env.scene.grid = {size:100};
+        const raviel = {documentName:"Token",parent:env.scene,x:100,y:200,width:0.85,height:0.85,levels:new Set(["floor"])};
+        const ziggy = {documentName:"Token",parent:env.scene,x:500,y:400,width:1,height:1,levels:new Set(["floor"])};
+        const [donor,recipient] = reverse ? [ziggy,raviel] : [raviel,ziggy];
+        const source = transferTileData({type:"object",name:"Potion",system:{groundTokenSize:0.75}},donor,recipient,
+            {clock:()=>1000,id:()=>reverse?"return":"outbound"});
+        // BaseTile x/y/width/height are integer NumberFields in Foundry v14.
+        Object.assign(env.tile,source,{x:Math.round(source.x),y:Math.round(source.y),width:Math.round(source.width),height:Math.round(source.height)});
+        const flight = env.tile.flags["arcane-advent"].objectMotion;
+        env.display.position.set(env.tile.x,env.tile.y);
+        assert.ok(sceneObjectFlight(env.tile),"Native coordinate cleaning must not invalidate the return trajectory");
+        env.callbacks.get("createTile")(env.tile);
+        // A cached or asynchronously loaded texture is drawn after creation.
+        env.display.position.set(env.tile.x,env.tile.y);
+        env.callbacks.get("drawTile")({document:env.tile});
+        assert.deepEqual([env.display.position.x,env.display.position.y],[flight.from.x,flight.from.y]);
+        game.time.serverTime=flight.startedAt+125;
+        for(const tick of env.ticks)tick();
+        assert.deepEqual([env.display.position.x,env.display.position.y],[(flight.from.x+flight.to.x)/2,(flight.from.y+flight.to.y)/2]);
+        game.time.serverTime=flight.startedAt+250;
+        for(const tick of env.ticks)tick();
+        assert.deepEqual([env.display.position.x,env.display.position.y],[env.tile.x,env.tile.y]);
+        assert.equal(env.ticks.size,0);
+    }
 });
