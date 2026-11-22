@@ -145,8 +145,12 @@ un token simplement sélectionné n’est jamais utilisé comme cible implicite.
 Échap ou clic droit annule ce choix. Le dépôt est supprimé quand il est vidé.
 
 Les contenants et stockages conservent leur inventaire complet et leur sélection
-de transfert. Les sélections multiples affichent une coche, l’icône d’inventaire,
-la quantité, le nom et le poids, en conservant la hiérarchie des contenants.
+de transfert. Les sélections multiples affichent un toggle **✔️/❌** pour chaque
+exemplaire unique, ou un champ **quantité / disponible** pour une pile et pour la
+monnaie : **0** exclut la ligne du transfert. Les deux contrôles occupent la même
+largeur, avec l’icône d’inventaire, le nom et le poids à leur droite. La hiérarchie
+des contenants est conservée. La scission et les transferts rapides affichent
+également la quantité disponible à droite du champ.
 L’option **Supprimer le dépôt s’il est vide après
 le transfert**, décochée par défaut, supprime aussi l’Objet correspondant lorsque
 le transfert a réussi et qu’il ne reste rien. Elle ne s’applique pas aux stockages
@@ -516,3 +520,8 @@ disponible pour le lancer d’une arme. Les participants voient le mouvement et
 l’orientation synchronisés ; le MJ actif termine aussi les mouvements hors scène.
 
 Les jets, dégâts, esquives et collisions restent décidés par le MJ.
+
+Les déplacements ordinaires des objets au sol et des tuiles sont instantanés par
+défaut, y compris au glisser-déposer. Les déplacements choisis dans **Animations**
+conservent leur durée et leurs réglages ; les animations natives des personnages
+restent inchangées.

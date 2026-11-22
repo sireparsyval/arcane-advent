@@ -1,6 +1,14 @@
 import { validateAnimationRoute } from "./scene-animation-service.mjs";
 import { sceneClock, projectileFrame, projectileAppearance } from "./scene-projectiles.mjs";
 import { syncSceneObject } from "./scene-objects.mjs";
+import { inventoryForToken } from "./storage-inventory.mjs";
+
+export function defaultSceneObjectMovement(doc, _changes, options) {
+    if (doc.documentName !== "Tile" && !(doc.documentName === "Token" && inventoryForToken(doc)?.type === "storage")) return;
+    // Explicit API animations and the Animations menu retain their settings.
+    // Otherwise normal dragging, keyboard and HUD updates are instantaneous.
+    if (options.animate === undefined && options.animation === undefined) options.animate = false;
+}
 
 export const OBJECT_MOTION_QUERY = "arcane-advent.objectMotion";
 export function objectCenter(doc) {
@@ -51,6 +59,9 @@ export async function requestObjectMotion(doc, points, settings) {
 }
 
 export function registerObjectMotion() {
+    Hooks.on("preMoveToken", defaultSceneObjectMovement);
+    Hooks.on("preUpdateToken", defaultSceneObjectMovement);
+    Hooks.on("preUpdateTile", defaultSceneObjectMovement);
     let queue=Promise.resolve();
     CONFIG.queries[OBJECT_MOTION_QUERY]=(data,{user})=>{
         const run=queue.catch(()=>{}).then(async()=>{

@@ -4,6 +4,7 @@ import { requestInventoryAction, storageAccess, isGroundDeposit } from "../stora
 import { inventoryForToken } from "../storage-inventory.mjs";
 import { inventorySelectionRows } from "../ground-items.mjs";
 import { targetedInventoryRecipient, chooseInventoryRecipient } from "./inventory-recipient.mjs";
+import { transferAmountControl, transferAmount, setTransferAmount, bindTransferAmounts } from "./inventory-quantity-controls.mjs";
 
 // Shared by character inventories and storage sheets. DOM construction keeps
 // player-authored item names out of HTML strings.
@@ -42,8 +43,7 @@ export async function inventoryActionDialog(actor, action, initialId = null, { e
             picker.append(label);
         }
         const entries = inventorySelectionRows(actor.items).filter(entry => isInventoryItem(entry.item) && !excludeIds.includes(entry.item.id));
-        const items = entries.map(entry => entry.item);
-        if (!items.length) throw new Error("Cet inventaire est vide.");
+        if (!entries.length) throw new Error("Cet inventaire est vide.");
         const selectAll = document.createElement("button");
         selectAll.type = "button";
         selectAll.dataset.transferSelectAll = "";
@@ -51,16 +51,15 @@ export async function inventoryActionDialog(actor, action, initialId = null, { e
         const list = document.createElement("div");
         list.className = "aa-transfer-choices";
         picker.append(selectAll, list);
-        for (const item of items) {
-            const entry = entries.find(entry => entry.item === item);
+        for (const entry of entries) {
+            const { item } = entry;
             const row = document.createElement("div");
             row.className = "aa-transfer-choice";
-            const label = document.createElement("label");
-            const check = document.createElement("input");
-            check.type = "checkbox";
-            check.dataset.transferItem = item.id;
-            check.defaultChecked = item.id === initialId;
-            check.disabled = item.type === "weapon" && item.system.corporeal;
+            const available = item.type === "object" ? item.system.quantity : 1;
+            row.dataset.unitWeight = String(item.type === "object" ? item.system.weight ?? 0 : entry.weight);
+            const amount = transferAmountControl({ id: item.id, available, numeric: available > 1,
+                selected: item.id === initialId, disabled: item.type === "weapon" && item.system.corporeal });
+            amount.children[0].setAttribute("aria-label", available > 1 ? `Quantité de ${item.name}` : `Sélectionner ${item.name}`);
             const icon = document.createElement("span");
             icon.className = "aa-transfer-icon";
             if (entry.icon) icon.textContent = entry.icon;
@@ -69,21 +68,10 @@ export async function inventoryActionDialog(actor, action, initialId = null, { e
             name.className = "aa-transfer-name";
             name.style.paddingInlineStart = `${entry.depth * 12}px`;
             name.textContent = `${item.name}${item.system.equipped ? " · équipé" : ""}`;
-            label.append(check, icon, name);
-            row.append(label);
-            let amount;
-            if (item.type === "object") {
-                amount = document.createElement("input");
-                Object.assign(amount, { type: "number", min: "1", max: String(item.system.quantity), step: "1", defaultValue: String(item.system.quantity) });
-                amount.dataset.transferQuantity = "";
-                amount.dataset.unitWeight = String(item.system.weight ?? 0);
-                amount.setAttribute("aria-label", `Quantité de ${item.name}`);
-                row.append(amount);
-            } else { const quantity = document.createElement("span"); quantity.className = "aa-transfer-quantity"; quantity.textContent = "1"; row.append(quantity); }
             const weight = document.createElement("span");
             weight.className = "aa-transfer-weight";
-            weight.textContent = `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(entry.weight)} kg`;
-            row.append(weight);
+            weight.textContent = `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(item.id === initialId ? entry.weight : 0)} kg`;
+            row.append(amount, icon, name, weight);
             list.append(row);
         }
         const choice = await formDialog.prompt({
@@ -91,29 +79,25 @@ export async function inventoryActionDialog(actor, action, initialId = null, { e
             position: { width: 600 }, content, rejectClose: false,
             render: (_event, dialog) => {
                 const form = dialog.element;
+                bindTransferAmounts(form);
                 form.querySelector("[data-transfer-select-all]").addEventListener("click", () => {
-                    const checks = [...form.querySelectorAll("[data-transfer-item]:not(:disabled)")];
-                    const value = checks.some(input => !input.checked);
-                    checks.forEach(input => { input.checked = value; });
-                });
-                for (const quantity of form.querySelectorAll("[data-transfer-quantity]")) quantity.addEventListener("input", () => {
-                    quantity.closest(".aa-transfer-choice").querySelector(".aa-transfer-weight").textContent = `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(quantity.valueAsNumber * Number(quantity.dataset.unitWeight))} kg`;
+                    const controls = [...form.querySelectorAll("[data-transfer-item]:not(:disabled)")];
+                    const selected = controls.some(control => !(transferAmount(control) > 0));
+                    controls.forEach(control => setTransferAmount(control, selected));
                 });
             },
             buttons: [{ action: "cancel", label: "Annuler", callback: () => null }],
             ok: { label: action === "transfer" ? "Transférer" : action === "drop" ? "Déposer" : "Valider", callback: (_event, button) => {
-                const selected = [...button.form.querySelectorAll("[data-transfer-item]:checked:not(:disabled)")];
-                if (!selected.length) throw new Error("Sélectionnez au moins un objet.");
-                const selections = selected.map(check => {
-                    const item = actor.items.get(check.dataset.transferItem);
+                const selections = [...button.form.querySelectorAll("[data-transfer-item]:not(:disabled)")].map(control => {
+                    const item = actor.items.get(control.dataset.transferItem);
                     if (!item) throw new Error("Un objet sélectionné n’est plus disponible.");
-                    const amount = check.closest(".aa-transfer-choice").querySelector("[data-transfer-quantity]");
-                    const quantity = amount ? amount.valueAsNumber : 1;
-                    if (!Number.isSafeInteger(quantity) || quantity < 1 || (amount && quantity > Number(amount.max))) {
+                    const quantity = transferAmount(control), maximum = item.type === "object" ? item.system.quantity : 1;
+                    if (!Number.isSafeInteger(quantity) || quantity < 0 || quantity > maximum) {
                         throw new Error(`Quantité invalide : ${item.name}.`);
                     }
                     return { id: item.id, quantity };
-                });
+                }).filter(entry => entry.quantity > 0);
+                if (!selections.length) throw new Error("Sélectionnez au moins un objet.");
                 return { selections, deleteEmptyGround: button.form.querySelector("[data-delete-empty-ground]")?.checked === true };
             } }
         });

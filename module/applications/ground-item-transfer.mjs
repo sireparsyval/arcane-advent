@@ -2,6 +2,7 @@ import { formDialog } from "./form-interactions.mjs";
 import { inventoryActor, looseGroundItem, requestInventoryAction, storageAccess } from "../storage.mjs";
 import { inventoryForToken } from "../storage-inventory.mjs";
 import { isInventoryItem } from "../inventory.mjs";
+import { transferAmountControl } from "./inventory-quantity-controls.mjs";
 
 import { targetedInventoryRecipient, chooseInventoryRecipient } from "./inventory-recipient.mjs";
 export { targetedInventoryRecipient, chooseInventoryRecipient } from "./inventory-recipient.mjs";
@@ -31,10 +32,9 @@ export async function quickInventoryAction(source, itemId, action, { signal } = 
     if (!Number.isSafeInteger(maximum) || maximum < 1) throw new Error("La quantité n’est plus disponible.");
     let quantity = maximum;
     if (maximum > 1) {
-        const content = document.createElement("div"), label = document.createElement("label"), amount = document.createElement("input");
+        const content = document.createElement("div"), label = document.createElement("label");
         label.textContent = action === "transfer" ? "Quantité à transférer " : "Quantité à déposer ";
-        Object.assign(amount, { name: "quantity", type: "number", min: "1", max: String(maximum), step: "1", defaultValue: String(maximum) });
-        label.append(amount);
+        label.append(transferAmountControl({ name: "quantity", available: maximum, minimum: 1, value: maximum }));
         content.append(label);
         quantity = await formDialog.prompt({
             window: { title: item.name }, position: { width: 320 }, content, rejectClose: false,

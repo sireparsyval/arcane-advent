@@ -4,17 +4,17 @@ import { groundMenu, mainGroundContainer, checkedCoins, hasCoins } from "../grou
 import { LUQA_DENOMINATIONS } from "../inventory.mjs";
 import { chooseInventoryItems } from "./inventory-transfer.mjs";
 import { targetedInventoryRecipient, chooseInventoryRecipient, inventorySourceToken } from "./inventory-recipient.mjs";
+import { transferAmountControl, bindTransferAmounts } from "./inventory-quantity-controls.mjs";
 
 const busy = new Set();
 export const groundActionBusy = source => busy.has(source.uuid);
 
 async function quantityDialog(item, { split = false } = {}) {
     const maximum = item.system.quantity - (split ? 1 : 0);
-    const content = document.createElement("div"), label = document.createElement("label"), input = document.createElement("input");
+    const content = document.createElement("div"), label = document.createElement("label");
     label.textContent = split ? "Quantité de la nouvelle pile " : "Quantité à transférer ";
-    Object.assign(input, { name: "quantity", type: "number", min: "1", max: String(maximum), step: "1",
-        defaultValue: String(split ? Math.max(1, Math.floor(item.system.quantity / 2)) : maximum) });
-    label.append(input); content.append(label);
+    label.append(transferAmountControl({ name: "quantity", available: item.system.quantity, maximum, minimum: 1,
+        value: split ? Math.max(1, Math.floor(item.system.quantity / 2)) : maximum })); content.append(label);
     return formDialog.prompt({ window: { title: split ? "Scinder la pile" : item.name }, position: { width: 340 }, content, rejectClose: false,
         buttons: [{ action: "cancel", label: "Annuler", callback: () => null }],
         ok: { label: split ? "Scinder" : "Transférer", callback: (_event, button) => {
@@ -30,25 +30,21 @@ export async function chooseLuqa(purse, title) {
     const content = document.createElement("div"), list = document.createElement("div");
     list.className = "aa-transfer-picker";
     for (const { key, symbol, label } of LUQA_DENOMINATIONS) {
-        const row = document.createElement("label"); row.className = "aa-transfer-choice aa-luqa-choice";
-        const check = document.createElement("input"); Object.assign(check, { type: "checkbox", name: `take.${key}`, defaultChecked: coins[key] > 0, disabled: coins[key] === 0 });
+        const row = document.createElement("div"); row.className = "aa-transfer-choice aa-luqa-choice"; row.dataset.unitWeight = "0.01";
+        const amount = transferAmountControl({ name: key, available: coins[key], value: coins[key], disabled: coins[key] === 0 });
+        amount.children[0].setAttribute("aria-label", `Quantité de ${label}`);
         const icon = document.createElement("span"); icon.className = "aa-transfer-icon"; icon.textContent = symbol;
-        const amount = document.createElement("input"); Object.assign(amount, { type: "number", name: key, min: "0", max: String(coins[key]), step: "1", defaultValue: String(coins[key]) });
         const name = document.createElement("span"); name.className = "aa-transfer-name"; name.textContent = label;
         const weight = document.createElement("span"); weight.className = "aa-transfer-weight"; weight.textContent = `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(coins[key] * 0.01)} kg`;
-        row.append(check, icon, amount, name, weight); list.append(row);
+        row.append(amount, icon, name, weight); list.append(row);
     }
     content.append(list);
     return formDialog.prompt({ window: { title }, position: { width: 600 }, content, rejectClose: false,
-        render: (_event, dialog) => {
-            for (const { key } of LUQA_DENOMINATIONS) {
-                const input = dialog.element.querySelector(`[name="${key}"]`);
-                input.addEventListener("input", () => { input.closest(".aa-luqa-choice").querySelector(".aa-transfer-weight").textContent = `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(input.valueAsNumber * 0.01)} kg`; });
-            }
-        }, buttons: [{ action: "cancel", label: "Annuler", callback: () => null }],
+        render: (_event, dialog) => bindTransferAmounts(dialog.element),
+        buttons: [{ action: "cancel", label: "Annuler", callback: () => null }],
         ok: { label: "Valider", callback: (_event, button) => {
             const selected = Object.fromEntries(LUQA_DENOMINATIONS.map(({ key }) => [key,
-                button.form.elements[`take.${key}`].checked ? button.form.elements[key].valueAsNumber : 0]));
+                button.form.elements[key].valueAsNumber]));
             checkedCoins(selected);
             if (!hasCoins(selected) || Object.keys(selected).some(key => selected[key] > coins[key])) throw Error("Sélection de Luqa invalide.");
             return selected;

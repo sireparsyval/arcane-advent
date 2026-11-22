@@ -1134,15 +1134,15 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-storage-directory-row > span { flex: 1; overflow-wrap: anywhere; }
 .aa-transfer-choices { max-height: 45vh; overflow-y: auto; margin-top: 8px; }
 .aa-transfer-cleanup { display: flex; align-items: center; gap: 6px; margin-block: 10px; }
-.aa-transfer-choice { display: grid; grid-template-columns: 22px 24px 62px minmax(100px,1fr) 80px; align-items: center; gap: 8px; padding: 6px; border: 1px solid var(--color-border-light-primary); border-radius: 4px; margin-block: 4px; }
-.aa-transfer-choice > label { display: contents; }
-.aa-transfer-choice input[data-transfer-item] { grid-column: 1; grid-row: 1; }
+.aa-transfer-choice { display: grid; grid-template-columns: 124px 24px minmax(100px,1fr) 80px; align-items: center; gap: 8px; padding: 6px; border: 1px solid var(--color-border-light-primary); border-radius: 4px; margin-block: 4px; }
+.aa-transfer-amount { display: inline-grid; grid-template-columns: 64px 52px; align-items: center; gap: 8px; width: 124px; vertical-align: middle; }
+.aa-transfer-amount > input, .aa-transfer-amount > button { box-sizing: border-box; width: 64px; min-width: 0; height: 32px; margin: 0; text-align: center; }
+.aa-transfer-toggle[aria-pressed="true"] { border-color: var(--color-border-highlight); }
+.aa-transfer-available { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .aa-transfer-icon { grid-column: 2; grid-row: 1; text-align: center; }
 .aa-transfer-icon img { width: 24px; height: 24px; object-fit: contain; border: 0; vertical-align: middle; }
-.aa-transfer-choice > input[type="number"], .aa-transfer-quantity { grid-column: 3; grid-row: 1; width: 100%; text-align: center; }
-.aa-transfer-name { grid-column: 4; grid-row: 1; min-width: 0; overflow-wrap: anywhere; }
-.aa-transfer-weight { grid-column: 5; grid-row: 1; text-align: right; white-space: nowrap; }
-.aa-luqa-choice > input[type="checkbox"] { grid-column: 1; grid-row: 1; }
+.aa-transfer-name { grid-column: 3; grid-row: 1; min-width: 0; overflow-wrap: anywhere; }
+.aa-transfer-weight { grid-column: 4; grid-row: 1; text-align: right; white-space: nowrap; }
 
 .aa-inventory-heading h3 {
     flex: 1 0 auto;

@@ -38,6 +38,7 @@ globalThis.foundry = { utils: { randomID: () => `request${++serial}` }, applicat
     }
 } };
 const { inventoryActionDialog } = await import("../../module/applications/inventory-transfer.mjs");
+const { chooseLuqa, performGroundAction } = await import("../../module/applications/ground-actions.mjs");
 const { ArcaneStorageSheet } = await import("../../module/applications/actor/storage-sheet.mjs");
 async function test(name, fn) {
     requests.length = errors.length = 0;
@@ -48,10 +49,8 @@ async function test(name, fn) {
 for (const action of ["transfer", "drop"]) {
     await test(`${action}: open, edit the rendered quantity and submit`, async () => {
         scenario = form => {
-            const check = form.querySelector('[data-transfer-item="object"]');
-            check.checked = true;
-            const amount = check.closest(".aa-transfer-choice").querySelector("[data-transfer-quantity]");
-            equal(amount.value, "4");
+            const amount = form.querySelector('[data-transfer-item="object"]');
+            equal(amount.value, "0");
             amount.value = "2";
             assert(form.textContent.includes("Objet <test>"), "Names must remain text");
             assert(!form.querySelector("test"), "Item name was interpreted as markup");
@@ -69,8 +68,10 @@ for (const action of ["transfer", "drop"]) {
 await test("select all and deselect all work after rendering", async () => {
     scenario = form => {
         const all = form.querySelector("[data-transfer-select-all]");
-        all.click(); equal(form.querySelectorAll("[data-transfer-item]:checked").length, 2);
-        all.click(); equal(form.querySelectorAll("[data-transfer-item]:checked").length, 0);
+        all.click(); equal(form.querySelector('[data-transfer-item="object"]').value, "4");
+        equal(form.querySelector('[data-transfer-item="bag"]').getAttribute("aria-pressed"), "true");
+        all.click(); equal(form.querySelector('[data-transfer-item="object"]').value, "0");
+        equal(form.querySelector('[data-transfer-item="bag"]').getAttribute("aria-pressed"), "false");
         all.click();
     };
     await inventoryActionDialog(source, "transfer");
@@ -79,10 +80,67 @@ await test("select all and deselect all work after rendering", async () => {
 });
 
 await test("initial item selection survives serialization", async () => {
-    scenario = form => equal(form.querySelectorAll("[data-transfer-item]:checked").length, 1);
+    scenario = form => {
+        equal(form.querySelector('[data-transfer-item="object"]').value, "4");
+        equal(form.querySelector('[data-transfer-item="bag"]').getAttribute("aria-pressed"), "false");
+    };
     await inventoryActionDialog(source, "transfer", "object");
     equal(errors, []);
     equal(requests[0].selections, [{ id: "object", quantity: 4 }]);
+});
+
+await test("a unique object uses a serialized yes/no toggle in the same slot as stack amounts", async () => {
+    const single = { ...source, items: new Items([["single", { id: "single", name: "Unique", type: "object", system: { quantity: 1, weight: 2 } }]]) };
+    scenario = form => {
+        const toggle = form.querySelector('[data-transfer-item="single"]');
+        equal(toggle.tagName, "BUTTON"); equal(toggle.textContent, "❌"); equal(toggle.type, "button");
+        assert(!form.querySelector('[data-transfer-quantity], input[type="checkbox"]'), "A unique item must have just its toggle");
+        toggle.click(); equal(toggle.getAttribute("aria-pressed"), "true"); equal(toggle.textContent, "✔️");
+        toggle.click(); equal(toggle.getAttribute("aria-pressed"), "false");
+        toggle.click();
+        equal(form.querySelector('.aa-transfer-weight').textContent, "2 kg");
+    };
+    await inventoryActionDialog(single, "transfer");
+    equal(errors, []); equal(requests[0].selections, [{ id: "single", quantity: 1 }]);
+});
+
+await test("stack quantities are selected directly without a checkbox and show their available stock", async () => {
+    scenario = form => {
+        const amount = form.querySelector('[data-transfer-item="object"]');
+        equal(amount.closest('.aa-transfer-amount').querySelector('.aa-transfer-available').textContent, "/ 4");
+        const toggle = form.querySelector('[data-transfer-item="bag"]');
+        equal(amount.getBoundingClientRect().width, 64); equal(toggle.getBoundingClientRect().width, 64);
+        assert(amount.closest('.aa-transfer-amount').querySelector('.aa-transfer-available').getBoundingClientRect().left >= amount.getBoundingClientRect().right, "The available stock must follow the amount field");
+        assert(!form.querySelector('input[type="checkbox"]'), "Stacks must not require a separate checkbox");
+        amount.value = "3"; amount.dispatchEvent(new Event("input"));
+    };
+    await inventoryActionDialog(source, "transfer");
+    equal(errors, []); equal(requests[0].selections, [{ id: "object", quantity: 3 }]);
+});
+
+await test("currency amounts and available balances survive serialization; zero means no transfer", async () => {
+    scenario = form => {
+        assert(!form.querySelector('input[type="checkbox"]'), "Currency must use amounts only");
+        equal(form.elements.copper.value, "24");
+        equal(form.elements.copper.closest('.aa-transfer-amount').querySelector('.aa-transfer-available').textContent, "/ 24");
+        form.elements.copper.value = "5"; form.elements.copper.dispatchEvent(new Event("input"));
+        equal(form.elements.copper.closest('.aa-transfer-choice').querySelector('.aa-transfer-weight').textContent, "0,05 kg");
+        form.elements.silver.value = "0";
+        equal(form.elements.gold.disabled, true);
+    };
+    equal(await chooseLuqa({ system: { coins: { copper: 24, silver: 1 } } }, "Luqa"), { copper: 5, silver: 0, gold: 0, platinum: 0 });
+});
+
+await test("splitting shows the original stack balance but keeps at least one copy in the source", async () => {
+    const pile = { ...source, type: "storage", system: { ground: true }, getFlag: () => false,
+        items: new Items([["stack", { id: "stack", name: "Pile", type: "object", system: { quantity: 5 } }]]) };
+    scenario = form => {
+        equal(form.elements.quantity.value, "2"); equal(form.elements.quantity.max, "4");
+        equal(form.querySelector('.aa-transfer-available').textContent, "/ 5");
+        form.elements.quantity.value = "4";
+    };
+    await performGroundAction(pile, "split", { token });
+    equal(errors, []); equal(requests[0].action, "split"); equal(requests[0].selections, [{ id: "stack", quantity: 4 }]);
 });
 
 await test("an empty selection does not send a request", async () => {
@@ -94,8 +152,7 @@ await test("an empty selection does not send a request", async () => {
 
 await test("an invalid rendered quantity does not send a request", async () => {
     scenario = form => {
-        form.querySelector('[data-transfer-item="object"]').checked = true;
-        form.querySelector("[data-transfer-quantity]").value = "0";
+        form.querySelector("[data-transfer-quantity]").value = "5";
     };
     await inventoryActionDialog(source, "transfer");
     equal(requests.length, 0);
@@ -128,7 +185,7 @@ await test("ground cleanup is opt-in and permanent storage does not offer it", a
         const storage = { ...source, type: "storage", system: { ground }, getFlag: () => false };
         scenario = form => {
             equal(Boolean(form.querySelector("[data-delete-empty-ground]")), ground);
-            form.querySelector('[data-transfer-item="object"]').checked = true;
+            form.querySelector('[data-transfer-item="object"]').value = "1";
         };
         await inventoryActionDialog(storage, "transfer");
         equal(errors, []);

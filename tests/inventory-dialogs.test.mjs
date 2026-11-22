@@ -23,7 +23,7 @@ test("inventory dialogs, token HUD, aptitude targeting and defense tooltips in a
     const server = createServer(async (request, response) => {
         if (request.url === "/") {
             response.setHeader("Content-Type", "text/html; charset=utf-8");
-            response.end('<!doctype html><meta charset="utf-8"><body><main></main><pre></pre><script type="module" src="/tests/browser/inventory-dialogs.mjs"></script></body>');
+            response.end('<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/styles/arcane-advent.css"><body><main></main><pre></pre><script type="module" src="/tests/browser/inventory-dialogs.mjs"></script></body>');
             return;
         }
         try {
@@ -44,7 +44,7 @@ test("inventory dialogs, token HUD, aptitude targeting and defense tooltips in a
         { windowsHide: true, timeout: 35000, maxBuffer: 1024 * 1024 });
         assert.match(stdout, /data-status="passed"/, stdout);
         const results = JSON.parse(stdout.match(/<pre>(.*?)<\/pre>/s)[1]);
-        assert.equal(results.length, 25);
+        assert.equal(results.length, 29);
         assert.ok(results.every(result => result.passed), JSON.stringify(results));
     } finally {
         server.closeAllConnections();

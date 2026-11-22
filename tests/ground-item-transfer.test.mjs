@@ -37,11 +37,11 @@ test("currency selection defaults to all available denominations and reads the s
     const purse = { system: { coins: { copper: 7, gold: 2 } } };
     foundry.applications.api.DialogV2.prompt = async config => {
         const rows = config.content.children[0].children;
-        assert.deepEqual(rows.map(row => row.children[2].defaultValue), ["7", "0", "2", "0"]);
-        assert.deepEqual(rows.map(row => row.children[0].defaultChecked), [true, false, true, false]);
-        return config.ok.callback(null, { form: { elements: Object.fromEntries(["copper", "silver", "gold", "platinum"].flatMap(key => [
-            [`take.${key}`, { checked: key === "copper" }], [key, { valueAsNumber: key === "copper" ? 3 : 0 }]
-        ])) } });
+        assert.deepEqual(rows.map(row => row.children[0].children[0].defaultValue), ["7", "0", "2", "0"]);
+        assert.deepEqual(rows.map(row => row.children[0].children[1].textContent), ["/ 7", "/ 0", "/ 2", "/ 0"]);
+        assert.ok(rows.every(row => row.children.every(child => child.type !== "checkbox")));
+        return config.ok.callback(null, { form: { elements: Object.fromEntries(["copper", "silver", "gold", "platinum"].map(key =>
+            [key, { valueAsNumber: key === "copper" ? 3 : 0 }])) } });
     };
     assert.deepEqual(await chooseLuqa(purse, "Luqa"), { copper: 3, silver: 0, gold: 0, platinum: 0 });
 });
@@ -51,9 +51,8 @@ test("invalid or cancelled currency selections never send a transfer", async () 
         const env = environment();
         Object.assign(env.source.items.get("apple"), { type: "purse", system: { coins: { copper: 4 } } });
         foundry.applications.api.DialogV2.prompt = async config => value === null ? config.buttons[0].callback()
-            : config.ok.callback(null, { form: { elements: Object.fromEntries(["copper", "silver", "gold", "platinum"].flatMap(key => [
-                [`take.${key}`, { checked: key === "copper" }], [key, { valueAsNumber: value }]
-            ])) } });
+            : config.ok.callback(null, { form: { elements: Object.fromEntries(["copper", "silver", "gold", "platinum"].map(key =>
+                [key, { valueAsNumber: key === "copper" ? value : 0 }])) } });
         const operation = performGroundAction(env.source, "coinsPart", { itemId: "apple" });
         if (value === null) assert.equal(await operation, undefined);
         else await assert.rejects(operation, /Luqa/);
@@ -79,12 +78,13 @@ function environment(quantity = 1) {
     globalThis.ui = { notifications: { info() {}, warn: message => warnings.push(message) } };
     globalThis.Hooks = { on(name, callback) { const id = ++serial; hooks.set(id, { name, callback }); return id; },
         off(_name, id) { hooks.delete(id); } };
-    globalThis.document = Object.assign(keyboard, { createElement: tag => ({ tag, children: [], append(...children) { this.children.push(...children); } }) });
+    globalThis.document = Object.assign(keyboard, { createElement: tag => ({ tag, children: [], dataset: {}, attributes: {},
+        setAttribute(key, value) { this.attributes[key] = value; }, append(...children) { this.children.push(...children); } }) });
     const dialog = { value: null, cancel: false, maximum: null, name: null };
     globalThis.foundry = { utils: { randomID: () => `id${++serial}` }, applications: { api: { DialogV2: { async prompt(config) {
         prompts++;
         assert.equal(config.position.width, 320);
-        const input = config.content.children[0].children[0];
+        const input = config.content.children[0].children[0].children[0];
         dialog.maximum = input.defaultValue;
         dialog.name = config.window.title;
         if (dialog.cancel) return config.buttons[0].callback();

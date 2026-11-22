@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { objectMotionPlan, objectCenter, motionSettings, registerObjectMotion } from "../module/scene-object-motion.mjs";
+import { objectMotionPlan, objectCenter, motionSettings, registerObjectMotion, defaultSceneObjectMovement } from "../module/scene-object-motion.mjs";
 import { projectileAppearance, projectileFrame } from "../module/scene-projectiles.mjs";
 const scene={width:2000,height:1500,grid:{size:100,distance:1}};
 const doc={documentName:"Token",parent:scene,x:100,y:100,width:1,height:1,rotation:45};
@@ -24,6 +24,42 @@ test("motion rejects stale origins, off-scene destinations and invalid settings 
     assert.throws(()=>objectMotionPlan(doc,[{x:150,y:150},{x:1999,y:1499}],{},{clock:()=>1000,id:()=>"test"}),/scène/);
     for(const input of [{rotation:"bad"},{turns:-1},{direction:0},{offset:Infinity}])assert.throws(()=>motionSettings(input),/invalides/);
     assert.throws(()=>make({duration:0}),/durée/);
+});
+
+test("ordinary scenery and ground inventory movement is instantaneous, while explicit animation options and characters are preserved", () => {
+    const storage = { documentName: "Token", actor: { type: "storage" } };
+    for (const object of [storage, { documentName: "Tile" }]) {
+        const options = {};
+        defaultSceneObjectMovement(object, { x: 400 }, options);
+        assert.equal(options.animate, false);
+        for (const settings of [{ animate: true }, { animate: false }, { animation: { duration: 1200 } }]) {
+            const before = structuredClone(settings);
+            defaultSceneObjectMovement(object, { x: 400 }, settings);
+            assert.deepEqual(settings, before);
+        }
+    }
+    for (const type of ["character", "npc"]) {
+        const options = {};
+        defaultSceneObjectMovement({ documentName: "Token", actor: { type } }, { x: 400 }, options);
+        assert.deepEqual(options, {});
+    }
+});
+
+test("native movement hooks also resolve ground inventories through their proxy token", () => {
+    const hooks = new Map();
+    globalThis.Hooks = { on: (name, callback) => hooks.set(name, callback), once() {} };
+    globalThis.CONFIG = { queries: {} };
+    globalThis.game = { items: new Map([["ground", { documentName: "Item", type: "storage" }]]) };
+    registerObjectMotion();
+    const proxy = { documentName: "Token", getFlag: () => "ground", actor: { type: "storage" } };
+    for (const hook of ["preMoveToken", "preUpdateToken"]) {
+        const options = {};
+        hooks.get(hook)(proxy, { x: 400 }, options);
+        assert.equal(options.animate, false);
+    }
+    const options = {};
+    hooks.get("preUpdateTile")({ documentName: "Tile" }, { y: 400 }, options);
+    assert.equal(options.animate, false);
 });
 
 for (const type of ["storage", "character", "npc"]) test(`${type} token rendering follows the shared clock and restores position on completion`,()=>{
