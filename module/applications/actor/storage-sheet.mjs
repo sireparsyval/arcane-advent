@@ -3,6 +3,8 @@ import { storageAccess, placeStorage, isGroundTemplate, isGroundDeposit, looseGr
 import { inventoryActionDialog } from "../inventory-transfer.mjs";
 import { inventoryForDocument, inventoryForToken } from "../../storage-inventory.mjs";
 import { runQuickInventoryAction } from "../ground-item-transfer.mjs";
+import { openPurseActions } from "../ground-actions.mjs";
+import { mainGroundContainer } from "../../ground-items.mjs";
 import { bindFieldEnter, formDialog } from "../form-interactions.mjs";
 
 const { ActorSheetV2, ItemSheetV2 } = foundry.applications.sheets;
@@ -15,6 +17,10 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
         window: { resizable: true },
         actions: {
             quickInventory: function (_event, target) { return runQuickInventoryAction(this, this.inventoryHost, target); },
+            purseActions: async function (_event, target) {
+                try { await openPurseActions(this.inventoryHost, target.dataset.itemId); }
+                catch (error) { ui.notifications.error(error.message); }
+            },
             transfer: function () { return inventoryActionDialog(this.inventoryHost, "transfer"); },
             dropGround: function () { return inventoryActionDialog(this.inventoryHost, "drop"); },
             place: async function () { try { await placeStorage(this.inventoryHost); } catch (error) { ui.notifications.error(error.message); } },
@@ -88,7 +94,7 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
                 rows.push({ id: node.item.id, name: node.item.name, depth,
                     quantity: node.item.type === "object" ? node.item.system.quantity : 1,
                     weight: new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(node.weight),
-                    container: node.item.type === "container" });
+                    container: node.item.type === "container", isPurse: node.item.type === "purse" });
                 visit(node.children, depth + 1);
             }
         };
@@ -96,7 +102,8 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
         const loose = looseGroundItem(this.inventoryHost);
         return { ...context, actor: this.inventoryHost, rows, isGM: game.user.isGM,
             looseItem: loose ? { id: loose.id, name: loose.name, img: loose.img || this.inventoryHost.img,
-                quantity: loose.type === "object" ? loose.system.quantity : 1 } : null,
+                quantity: loose.type === "object" ? loose.system.quantity : 1, isPurse: loose.type === "purse" } : null,
+            fixedOnScene: this.inventoryHost.system.fixedOnScene || mainGroundContainer(this.inventoryHost)?.system.fixedOnScene,
             ground: isGroundDeposit(this.inventoryHost), canPlace: game.user.isGM && !isGroundDeposit(this.inventoryHost),
             locked: this.inventoryHost.system.locked, canTransfer: storageAccess(this.inventoryHost),
             totalWeight: new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 }).format(inventory.totalWeight) };
@@ -124,9 +131,11 @@ const storageSheet = Base => class extends HandlebarsApplicationMixin(Base) {
             input.addEventListener("change", async () => {
                 if (!game.user.isGM) return;
                 const field = input.dataset.storageField;
-                const value = field === "system.locked" ? input.checked : input.value.trim();
-                if (!["name", "img", "system.locked"].includes(field) || value === "") return;
+                const value = ["system.locked", "system.fixedOnScene"].includes(field) ? input.checked : input.value.trim();
+                if (!["name", "img", "system.locked", "system.fixedOnScene"].includes(field) || value === "") return;
                 try {
+                    const main = mainGroundContainer(this.inventoryHost);
+                    if (field === "system.fixedOnScene" && main) await this.inventoryHost.updateInventoryItem(main.id, { "system.fixedOnScene": value });
                     const changes = { [field]: value };
                     if (!this.inventoryHost.document) {
                         if (field === "img") changes["prototypeToken.texture.src"] = value;

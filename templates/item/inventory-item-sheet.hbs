@@ -35,11 +35,12 @@
                 <file-picker name="system.groundTokenImage" type="image" value="{{system.groundTokenImage}}"></file-picker>
             </span>
         </label>
-        <p class="hint">Utilisée si cet objet est déposé seul, avec son contenu éventuel. Laissez vide pour utiliser le sac par défaut.</p>
+        <p class="hint">Utilisée pour le dépôt sur scène. Laissez vide pour l’image par défaut du type d’objet.</p>
         {{> aaInventoryItemField label="Taille sur scène (cases)" type="number" name="system.groundTokenSize"
             value=system.groundTokenSize min=0.1 step="any" required=true}}
         <p class="hint">Jeton carré : 1 = une case de côté ; 0,5 = une demi-case. Utilisée lors du dépôt ou du lancer.</p>
         {{#if isContainer}}
+            <label class="checkbox"><input type="checkbox" name="system.fixedOnScene" {{#if system.fixedOnScene}}checked{{/if}}> Fixe sur scène (contenant non transportable)</label>
             <p class="hint">Poids propre du contenant&nbsp;: 0 kg. Le poids affiché dans l’inventaire correspond à son contenu.</p>
         {{else if isPurse}}
             <p class="hint">Bourse réservée aux Luqa. Chaque pièce pèse 0,01 kg ; le poids est calculé automatiquement.</p>
@@ -69,6 +70,7 @@
             {{#each coins}}
                 {{> aaInventoryItemField label=label type="number" name=field value=value min=0 step="1" required=true}}
             {{/each}}
+            {{#if canMovePurse}}<button type="button" data-action="purseActions"><i class="fa-solid fa-coins" aria-hidden="true"></i> Transférer / déposer des Luqa</button>{{/if}}
         </fieldset>
     {{/if}}
 

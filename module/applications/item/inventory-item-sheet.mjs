@@ -3,6 +3,7 @@ import { WEAPON_PROPERTIES } from "../../expertise.mjs";
 import { storageInventoryOwner } from "../../storage-inventory.mjs";
 import { ammunitionItems } from "../../weapon-ammunition.mjs";
 import { bindFieldEnter, formDialog } from "../form-interactions.mjs";
+import { openPurseActions } from "../ground-actions.mjs";
 
 const { HandlebarsApplicationMixin } = foundry.applications.api;
 const { ItemSheetV2 } = foundry.applications.sheets;
@@ -57,6 +58,12 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
         position: { width: 520, height: "auto" },
         form: { submitOnChange: false, closeOnSubmit: true },
         actions: {
+            purseActions: async function () {
+                if (!this.isEditable) return;
+                const owner = this.document.actor ?? storageInventoryOwner(this.document);
+                try { if (owner) await openPurseActions(owner, this.document.id); }
+                catch (error) { ui.notifications.error(error.message); }
+            },
             addReduction: this.#onAddReduction,
             removeReduction: this.#onRemoveReduction,
             deleteInventoryItem: this.#onDelete
@@ -95,6 +102,7 @@ export class ArcaneInventoryItemSheet extends HandlebarsApplicationMixin(ItemShe
             system,
             isObject: type === "object",
             isPurse: type === "purse",
+            canMovePurse: type === "purse" && this.isEditable && Boolean(this.document.actor ?? storageInventoryOwner(this.document)),
             isContainer: isInventoryContainer(this.document),
             coins: luqaCounters(this.document),
             isWeapon: type === "weapon",

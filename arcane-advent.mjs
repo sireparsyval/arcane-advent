@@ -7,7 +7,8 @@ import { ObjectData, ContainerData, PurseData } from "./module/data/inventory-da
 import { INVENTORY_TYPES } from "./module/inventory.mjs";
 import { StorageData, StorageItemData } from "./module/data/storage-data.mjs";
 import { ArcaneStorageSheet, ArcaneStorageItemSheet } from "./module/applications/actor/storage-sheet.mjs";
-import { registerStorageService } from "./module/storage.mjs";
+import { registerStorageService, registerCoinPileAppearance } from "./module/storage.mjs";
+import { registerGroundTokenHUD } from "./module/token-ground-hud.mjs";
 import { migrateStorageActors, migrateStorageImages } from "./module/storage-migration.mjs";
 import { registerStorageDirectory, StorageDirectory } from "./module/applications/storage-directory.mjs";
 
@@ -60,6 +61,8 @@ Hooks.once("init", () => {
     registerArcaneText();
     registerGlyphCatalog();
     registerTokenBars();
+    registerGroundTokenHUD();
+    registerCoinPileAppearance();
 
     CONFIG.Actor.documentClass = ArcaneActor;
     CONFIG.Combat.documentClass = ArcaneCombat;

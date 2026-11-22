@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { looseGroundItem } from "../module/storage.mjs";
 import { targetedInventoryRecipient, chooseInventoryRecipient, transferLooseGroundItem, quickInventoryAction, runQuickInventoryAction } from "../module/applications/ground-item-transfer.mjs";
+import { performGroundAction, chooseLuqa } from "../module/applications/ground-actions.mjs";
 
 class Surface {
     events = new Map();
@@ -13,6 +14,52 @@ class Surface {
     }
 }
 class Items extends Map { [Symbol.iterator]() { return this.values(); } }
+
+test("currency actions accept a targeted ground purse from either a carried or a deposited purse", async () => {
+    for (const carried of [true, false]) {
+        const env = environment();
+        env.source.type = carried ? "character" : "storage"; env.source.isOwner = true;
+        Object.assign(env.source.items.get("apple"), { type: "purse", system: { coins: { copper: 4 } } });
+        env.target.actor = { type: "storage", uuid: "Item.target", system: { ground: true }, getFlag: () => false,
+            items: new Items([["purse", { id: "purse", type: "purse", system: { coins: {} } }]]) };
+        await performGroundAction(env.source, "coinsAll", { itemId: "apple" });
+        assert.equal(env.requests.length, 1);
+        assert.equal(env.requests[0].action, "coinAll");
+        assert.equal(env.requests[0].purseId, "apple");
+        assert.equal(env.requests[0].targetToken, env.target.uuid);
+        assert.equal(env.prompts(), 0);
+        assert.throws(() => targetedInventoryRecipient(env.source), /contenant ou un stockage/);
+    }
+});
+
+test("currency selection defaults to all available denominations and reads the submitted selection", async () => {
+    environment();
+    const purse = { system: { coins: { copper: 7, gold: 2 } } };
+    foundry.applications.api.DialogV2.prompt = async config => {
+        const rows = config.content.children[0].children;
+        assert.deepEqual(rows.map(row => row.children[2].defaultValue), ["7", "0", "2", "0"]);
+        assert.deepEqual(rows.map(row => row.children[0].defaultChecked), [true, false, true, false]);
+        return config.ok.callback(null, { form: { elements: Object.fromEntries(["copper", "silver", "gold", "platinum"].flatMap(key => [
+            [`take.${key}`, { checked: key === "copper" }], [key, { valueAsNumber: key === "copper" ? 3 : 0 }]
+        ])) } });
+    };
+    assert.deepEqual(await chooseLuqa(purse, "Luqa"), { copper: 3, silver: 0, gold: 0, platinum: 0 });
+});
+
+test("invalid or cancelled currency selections never send a transfer", async () => {
+    for (const value of [0, 5, 1.5, NaN, null]) {
+        const env = environment();
+        Object.assign(env.source.items.get("apple"), { type: "purse", system: { coins: { copper: 4 } } });
+        foundry.applications.api.DialogV2.prompt = async config => value === null ? config.buttons[0].callback()
+            : config.ok.callback(null, { form: { elements: Object.fromEntries(["copper", "silver", "gold", "platinum"].flatMap(key => [
+                [`take.${key}`, { checked: key === "copper" }], [key, { valueAsNumber: value }]
+            ])) } });
+        const operation = performGroundAction(env.source, "coinsPart", { itemId: "apple" });
+        if (value === null) assert.equal(await operation, undefined);
+        else await assert.rejects(operation, /Luqa/);
+        assert.equal(env.requests.length, 0);
+    }
+});
 function environment(quantity = 1) {
     const view = new Surface(), keyboard = new Surface(), hooks = new Map(), requests = [], warnings = [];
     let serial = 0, prompts = 0;

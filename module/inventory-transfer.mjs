@@ -67,10 +67,13 @@ export function transferPlan(items, selections, randomID) {
 // Both sides are locked by the caller. A failed write is compensated from
 // snapshots; source items are removed only after every destination item exists.
 export async function executeTransfer(source, destination, selections, randomID) {
+    return executeInventoryPlan(source, destination, transferPlan(source.items, selections, randomID));
+}
+
+export async function executeInventoryPlan(source, destination, plan) {
     const destinations = Array.isArray(destination) ? destination : [destination];
     if (destinations.some(entry => source.uuid === entry.uuid)) throw new Error("Choisissez un autre destinataire.");
     if (new Set(destinations.map(entry => entry.uuid)).size !== destinations.length) throw new Error("Destinations de dépôt invalides.");
-    const plan = transferPlan(source.items, selections, randomID);
     const roots = plan.creates.filter(item => !item.system.containerId);
     if (Array.isArray(destination) && roots.length !== destinations.length) throw new Error("Dépôts au sol incomplets.");
     const copies = new Map(plan.creates.map(item => [item._id, item]));
@@ -85,20 +88,27 @@ export async function executeTransfer(source, destination, selections, randomID)
     const options = () => ({ keepId: true, aaTransfer: true });
     try {
         for (const { destination, creates } of groups) {
+            if (!creates.length) continue;
             const created = await destination.createEmbeddedDocuments("Item", creates, options());
             if (created.length !== creates.length || creates.some(item => !destination.items.get(item._id))) {
                 throw new Error("Le stockage destinataire n’a pas accepté tous les objets.");
             }
         }
+        if (plan.destinationUpdates?.length) {
+            const updated = await destination.updateEmbeddedDocuments("Item", plan.destinationUpdates, options());
+            if (updated.length !== plan.destinationUpdates.length) throw Error("La bourse destinataire n’a pas été mise à jour.");
+            verifyCoins(destination, plan.destinationUpdates);
+        }
         if (plan.updates.length) {
             const updated = await source.updateEmbeddedDocuments("Item", plan.updates, options());
             if (updated.length !== plan.updates.length) throw new Error("Quantités non mises à jour.");
+            verifyCoins(source, plan.updates);
         }
         if (plan.deletes.length) {
             await source.deleteEmbeddedDocuments("Item", plan.deletes, options());
             if (plan.deletes.some(id => source.items.get(id))) throw new Error("Le déplacement a été interrompu.");
         }
-        return { count: plan.creates.length };
+        return { count: plan.creates.length || plan.originals.length || 1, createdIds: plan.creates.map(item => item._id) };
     } catch (error) {
         try {
             const missing = plan.originals.filter(item => !source.items.get(item._id));
@@ -112,11 +122,19 @@ export async function executeTransfer(source, destination, selections, randomID)
                 if (remaining.length) await destination.deleteEmbeddedDocuments("Item", remaining, options());
                 if (ids.some(id => destination.items.get(id))) throw new Error("Annulation incomplète.");
             }
+            if (plan.destinationOriginals?.length) await destination.updateEmbeddedDocuments("Item", plan.destinationOriginals, options());
         } catch (rollbackError) {
             console.error("Arcane Advent | Réconciliation nécessaire", { source: source.uuid,
                 destinations: destinations.map(entry => entry.uuid), plan, error, rollbackError });
             throw new Error("Transfert interrompu : le MJ doit vérifier les deux inventaires (détails dans la console).");
         }
         throw error;
+    }
+}
+
+function verifyCoins(owner, changes) {
+    for (const change of changes) if (change["system.coins"] && Object.entries(change["system.coins"])
+        .some(([key, value]) => owner.items.get(change._id)?.system.coins?.[key] !== value)) {
+        throw Error("Les quantités de Luqa n’ont pas été enregistrées.");
     }
 }

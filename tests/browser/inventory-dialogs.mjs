@@ -12,10 +12,10 @@ const source = { uuid: "Actor.pantin", type: "character", isOwner: true,
         ["object", { id: "object", name: "Objet <test>", type: "object", system: { quantity: 4 } }],
         ["bag", { id: "bag", name: "Sac", type: "container", system: {} }]
     ]) };
-const target = { uuid: "Actor.ziggy" };
-const token = { uuid: "Scene.scene.Token.pantin", parent: { id: "scene" }, actor: source };
+const target = { uuid: "Actor.ziggy", type: "character" };
+const token = { documentName: "Token", uuid: "Scene.scene.Token.pantin", parent: { id: "scene" }, actor: source };
 globalThis.game = { user: { isGM: true, targets: new Set([{ actor: target,
-    document: { name: "Ziggy", uuid: "Scene.scene.Token.ziggy", actor: target } }]) },
+    document: { documentName: "Token", parent: { id: "scene" }, name: "Ziggy", uuid: "Scene.scene.Token.ziggy", actor: target } }]) },
     users: { activeGM: { async query(_name, data) { requests.push(data); return { count: data.selections.length }; } } } };
 globalThis.canvas = { scene: { id: "scene" }, tokens: { placeables: [{ actor: source, document: token }] } };
 globalThis.ui = { notifications: { info() {}, error: error => errors.push(error) } };

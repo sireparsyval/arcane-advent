@@ -1395,6 +1395,9 @@
                                     {{#if @root.canEditState}}
                                         <div class="aa-equipment-actions">
                                             {{> quickInventoryControls}}
+                                            {{#if isPurse}}
+                                                <button type="button" data-action="purseActions" data-item-id="{{id}}" title="Opérations sur les Luqa" aria-label="Transférer ou déposer des Luqa"><i class="fa-solid fa-coins" aria-hidden="true"></i></button>
+                                            {{/if}}
                                             {{#if canEquip}}
                                                 <button type="button" data-action="toggleEquipment" data-item-id="{{id}}">↑ Équiper</button>
                                             {{/if}}

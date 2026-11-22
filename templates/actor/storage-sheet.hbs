@@ -5,6 +5,7 @@
         <div><strong>{{looseItem.name}}</strong><span>× {{looseItem.quantity}}</span></div>
     </header>
     <button type="button" data-action="quickInventory" data-inventory-action="transfer" data-item-id="{{looseItem.id}}" {{#unless canTransfer}}disabled{{/unless}}><i class="fa-solid fa-right-left"></i> Transférer</button>
+    {{#if looseItem.isPurse}}<button type="button" data-action="purseActions" data-item-id="{{looseItem.id}}" {{#unless canTransfer}}disabled{{/unless}}><i class="fa-solid fa-coins"></i> Luqa</button>{{/if}}
     {{else}}
     <header class="aa-storage-header">
         <img src="{{actor.img}}" alt="{{actor.name}}">
@@ -14,6 +15,7 @@
                 <label>Nom <input data-storage-field="name" value="{{actor.name}}"></label>
                 <label>Image <input data-storage-field="img" value="{{actor.img}}"></label>
                 <label><input type="checkbox" data-storage-field="system.locked" {{checked locked}}> Verrouiller les échanges des joueurs</label>
+                <label><input type="checkbox" data-storage-field="system.fixedOnScene" {{checked fixedOnScene}}> Fixe sur scène (contenant non transportable)</label>
             {{else}}
                 <h2>{{actor.name}}</h2>
                 {{#if locked}}<p>Stockage verrouillé.</p>{{/if}}
@@ -34,6 +36,7 @@
                 <span>{{#if container}}📦 {{/if}}{{name}}</span>
                 <span>× {{quantity}}</span><span>{{weight}} kg</span>
                 {{#if @root.canTransfer}}
+                    {{#if isPurse}}<button type="button" data-action="purseActions" data-item-id="{{id}}" title="Opérations sur les Luqa" aria-label="Transférer ou déposer des Luqa"><i class="fa-solid fa-coins" aria-hidden="true"></i></button>{{/if}}
                     <button type="button" data-action="quickInventory" data-inventory-action="transfer" data-item-id="{{id}}"
                         title="Transférer" aria-label="Transférer {{name}}"><i class="fa-solid fa-right-left" aria-hidden="true"></i></button>
                     <button type="button" data-action="quickInventory" data-inventory-action="drop" data-item-id="{{id}}"

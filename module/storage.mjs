@@ -1,9 +1,11 @@
-import { executeTransfer, transferPlan } from "./inventory-transfer.mjs";
+import { executeInventoryPlan, transferPlan } from "./inventory-transfer.mjs";
 import { inventoryForDocument, inventoryForToken, StorageInventory } from "./storage-inventory.mjs";
 import { animateSceneObject, objectCenter, objectMotionPlan } from "./scene-object-motion.mjs";
-import { isInventoryContainer, isInventoryItem } from "./inventory.mjs";
+import { EQUIPMENT_TYPES, isInventoryContainer, isInventoryItem } from "./inventory.mjs";
+import { groundItemAppearance, mainGroundContainer, storageContentItems } from "./ground-items.mjs";
+import { coinPlan, packStoragePlan } from "./inventory-ground-plans.mjs";
 
-export const STORAGE_IMAGE = "assets/arcane-advent/entities/objects/item-stash.png";
+export const STORAGE_IMAGE = "assets/arcane-advent/entities/objects/bag-item.png";
 export const STORAGE_QUERY = "arcane-advent.inventory";
 export const inventoryActor = actor => ["character", "npc", "storage"].includes(actor?.type);
 export const isGroundTemplate = actor => actor?.type === "storage" && !actor.isToken
@@ -40,7 +42,7 @@ function groundPositions(token, roots) {
     const scene = token.parent, grid = scene.grid.size;
     const occupied = [...scene.tokens].map(doc => ({ x: doc.x, y: doc.y, width: doc.width * grid, height: doc.height * grid }));
     return roots.map(root => {
-        const side = groundTokenSize(root.system.groundTokenSize ?? 1), extent = side * grid;
+        const side = groundTokenSize(groundItemAppearance(root).size), extent = side * grid;
         if (extent > scene.width || extent > scene.height) throw new Error("La taille du jeton dépasse celle de la scène.");
         const baseX = Math.round(Math.max(0, Math.min(scene.width - extent, token.x + token.width * grid)) / grid);
         const baseY = Math.round(Math.max(0, Math.min(scene.height - extent, token.y)) / grid);
@@ -70,7 +72,7 @@ function groundPositions(token, roots) {
     });
 }
 
-export async function createStorage({ name = "Objets au sol", scene = null, x, y, ground = false, img, snap = true, size = 1 } = {}) {
+export async function createStorage({ name = "Objets au sol", scene = null, x, y, ground = false, img, snap = true, size = 1.5 } = {}) {
     if (!game.user.isGM) throw new Error("La création d’un stockage nécessite le MJ.");
     size = groundTokenSize(size);
     img ||= game.settings.get("arcane-advent", "storageImage") || STORAGE_IMAGE;
@@ -128,8 +130,8 @@ export async function placeStorage(actor, scene = canvas.scene, position = {}) {
     return created;
 }
 
-async function deleteEmptyGround(actor) {
-    if (!isGroundDeposit(actor) || actor.items.size !== 0) return false;
+async function deleteEmptyGround(actor, force = false) {
+    if ((!force && !isGroundDeposit(actor)) || actor.type !== "storage" || actor.items.size !== 0) return false;
     if (actor instanceof StorageInventory) {
         for (const scene of game.scenes) {
             const ids = scene.tokens.filter(token => inventoryForToken(token)?.uuid === actor.uuid).map(token => token.id);
@@ -160,78 +162,110 @@ async function processRequest(data, user) {
         || !(source.type === "storage" ? storageAccess(source, user) : source.testUserPermission(user, "OWNER"))) {
         throw new Error("Vous n’avez pas accès à cet inventaire.");
     }
-    if (!Array.isArray(data.selections) || !data.selections.length || data.selections.length > 1000) {
-        throw new Error("Sélectionnez au moins un objet.");
-    }
-    let destination;
-    const groundCreated = [];
-    if (data.action === "drop" || data.action === "throw") {
-        const token = await fromUuid(data.sourceToken);
-        requireSceneToken(token, source, user);
-        for (const selection of data.selections) {
-            const configuredSize = source.items.get(selection.id)?.system.groundTokenSize;
-            if (configuredSize != null) groundTokenSize(configuredSize);
-        }
-        const preview = transferPlan(source.items, data.selections, foundry.utils.randomID);
-        const roots = preview.creates.filter(item => !item.system.containerId);
-        const single = roots.length === 1 ? roots[0] : null;
-        const thrown = data.action === "throw";
-        const center = objectCenter(token), size = token.parent.grid.size;
-        const side = groundTokenSize(single?.system.groundTokenSize ?? 1), extent = side * size;
-        if (thrown) {
-            const weapon = source.items.get(data.selections[0]?.id);
-            if(data.selections.length!==1||weapon?.type!=="weapon"||weapon.system.corporeal||!weapon.system.equipped
-                ||!new Set(weapon.system.properties).has("thrown"))throw Error("Choisissez une arme Lancer équipée et non corporelle.");
-            if (center.x-extent/2 < 0 || center.y-extent/2 < 0
-                || center.x+extent/2 > token.parent.width || center.y+extent/2 > token.parent.height) {
-                throw new Error("Le jeton de l’objet lancé doit tenir dans la scène à son point de départ.");
-            }
-            objectMotionPlan({documentName:"Token",parent:token.parent,x:center.x-extent/2,y:center.y-extent/2,width:side,height:side,rotation:0},data.points,data.motion);
-        }
-        const positions = thrown ? [{ x: center.x - extent / 2, y: center.y - extent / 2, size: side }] : groundPositions(token, roots);
-        try {
-            for (const [index, root] of roots.entries()) {
-                groundCreated.push(await createStorage({ name: root.name,
-                    img: root.system.groundTokenImage?.trim() || (!isInventoryContainer(root) ? root.img : undefined),
-                    scene: token.parent, ...positions[index], ground: true, snap: !thrown }));
-            }
-        } catch (error) {
-            for (const storage of groundCreated) await deleteEmptyGround(storage);
-            throw error;
-        }
-        destination = groundCreated;
-    } else if (data.action === "transfer") {
-        const token = await fromUuid(data.targetToken);
-        destination = inventoryForToken(token);
-        if (!inventoryActor(destination) || destination.pack) throw new Error("Ciblez un personnage ou un stockage.");
-        requireSceneToken(token, destination, user);
-        if (destination.type === "storage" && !storageAccess(destination, user)) throw new Error("Ce stockage est verrouillé ou inaccessible.");
-    } else throw new Error("Action inconnue.");
-
-    const actors = [...new Set([source, ...(Array.isArray(destination) ? destination : [destination])])];
-    const locked = [];
-    let result;
+    const coinAction = ["coinAll", "coinPart", "coinDrop"].includes(data.action);
+    const dropping = ["drop", "throw", "split", "coinDrop"].includes(data.action);
+    const receiving = ["transfer", "equip", "takeStorage", "transferContents", "coinAll", "coinPart"].includes(data.action);
+    if (!dropping && !receiving) throw new Error("Action inconnue.");
+    let selections = data.selections, destination, result;
+    const created = [], locked = [];
+    const lock = async inventory => {
+        if (locked.includes(inventory)) return;
+        if (inventory.getFlag("arcane-advent", "inventoryBusy")) throw new Error("Cet inventaire est déjà utilisé. Le MJ peut débloquer une opération interrompue depuis Stockages.");
+        await inventory.setFlag("arcane-advent", "inventoryBusy", data.requestId);
+        locked.push(inventory);
+    };
     try {
-        for (const actor of actors) {
-            if (actor.getFlag("arcane-advent", "inventoryBusy")) {
-                throw new Error("Cet inventaire est déjà utilisé. Le MJ peut débloquer une opération interrompue depuis Stockages.");
-            }
-            await actor.setFlag("arcane-advent", "inventoryBusy", data.requestId);
-            locked.push(actor);
+        await lock(source);
+        if (receiving) {
+            const token = await fromUuid(data.targetToken);
+            destination = inventoryForToken(token);
+            if (!inventoryActor(destination) || destination.pack) throw new Error("Ciblez un personnage ou un stockage.");
+            requireSceneToken(token, destination, user);
+            if (source.uuid === destination.uuid) throw new Error("Choisissez un autre destinataire.");
+            if (destination.type === "storage" && !storageAccess(destination, user)) throw new Error("Ce stockage est verrouillé ou inaccessible.");
+            const looseTarget = destination.type === "storage" ? looseGroundItem(destination) : null;
+            if (looseTarget && !(coinAction && looseTarget.type === "purse")) throw new Error("Choisissez un personnage, un contenant ou un stockage destinataire.");
+            await lock(destination);
         }
-        result = await executeTransfer(source, destination, data.selections, foundry.utils.randomID);
+        const main = source.type === "storage" ? mainGroundContainer(source) : null;
+        if (["takeStorage", "transferContents"].includes(data.action)) {
+            if (source.type !== "storage") throw new Error("Choisissez un stockage.");
+            if (data.action === "takeStorage") {
+                if (source.system.fixedOnScene || main?.system.fixedOnScene) throw new Error("Ce contenant est fixe sur scène.");
+                selections = main ? [{ id: main.id, quantity: 1 }] : [];
+            } else selections = storageContentItems(source).map(item => ({ id: item.id, quantity: item.type === "object" ? item.system.quantity : 1 }));
+        }
+        let plan;
+        if (coinAction) plan = coinPlan(source, destination, data.purseId, data.coins, {
+            all: data.action === "coinAll", drop: data.action === "coinDrop", randomID: foundry.utils.randomID
+        });
+        else if (data.action === "takeStorage" && !main) plan = packStoragePlan(source, foundry.utils.randomID);
+        else {
+            if (!Array.isArray(selections) || !selections.length || selections.length > 1000) throw new Error("Sélectionnez au moins un objet.");
+            if (dropping) for (const selection of selections) {
+                const size = source.items.get(selection.id)?.system.groundTokenSize;
+                if (size != null) groundTokenSize(size);
+            }
+            if (main && (main.system.fixedOnScene || source.system.fixedOnScene) && selections.some(entry => entry.id === main.id)) throw new Error("Ce contenant est fixe sur scène.");
+            if (data.action === "split") {
+                const item = looseGroundItem(source), amount = selections[0]?.quantity;
+                if (!item || item.type !== "object" || selections.length !== 1 || selections[0].id !== item.id
+                    || !Number.isSafeInteger(amount) || amount < 1 || amount >= item.system.quantity) throw new Error("Scission de pile invalide.");
+            }
+            if (data.action === "equip") {
+                if (destination.type === "storage" || selections.length !== 1 || !EQUIPMENT_TYPES.includes(source.items.get(selections[0].id)?.type)) {
+                    throw new Error("Choisissez un seul équipement et un personnage destinataire.");
+                }
+            }
+            plan = transferPlan(source.items, selections, foundry.utils.randomID);
+        }
+        if (dropping) {
+            const token = await fromUuid(data.sourceToken);
+            requireSceneToken(token, source, user);
+            const roots = plan.creates.filter(item => !item.system.containerId);
+            const thrown = data.action === "throw", center = objectCenter(token);
+            const single = roots.length === 1 ? roots[0] : null;
+            const side = groundTokenSize(single ? groundItemAppearance(single).size : 1), extent = side * token.parent.grid.size;
+            if (thrown) {
+                const weapon = source.items.get(selections[0]?.id);
+                if (selections.length !== 1 || weapon?.type !== "weapon" || weapon.system.corporeal || !weapon.system.equipped
+                    || !new Set(weapon.system.properties).has("thrown")) throw new Error("Choisissez une arme Lancer équipée et non corporelle.");
+                if (center.x - extent / 2 < 0 || center.y - extent / 2 < 0 || center.x + extent / 2 > token.parent.width || center.y + extent / 2 > token.parent.height) {
+                    throw new Error("Le jeton de l’objet lancé doit tenir dans la scène à son point de départ.");
+                }
+                objectMotionPlan({ documentName: "Token", parent: token.parent, x: center.x - extent / 2, y: center.y - extent / 2,
+                    width: side, height: side, rotation: 0 }, data.points, data.motion);
+            }
+            const positions = thrown ? [{ x: center.x - extent / 2, y: center.y - extent / 2, size: side }] : groundPositions(token, roots);
+            for (const [index, root] of roots.entries()) {
+                const storage = await createStorage({ name: root.name, img: groundItemAppearance(root).img,
+                    scene: token.parent, ...positions[index], ground: true, snap: !thrown });
+                created.push(storage);
+                await lock(storage);
+            }
+            destination = created;
+        }
+        const targetContainer = !Array.isArray(destination) && destination.type === "storage" ? mainGroundContainer(destination) : null;
+        if (targetContainer) for (const copy of plan.creates) if (!copy.system.containerId) copy.system.containerId = targetContainer.id;
+        result = await executeInventoryPlan(source, destination, plan);
         if (data.action === "throw") {
-            const token = [...game.scenes].flatMap(scene=>[...scene.tokens]).find(token=>inventoryForToken(token)?.uuid===groundCreated[0].uuid);
-            try { if(!token)throw Error("Jeton du dépôt introuvable.");await animateSceneObject(token,data.points,data.motion); }
-            catch(error){result.warning=`L’arme est déposée au sol, mais son animation a échoué : ${error.message}`;}
+            const token = [...game.scenes].flatMap(scene => [...scene.tokens]).find(token => inventoryForToken(token)?.uuid === created[0].uuid);
+            try { if (!token) throw Error("Jeton du dépôt introuvable."); await animateSceneObject(token, data.points, data.motion); }
+            catch (error) { result.warning = `L’arme est déposée au sol, mais son animation a échoué : ${error.message}`; }
         }
     } finally {
-        for (const actor of locked) await actor.unsetFlag("arcane-advent", "inventoryBusy");
-        // An empty deposit created for a failed operation can be removed safely.
-        for (const storage of groundCreated) if (storage.items.size === 0) await deleteEmptyGround(storage);
+        for (const inventory of locked) await inventory.unsetFlag("arcane-advent", "inventoryBusy");
+        for (const storage of created) if (storage.items.size === 0) await deleteEmptyGround(storage);
     }
-    if (data.deleteEmptyGround === true && isGroundDeposit(source) && source.items.size === 0) {
-        try { result.deletedGround = await deleteEmptyGround(source); }
+    if (data.action === "equip") {
+        try {
+            const item = await destination.updateInventoryItem(result.createdIds[0], { "system.equipped": true });
+            if (!item?.system.equipped) throw new Error("L’équipement ne peut pas être équipé actuellement.");
+            result.equipped = true;
+        } catch (error) { result.warning = `L’objet a été transféré, mais n’a pas pu être équipé : ${error.message}`; }
+    }
+    if (data.action !== "transferContents" && (data.deleteEmptyGround === true || coinAction || data.action === "takeStorage") && source.items.size === 0) {
+        try { result.deletedGround = await deleteEmptyGround(source, data.action === "takeStorage"); }
         catch (error) {
             console.error("Arcane Advent | Suppression du dépôt vide", error);
             result.warning = "Les objets ont été transférés, mais le dépôt vide n’a pas pu être supprimé.";
@@ -263,15 +297,42 @@ export function registerStorageService() {
     };
 }
 
-export async function requestInventoryAction(actor, selections, { action, sourceToken, targetToken, deleteEmptyGround = false, points, motion }) {
+export async function requestInventoryAction(actor, selections, { action, sourceToken, targetToken, deleteEmptyGround = false, points, motion, purseId, coins }) {
     const gm = game.users.activeGM;
     if (!gm) throw new Error("Un MJ doit être connecté pour déplacer les objets.");
     const data = { requestId: foundry.utils.randomID(), source: actor.uuid,
-        selections, action, sourceToken, targetToken, deleteEmptyGround: deleteEmptyGround === true, points, motion };
+        selections, action, sourceToken, targetToken, deleteEmptyGround: deleteEmptyGround === true, points, motion, purseId, coins };
     const result = gm.isSelf
         ? await CONFIG.queries[STORAGE_QUERY](data, { user: game.user })
         : await gm.query(STORAGE_QUERY, data, { timeout: 30000 });
     if (result?.error) throw new Error(result.error);
     if (!result?.count) throw new Error("Réponse du MJ interrompue. Vérifiez les inventaires avant de réessayer.");
     return result;
+}
+
+export async function syncCoinPileAppearance(storage) {
+    const item = looseGroundItem(storage);
+    if (item?.type !== "purse" || !item.system.coinPile) return;
+    const { img, size } = groundItemAppearance(item);
+    if (storage.img !== img || storage.system.groundTokenSize !== size) await storage.update({ img, "system.groundTokenSize": size });
+    for (const scene of game.scenes) {
+        const changes = scene.tokens.filter(token => inventoryForToken(token)?.uuid === storage.uuid
+            && (token.texture?.src !== img || token.width !== size || token.height !== size)).map(token => ({
+            _id: token.id, "texture.src": img, width: size, height: size,
+            x: Math.max(0, Math.min(token.x, scene.width - size * scene.grid.size)),
+            y: Math.max(0, Math.min(token.y, scene.height - size * scene.grid.size))
+        }));
+        if (changes.length) await scene.updateEmbeddedDocuments("Token", changes);
+    }
+}
+
+export function registerCoinPileAppearance() {
+    const queues = new Map();
+    Hooks.on("updateItem", (item, changes) => {
+        if (!game.users.activeGM?.isSelf || item.type !== "storage"
+            || !(Object.hasOwn(changes.system ?? {}, "contents") || Object.hasOwn(changes, "system.contents"))) return;
+        const next = (queues.get(item.uuid) ?? Promise.resolve()).catch(() => {}).then(() => syncCoinPileAppearance(inventoryForDocument(item)));
+        queues.set(item.uuid, next);
+        next.catch(error => ui.notifications.error(error.message)).finally(() => { if (queues.get(item.uuid) === next) queues.delete(item.uuid); });
+    });
 }

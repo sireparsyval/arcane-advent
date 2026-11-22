@@ -4,7 +4,7 @@ const { BooleanField, ArrayField, ObjectField, NumberField } = foundry.data.fiel
 
 export class StorageData extends foundry.abstract.TypeDataModel {
     static defineSchema() {
-        return { locked: new BooleanField({ initial: false }), ground: new BooleanField({ initial: false }) };
+        return { locked: new BooleanField({ initial: false }), ground: new BooleanField({ initial: false }), fixedOnScene: new BooleanField({ initial: false }) };
     }
 }
 
@@ -13,7 +13,8 @@ export class StorageItemData extends BaseItemData {
         return { ...super.defineSchema(),
             locked: new BooleanField({ initial: false }),
             ground: new BooleanField({ initial: false }),
-            groundTokenSize: new NumberField({ required: true, nullable: false, min: 0.1, initial: 1 }),
+            fixedOnScene: new BooleanField({ initial: false }),
+            groundTokenSize: new NumberField({ required: true, nullable: false, min: 0.1, initial: 1.5 }),
             contents: new ArrayField(new ObjectField({ nullable: false }), { initial: [] })
         };
     }

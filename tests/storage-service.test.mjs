@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { isDeepStrictEqual } from "node:util";
-import { registerStorageService, STORAGE_QUERY, storageAccess, requestInventoryAction, createStorage, placeStorage, isGroundTemplate } from "../module/storage.mjs";
+import { registerStorageService, STORAGE_QUERY, storageAccess, requestInventoryAction, createStorage, placeStorage, isGroundTemplate, syncCoinPileAppearance } from "../module/storage.mjs";
 import { inventoryForDocument, inventoryForToken } from "../module/storage-inventory.mjs";
 import { migrateStorageActors } from "../module/storage-migration.mjs";
 
@@ -65,10 +65,11 @@ function actor(id, owner, type = "character") {
         async updateEmbeddedDocuments(_type, data, options = {}) { options.parentUuid = this.uuid; options.updates = data; return data.map(entry => {
             const result = this.items.get(entry._id);
             if (entry.system) result.system = { ...entry.system };
-            if (Object.hasOwn(entry, "system.quantity")) result.system.quantity = entry["system.quantity"];
+            for (const [key, value] of Object.entries(entry)) if (key.startsWith("system.")) merge(result, { [key]: value });
             return result;
         }); },
         async deleteEmbeddedDocuments(_type, ids, options = {}) { options.parentUuid = this.uuid; options.ids = ids; return ids.map(id => { const result = this.items.get(id); this.items.delete(id); return result; }); },
+        async updateInventoryItem(id, changes) { return (await this.updateEmbeddedDocuments("Item", [{ _id: id, ...changes }]))[0]; },
         async getTokenDocument(position) { return { toObject: () => ({ actorId: this.id, actorLink: true, ...position }) }; },
         async delete() { documents.delete(this.uuid); game.actors.delete(this.id); }
     };
@@ -246,7 +247,7 @@ test("throwing removes the equipped weapon and animates a recoverable ground inv
     assert.equal(result.error,undefined);assert.equal(result.warning,undefined);assert.equal(result.count,1);
     assert.equal(source.items.has(w.id),false);
     const ground=[...scene.tokens].find(t=>[...(inventoryForToken(t)?.items??[])].some(i=>i.name==="knife"));
-    assert.ok(ground);assert.equal(ground.x,500);assert.equal(ground.y,500);
+    assert.ok(ground);assert.equal(ground.x,487.5);assert.equal(ground.y,487.5);
     assert.equal(ground.getFlag("arcane-advent","objectMotion").duration,1000);
     assert.equal([...inventoryForToken(ground).items][0].system.equipped,false);
 });
@@ -331,14 +332,14 @@ test("multiple loose roots have separate tokens, per-item images and per-item sq
         const deposits = [...scene.tokens].filter(t => !before.has(t.id) && t.actor.isToken);
         assert.equal(deposits.length, multiple ? 2 : 1);
         const deposit = deposits.find(t => [...inventoryForToken(t).items][0].name === "first");
-        assert.equal(deposit.texture.src, multiple ? "assets/first.webp" : "assets/test.png");
+        assert.equal(deposit.texture.src, multiple ? "assets/first.webp" : "assets/arcane-advent/entities/objects/item-generic.png");
         assert.equal(deposit.width, 3);
         assert.equal(deposit.height, 3);
         assert.equal(inventoryForToken(deposit).items.size, 1);
         if (multiple) {
             const second = deposits.find(t => t !== deposit);
-            assert.equal(second.width, 1);
-            assert.equal(second.texture.src, "assets/test.png");
+            assert.equal(second.width, 1.25);
+            assert.equal(second.texture.src, "assets/arcane-advent/entities/objects/item-generic.png");
             assert.ok(deposit.x + deposit.width * 100 <= second.x || second.x + second.width * 100 <= deposit.x
                 || deposit.y + deposit.height * 100 <= second.y || second.y + second.height * 100 <= deposit.y);
         }
@@ -714,4 +715,162 @@ test("migration preserves a legacy unlinked token's inventory separately from it
     assert.equal(inventoryForDocument(main).items.get("apple").system.quantity, 2);
     assert.equal(inventoryForToken(unlinked).items.get("apple").system.quantity, 9);
     assert.notEqual(inventoryForToken(unlinked).uuid, main.uuid);
+});
+
+function wallet(id, coins, extra = {}) {
+    const value = item(id, 1); value.type = "purse";
+    Object.assign(value.system, { coins: structuredClone(coins), ...extra });
+    return value;
+}
+
+test("splitting a ground stack preserves both quantities, source metadata and the independent token", async () => {
+    const source = await createStorage({ ground: true, scene });
+    await stock(source, "split", 7);
+    const origin = groundToken(source), previous = new Set(scene.tokens.keys());
+    const result = await query({ action: "split", source: source.uuid, sourceToken: origin.uuid, selections: [{ id: "split", quantity: 3 }] });
+    assert.equal(result.error, undefined);
+    assert.equal(source.items.get("split").system.quantity, 4);
+    const copy = [...scene.tokens].find(entry => !previous.has(entry.id));
+    assert.equal([...inventoryForToken(copy).items][0].system.quantity, 3);
+    assert.notEqual(inventoryForToken(copy).uuid, source.uuid);
+    assert.ok(scene.tokens.has(origin.id));
+    assert.ok((await query({ action: "split", source: source.uuid, sourceToken: origin.uuid, selections: [{ id: "split", quantity: 4 }] })).error);
+});
+
+test("a ground container keeps its principal root when receiving or transferring only its contents", async () => {
+    const source = await createStorage({ ground: true, scene });
+    const bag = item("principal", 1); bag.type = "container";
+    await source.createEmbeddedDocuments("Item", [bag.toObject()], { keepId: true });
+    const giver = actor("container-giver", "alice"); giver.items.set("apple", item("apple", 4));
+    assert.equal((await query(request(giver, source, { selections: [{ id: "apple", quantity: 2 }] }))).count, 1);
+    const inside = [...source.items].find(entry => entry.type === "object");
+    assert.equal(inside.system.containerId, "principal");
+    const recipient = actor("container-looter", "alice"), origin = groundToken(source);
+    assert.equal((await query(request(source, recipient, { action: "transferContents", selections: [], deleteEmptyGround: true }))).count, 1);
+    assert.equal(source.items.size, 1); assert.ok(source.items.has("principal")); assert.ok(scene.tokens.has(origin.id));
+    assert.equal([...recipient.items][0].system.containerId, null);
+});
+
+test("fixed containers reject whole pickup through every route while their contents remain transferable", async () => {
+    const source = await createStorage({ ground: true, scene });
+    const bag = item("fixed", 1); bag.type = "container"; bag.system.fixedOnScene = true;
+    const inside = item("inside", 2); inside.system.containerId = bag.id;
+    await source.createEmbeddedDocuments("Item", [bag.toObject(), inside.toObject()], { keepId: true });
+    const recipient = actor("fixed-recipient", "alice");
+    for (const action of ["takeStorage", "transfer"]) {
+        const result = await query(request(source, recipient, { action, selections: [{ id: bag.id, quantity: 1 }] }));
+        assert.match(result.error, /fixe/); assert.equal(source.items.size, 2); assert.equal(recipient.items.size, 0);
+    }
+    assert.equal((await query(request(source, recipient, { action: "transferContents", selections: [] }))).count, 1);
+    assert.equal(source.items.size, 1);
+});
+
+test("whole pickup packages a permanent storage and removes its source entity only after success", async () => {
+    const source = await createStorage({ name: "Coffre transportable", scene });
+    await stock(source, "apple", 2);
+    const recipient = actor("pack-recipient", "alice"), origin = groundToken(source);
+    const result = await query(request(source, recipient, { action: "takeStorage", selections: [] }));
+    assert.equal(result.error, undefined); assert.equal(result.deletedGround, true);
+    const container = [...recipient.items].find(entry => entry.type === "container");
+    assert.equal(container.name, "Coffre transportable");
+    assert.equal([...recipient.items].find(entry => entry.type === "object").system.containerId, container.id);
+    assert.equal(game.items.has(source.id), false); assert.equal(scene.tokens.has(origin.id), false);
+});
+
+test("the Equip action transfers one item and equips it on the recipient", async () => {
+    const source = await createStorage({ ground: true, scene });
+    const sword = item("hud-sword", 1); sword.type = "weapon"; sword.system.equipped = false;
+    await source.createEmbeddedDocuments("Item", [sword.toObject()], { keepId: true });
+    const recipient = actor("equip-recipient", "alice");
+    const result = await query(request(source, recipient, { action: "equip", selections: [{ id: sword.id, quantity: 1 }], deleteEmptyGround: true }));
+    assert.equal(result.error, undefined); assert.equal(result.equipped, true);
+    assert.equal([...recipient.items][0].system.equipped, true); assert.equal(result.deletedGround, true);
+});
+
+test("a carried purse can transfer currency directly into a targeted purse on the ground", async () => {
+    const source = actor("carried-currency", "alice"); source.items.set("wallet", wallet("wallet", { gold: 6, silver: 3 }));
+    const target = await createStorage({ ground: true, scene });
+    await target.createEmbeddedDocuments("Item", [wallet("ground-wallet", { gold: 2 }).toObject()], { keepId: true });
+    const result = await query(request(source, target, { action: "coinPart", selections: [], purseId: "wallet", coins: { gold: 4, silver: 1 } }));
+    assert.equal(result.error, undefined);
+    assert.equal(source.items.get("wallet").system.coins.gold, 2);
+    assert.equal(source.items.get("wallet").system.coins.silver, 2);
+    assert.equal(target.items.get("ground-wallet").system.coins.gold, 6);
+    assert.equal(target.items.get("ground-wallet").system.coins.silver, 1);
+    assert.equal(target.items.size, 1, "Currency must not create a second bag inside the targeted purse");
+});
+
+test("all currency goes to the first purse in visible inventory order and leaves the source bag empty", async () => {
+    const source = await createStorage({ ground: true, scene });
+    await source.createEmbeddedDocuments("Item", [wallet("wallet", { gold: 5 }).toObject()], { keepId: true });
+    const recipient = actor("ordered-purses", "alice");
+    const first = wallet("first", { gold: 1 }), second = wallet("second", { gold: 2 }); first.sort = -10; second.sort = 10;
+    recipient.items.set(second.id, second); recipient.items.set(first.id, first);
+    const origin = groundToken(source);
+    assert.equal((await query(request(source, recipient, { action: "coinAll", selections: [], purseId: "wallet" }))).error, undefined);
+    assert.equal(first.system.coins.gold, 6); assert.equal(second.system.coins.gold, 2);
+    assert.equal(source.items.get("wallet").system.coins.gold, 0); assert.ok(scene.tokens.has(origin.id));
+});
+
+test("partial currency transfer requires an existing purse, while all-content transfer falls back to carrying the bag", async () => {
+    const source = actor("currency-fallback", "alice"); source.items.set("wallet", wallet("wallet", { copper: 4 }));
+    const recipient = actor("currency-no-purse", "alice");
+    const part = await query(request(source, recipient, { action: "coinPart", selections: [], purseId: "wallet", coins: { copper: 2 } }));
+    assert.match(part.error, /aucune bourse/); assert.equal(source.items.get("wallet").system.coins.copper, 4);
+    const all = await query(request(source, recipient, { action: "coinAll", selections: [], purseId: "wallet" }));
+    assert.equal(all.error, undefined); assert.equal(source.items.size, 0);
+    assert.equal([...recipient.items][0].type, "purse"); assert.equal([...recipient.items][0].system.coins.copper, 4);
+});
+
+test("dropped currency changes from a mixed pile to a single coin and disappears when all coins are recovered", async () => {
+    const source = actor("currency-dropper", "alice"); source.items.set("wallet", wallet("wallet", { gold: 10, copper: 1 }));
+    const previous = new Set(scene.tokens.keys());
+    const drop = await query({ action: "coinDrop", source: source.uuid, sourceToken: token(source).uuid,
+        selections: [], purseId: "wallet", coins: { gold: 1, copper: 1 } });
+    assert.equal(drop.error, undefined);
+    const origin = [...scene.tokens].find(entry => !previous.has(entry.id) && inventoryForToken(entry)?.type === "storage");
+    const pile = inventoryForToken(origin), coins = [...pile.items][0];
+    assert.equal(coins.system.coinPile, true); assert.equal(origin.width, 0.75);
+    assert.equal(origin.texture.src, "assets/arcane-advent/entities/objects/stack-luqa.png");
+    const partial = await query(request(pile, source, { action: "coinPart", selections: [], purseId: coins.id, coins: { copper: 1 } }));
+    assert.equal(partial.error, undefined);
+    await syncCoinPileAppearance(pile);
+    assert.equal(origin.width, 0.25); assert.equal(origin.texture.src, "assets/arcane-advent/entities/objects/coin-luqa-gold.png");
+    assert.equal((await query(request(pile, source, { action: "coinAll", selections: [], purseId: coins.id }))).deletedGround, true);
+    assert.equal(scene.tokens.has(origin.id), false);
+    assert.equal(source.items.get("wallet").system.coins.gold, 10); assert.equal(source.items.get("wallet").system.coins.copper, 1);
+});
+
+test("a failed currency debit restores both purses without duplicating money", async () => {
+    const source = actor("failed-coin-source", "alice"); source.items.set("wallet", wallet("wallet", { gold: 5 }));
+    const recipient = actor("failed-coin-recipient", "alice"); recipient.items.set("wallet", wallet("wallet", { gold: 2 }));
+    const original = source.updateEmbeddedDocuments; let fail = true;
+    source.updateEmbeddedDocuments = async function (...args) { if (fail) { fail = false; throw new Error("Debit interrupted"); } return original.apply(this, args); };
+    const result = await query(request(source, recipient, { action: "coinPart", selections: [], purseId: "wallet", coins: { gold: 3 } }));
+    assert.match(result.error, /Debit interrupted/);
+    assert.equal(source.items.get("wallet").system.coins.gold, 5); assert.equal(recipient.items.get("wallet").system.coins.gold, 2);
+    assert.equal(source.getFlag("arcane-advent", "inventoryBusy"), undefined);
+    assert.equal(recipient.getFlag("arcane-advent", "inventoryBusy"), undefined);
+});
+
+test("concurrent currency withdrawals cannot spend the same coins twice", async () => {
+    const source = await createStorage({ ground: true, scene });
+    await source.createEmbeddedDocuments("Item", [wallet("wallet", { gold: 5 }).toObject()], { keepId: true });
+    const a = actor("coin-race-a", "alice"), b = actor("coin-race-b", "bob");
+    for (const recipient of [a, b]) recipient.items.set("wallet", wallet("wallet", { gold: 0 }));
+    const extra = { action: "coinPart", selections: [], purseId: "wallet", coins: { gold: 4 } };
+    const results = await Promise.all([query(request(source, a, extra)), query(request(source, b, extra), bob)]);
+    assert.equal(results.filter(result => !result.error).length, 1);
+    assert.equal(source.items.get("wallet").system.coins.gold, 1);
+    assert.equal(a.items.get("wallet").system.coins.gold + b.items.get("wallet").system.coins.gold, 4);
+});
+
+test("currency operations still enforce inventory ownership and locked target storages", async () => {
+    const source = actor("coins-not-owned", "bob"); source.items.set("wallet", wallet("wallet", { gold: 5 }));
+    const recipient = actor("coin-security-recipient", "alice"); recipient.items.set("wallet", wallet("wallet", { gold: 0 }));
+    assert.match((await query(request(source, recipient, { action: "coinAll", selections: [], purseId: "wallet" }))).error, /accès/);
+    const target = await createStorage({ ground: true, scene }); await target.update({ "system.locked": true });
+    const allowed = actor("coin-security-source", "alice"); allowed.items.set("wallet", wallet("wallet", { gold: 2 }));
+    assert.match((await query(request(allowed, target, { action: "coinPart", selections: [], purseId: "wallet", coins: { gold: 1 } }))).error, /verrouillé/);
+    assert.equal(allowed.items.get("wallet").system.coins.gold, 2);
 });

@@ -9,6 +9,7 @@ import { APTITUDE_RANGE_MODES, aptitudeRangeMode, aptitudeRangeSummary,
     bindAptitudeRangeToggle, refreshAptitudeTargetingFields } from "../../aptitude-targeting.mjs";
 import { inventoryActionDialog } from "../inventory-transfer.mjs";
 import { runQuickInventoryAction } from "../ground-item-transfer.mjs";
+import { openPurseActions } from "../ground-actions.mjs";
 import { bindFieldEnter, formDialog } from "../form-interactions.mjs";
 import { VOLUME_LABELS, ENCUMBRANCE_STAGES } from "../../encumbrance.mjs";
 import { MODIFIER_TARGETS, ABILITY_MODIFIER_KEYS, TRACKER_MODIFIER_KEYS, signedModifier } from "../../modifiers.mjs";
@@ -251,6 +252,11 @@ export class ArcaneCharacterSheet
             transferInventory: function () { if (this.isEditable) return inventoryActionDialog(this.actor, "transfer"); },
             dropInventoryGround: function () { if (this.isEditable) return inventoryActionDialog(this.actor, "drop"); },
             quickInventory: function (_event, target) { if (this.isEditable) return runQuickInventoryAction(this, this.actor, target); },
+            purseActions: async function (_event, target) {
+                if (!this.isEditable) return;
+                try { await openPurseActions(this.actor, target.dataset.itemId); }
+                catch (error) { ui.notifications.error(error.message); }
+            },
             editInventoryItem: this._onEditInventoryItem,
             moveInventoryItem: this._onMoveInventoryItem,
             moveInventoryItemToRoot: this._onMoveInventoryItemToRoot,

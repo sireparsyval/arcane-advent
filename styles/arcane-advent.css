@@ -1134,9 +1134,15 @@ body.detached > .aa-detached-sheet .window-content {
 .aa-storage-directory-row > span { flex: 1; overflow-wrap: anywhere; }
 .aa-transfer-choices { max-height: 45vh; overflow-y: auto; margin-top: 8px; }
 .aa-transfer-cleanup { display: flex; align-items: center; gap: 6px; margin-block: 10px; }
-.aa-transfer-choice { display: flex; align-items: center; gap: 8px; padding: 6px; border-bottom: 1px solid var(--color-border-light-primary); }
-.aa-transfer-choice > label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
-.aa-transfer-choice > input[type="number"] { width: 75px; flex: 0 0 75px; }
+.aa-transfer-choice { display: grid; grid-template-columns: 22px 24px 62px minmax(100px,1fr) 80px; align-items: center; gap: 8px; padding: 6px; border: 1px solid var(--color-border-light-primary); border-radius: 4px; margin-block: 4px; }
+.aa-transfer-choice > label { display: contents; }
+.aa-transfer-choice input[data-transfer-item] { grid-column: 1; grid-row: 1; }
+.aa-transfer-icon { grid-column: 2; grid-row: 1; text-align: center; }
+.aa-transfer-icon img { width: 24px; height: 24px; object-fit: contain; border: 0; vertical-align: middle; }
+.aa-transfer-choice > input[type="number"], .aa-transfer-quantity { grid-column: 3; grid-row: 1; width: 100%; text-align: center; }
+.aa-transfer-name { grid-column: 4; grid-row: 1; min-width: 0; overflow-wrap: anywhere; }
+.aa-transfer-weight { grid-column: 5; grid-row: 1; text-align: right; white-space: nowrap; }
+.aa-luqa-choice > input[type="checkbox"] { grid-column: 1; grid-row: 1; }
 
 .aa-inventory-heading h3 {
     flex: 1 0 auto;

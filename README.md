@@ -145,10 +145,42 @@ un token simplement sélectionné n’est jamais utilisé comme cible implicite.
 Échap ou clic droit annule ce choix. Le dépôt est supprimé quand il est vidé.
 
 Les contenants et stockages conservent leur inventaire complet et leur sélection
-de transfert. L’option **Supprimer le dépôt s’il est vide après
+de transfert. Les sélections multiples affichent une coche, l’icône d’inventaire,
+la quantité, le nom et le poids, en conservant la hiérarchie des contenants.
+L’option **Supprimer le dépôt s’il est vide après
 le transfert**, décochée par défaut, supprime aussi l’Objet correspondant lorsque
 le transfert a réussi et qu’il ne reste rien. Elle ne s’applique pas aux stockages
 permanents. Supprimer seulement un jeton conserve son Objet dans le répertoire.
+
+Le clic droit ouvre des commandes adaptées au contenu du jeton :
+
+| Type au sol | Commandes à droite |
+| --- | --- |
+| Objet ou équipement | Équiper si possible, transférer ; pour une pile, transférer une partie et scinder |
+| Contenant ou stockage | Tout transférer, transférer le contenu, transférer une partie, déposer une sélection |
+| Bourse ou pièces | Transférer tout, transférer le contenu, transférer une partie, déposer des Luqa |
+
+**Équiper** transfère l’équipement à un personnage puis l’équipe. **Scinder** crée
+un dépôt indépendant avec la quantité choisie et retire cette quantité de la pile
+initiale. **Tout transférer** emporte le contenant et supprime son entité au sol ;
+**Transférer le contenu** laisse le contenant vide sur scène. Dans les réglages du
+contenant ou du stockage, **Fixe sur scène** interdit d’emporter le contenant
+entier, sans bloquer les échanges de son contenu.
+
+Les personnages conservent leurs commandes natives à droite. Pour tous les jetons,
+le bouton **Cacher** se trouve à gauche, directement sous l’élévation. Les joueurs
+peuvent ouvrir les commandes d’un stockage accessible en lecture ; ses réglages
+natifs restent réservés au MJ.
+
+Le bouton **Luqa** d’une bourse portée ou déposée propose les opérations sur sa
+monnaie. Une bourse au sol ciblée peut recevoir directement les pièces, sans
+transférer la bourse source. Sur un personnage ou un stockage, le contenu va dans
+la première bourse rencontrée dans l’ordre visible de l’inventaire, sous-contenants
+compris. Sans bourse destinataire, **Transférer le contenu** transfère aussi la
+bourse source ; **Transférer une partie** exige une bourse destinataire existante.
+Les quatre types de Luqa sont conservés, sans conversion. **Déposer** crée un tas
+de pièces indépendant ; une vraie bourse vide reste présente, tandis qu’un tas
+entièrement récupéré disparaît.
 
 Le bouton **Stockages** du répertoire **Objets** et le menu **Stockages** dans
 les paramètres du système regroupent les stockages accessibles. Le MJ peut en
@@ -162,15 +194,23 @@ masqué dans le répertoire Acteurs, fournit les jetons natifs ciblables avec **
 Le MJ peut ajouter des objets depuis cette fiche ou y glisser des Items du
 répertoire/compendium. Utiliser **Transférer…** pour les objets d’un personnage.
 
-L’image par défaut est `assets/arcane-advent/entities/objects/item-stash.png`, réglable
-dans **Image des dépôts au sol**. Chaque stockage peut ensuite recevoir sa propre
-image ; sa modification se répercute sur ses jetons. Les options de chaque objet,
-contenant ou équipement proposent aussi **Image du jeton au sol** : elle est utilisée
-pour son dépôt, avec son contenu éventuel. Sans image sur scène personnalisée,
-un objet libre utilise son icône ; un contenant utilise le sac par défaut.
-**Taille sur scène
-(cases)** définit un jeton carré lors du dépôt ou du lancer : 1 = une case de
-côté, 0,5 = une demi-case. Les anciens objets gardent une taille par défaut de 1.
+Les images par défaut se trouvent dans `assets/arcane-advent/entities/objects/` :
+
+| Dépôt | Image | Côté du jeton (cases) |
+| --- | --- | --- |
+| Une pièce | `coin-luqa-copper/silver/gold/platinum.png`, selon son type | 0,25 |
+| Plusieurs pièces d’un type | `stack-luqa-copper/silver/gold/platinum.png` | 0,5 |
+| Pièces de plusieurs types | `stack-luqa.png` | 0,75 |
+| Bourse | `bag-luqa.png` | 1 |
+| Contenant | `bag-item.png` | 1,5 |
+| Autre objet ou équipement | `item-generic.png` | 1,25 |
+
+Les tas adaptent leur image et leur taille aux pièces restantes ou reçues. Les
+options **Image du jeton au sol** et **Taille sur scène (cases)** de chaque objet
+restent prioritaires pour les autres dépôts ; les tailles personnalisées déjà
+enregistrées sont conservées. Le jeton reste carré. Le réglage **Image des dépôts
+au sol** définit l’image des nouveaux stockages créés manuellement. Changer
+l’image d’un stockage met aussi à jour ses jetons.
 
 Les transferts sont traités un à un par le MJ, avec remappage des identifiants
 de contenants, verrouillage temporaire et compensation des écritures échouées.

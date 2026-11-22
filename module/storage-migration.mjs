@@ -8,7 +8,7 @@ const OLD_STORAGE_IMAGE = "assets/Arcane Advent/Entités/Objets/item.png";
 function usesOldStorageImage(path) {
     if (typeof path !== "string") return false;
     try { path = decodeURIComponent(path); } catch { /* Keep malformed paths unchanged. */ }
-    return path === OLD_STORAGE_IMAGE;
+    return path === OLD_STORAGE_IMAGE || path === "assets/arcane-advent/entities/objects/item-stash.png";
 }
 
 function storageImageChanges(document) {
