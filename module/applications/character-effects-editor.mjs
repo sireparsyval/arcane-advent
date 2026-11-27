@@ -1,11 +1,12 @@
 import { formDialog } from "./form-interactions.mjs";
-import { EFFECT_ABILITIES, EFFECT_ROLL_SCOPES, EFFECT_STAT_TARGETS, EFFECT_DAMAGE_ZONES,
+import { EFFECT_ABILITIES, EFFECT_ROLL_SCOPES, EFFECT_STAT_TARGETS, EFFECT_DAMAGE_ZONES, EFFECT_DAMAGE_SOURCES,
     activeCharacterEffects, characterEffectSources, conditionActor, effectRuleSummary, effectRuleActive, effectRuleSettings, effectSourceActive,
     newEffectRule, resolveRollEffects } from "../character-effects.mjs";
 import { conditionSummary } from "../aptitude-conditions.mjs";
 import { COMBAT_STANCES, combatStanceEffects } from "../combat-stances.mjs";
 import { fixedEffectAmount, resolveEffectAmount } from "../effect-amounts.mjs";
 import { traitParameterClipboard } from "../trait-clipboard.mjs";
+import { isAptitudeDamageRoll } from "../damage-effects.mjs";
 import { bindConditionControls, conditionControls, escape, newCondition, options, validateCondition } from "./effect-condition-controls.mjs";
 
 const copy = value => JSON.parse(JSON.stringify(value ?? {}));
@@ -37,7 +38,28 @@ function statRuleHTML(actor, rule) {
     </div><p class="hint" data-rule-summary>${escape(effectRuleSummary(rule, { actor: summaryActor(actor) }))}</p>`;
 }
 
+function damageSelectionHTML(actor, rule) {
+    const source = rule.damageSource ?? "all";
+    if (source === "all") return '<p class="hint">Tous les jets de dégâts : armes, aptitudes et arme improvisée.</p>';
+    const all = rule.damageAll !== false, selected = new Set(rule.damageItemIds ?? []);
+    const entries = [...(actor.items ?? [])].filter(item => item.type === source)
+        .map(item => ({ id: item.id, name: item.name }));
+    for (const id of selected) if (!entries.some(item => item.id === id)) entries.push({ id, name: "Élément absent de cette fiche" });
+    return `<fieldset class="aa-effect-damage-selection"><legend>${source === "weapon" ? "Armes concernées" : "Aptitudes concernées"}</legend>
+        <label class="checkbox"><input type="checkbox" data-efield="damageAll" ${checked(all)}>Toutes les ${source === "weapon" ? "armes" : "aptitudes"}</label>
+        <div class="aa-effect-condition-choices">${entries.map(item => `<label class="checkbox"><input type="checkbox" data-damage-item-id="${escape(item.id)}" ${checked(all || selected.has(item.id))} ${all ? "disabled" : ""}>${escape(item.name)}</label>`).join("") || '<p class="hint">Aucun élément de ce type sur cette fiche.</p>'}</div>
+        ${!all && !selected.size ? '<p class="hint">Cochez au moins un élément : sans sélection, aucun jet ne reçoit ce bonus/malus.</p>' : ""}
+    </fieldset>`;
+}
+
 function rollRuleHTML(actor, rule) {
+    if (rule.scope === "damage") return `<div class="aa-effect-grid">
+        <label>Jets concernés${select("scope", EFFECT_ROLL_SCOPES, rule.scope)}</label>
+        <label>Origine des dégâts${select("damageSource", EFFECT_DAMAGE_SOURCES, rule.damageSource ?? "all")}</label>
+        ${amountInput(actor, rule, "Bonus / malus aux dégâts")}
+        </div>${damageSelectionHTML(actor, rule)}
+        <p class="hint">Seul le montant fixe s’ajoute aux dégâts, sans Avantage ni Désavantage. Pour une aptitude avec un nom de jet personnalisé, choisissez « Jet de dégâts » dans ses options de jet.</p>
+        <p class="hint" data-rule-summary>${escape(effectRuleSummary(rule, { actor: summaryActor(actor) }))}</p>`;
     return `<div class="aa-effect-grid">
         <label>Jets concernés${select("scope", EFFECT_ROLL_SCOPES, rule.scope)}</label>
         <label>Caractéristique associée${select("ability", { "": "Toutes / sans filtre", ...EFFECT_ABILITIES }, rule.ability)}</label>
@@ -194,10 +216,18 @@ export async function openCharacterEffectsEditor(owner, { actor = owner.actor ??
                 rule[field.dataset.efield] = field.dataset.efield === "addBefore" ? value === "yes" : value;
             }
             card.querySelector("[data-rule-summary]").textContent = effectRuleSummary(rule, { actor: summaryActor(actor) });
-            if (field.dataset.efield === "activationMode") {
-                rule.conditionMode = "selected";
+            if (["activationMode", "scope", "damageSource", "damageAll"].includes(field.dataset.efield)) {
+                if (field.dataset.efield === "activationMode") rule.conditionMode = "selected";
+                if (field.dataset.efield === "damageSource") rule.damageItemIds = [];
                 render();
             }
+        } else if (field.dataset.damageItemId) {
+            const card = field.closest("[data-effect-rule]"), rule = draft.effectRules[card.dataset.effectRule];
+            const ids = new Set(rule.damageItemIds ?? []);
+            if (field.checked) ids.add(field.dataset.damageItemId);
+            else ids.delete(field.dataset.damageItemId);
+            rule.damageItemIds = [...ids];
+            card.querySelector("[data-rule-summary]").textContent = effectRuleSummary(rule, { actor: summaryActor(actor) });
         } else if (field.dataset.ruleConditionId) {
             const card = field.closest("[data-effect-rule]"), rule = draft.effectRules[card.dataset.effectRule];
             const ids = new Set(rule.conditionIds ?? []);
@@ -264,6 +294,13 @@ export async function openCharacterEffectsManager(actor) {
         rows.push({ label: "Initiative", type: "initiative", ability: "dexterity" }, { label: "Garde", type: "guard", ability: "strength" });
         rows.push({ label: "Attaque (FOR)", type: "attack", ability: "strength" }, { label: "Attaque (DEX)", type: "attack", ability: "dexterity" }, { label: "Contre-la-Mort", type: "death" });
         for (const [key, label] of Object.entries(EFFECT_ABILITIES)) rows.push({ label: `Aptitude (${label})`, type: "aptitude", abilities: [key] });
+        rows.push({ label: "Dégâts — Arme improvisée", type: "damage", damageSource: "improvised" });
+        for (const item of actor.items) {
+            if (item.type === "weapon") rows.push({ label: `Dégâts — ${item.name}`, type: "damage", damageSource: "weapon", itemId: item.id });
+            if (item.type === "aptitude") for (const config of Object.values(item.system.rolls ?? {})) {
+                if (isAptitudeDamageRoll(config)) rows.push({ label: `Dégâts — ${item.name} · ${config.name}`, type: "damage", damageSource: "aptitude", itemId: item.id });
+            }
+        }
         root.innerHTML = `<div class="aa-effect-body"><p class="hint">Le mode manuel actuel de la fiche est pris en compte. Les sources opposées s'annulent : au moins un Avantage + au moins un Désavantage = Neutre. L’initiative utilise toujours 1d20 + le score affiché sur la fiche.</p>
             <button type="button" data-manage-source="actor">Modifier les effets permanents du personnage</button>
             <details open><summary>Sources et activation</summary>${sources.map(({ source, active, rules, readOnly }) => `<article class="aa-effect-card"><div class="aa-effect-card-heading"><strong>${escape(source.name)}</strong><span>${active ? "● Actif" : "○ Inactif"}</span>${readOnly ? '<span class="hint">Gérée par les boutons de stance</span>' : `<button type="button" data-manage-source="${escape(source.id)}">Modifier</button>`}</div>

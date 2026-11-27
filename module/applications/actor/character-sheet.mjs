@@ -1387,6 +1387,7 @@ export class ArcaneCharacterSheet
                     [`system.rolls.${id}`]: {
                         name: fields.get("name").trim(),
                         formula,
+                        purpose: ["auto", "damage", "other"].includes(fields.get("purpose")) ? fields.get("purpose") : "auto",
                         ability: "",
                         abilities: fields.getAll("abilities").filter(key => Object.hasOwn(APTITUDE_ROLL_ABILITIES, key)),
                         skillId: fields.get("skillId"),

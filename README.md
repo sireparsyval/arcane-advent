@@ -1,5 +1,29 @@
 # arcane-advent
 
+### Effets sur les jets de dégâts
+
+Dans **Effet sur les jets**, choisir **Jets de dégâts**, puis **Tout**, **Arme**
+ou **Aptitude**. Pour Arme/Aptitude, décocher **Toutes les armes/aptitudes** pour
+sélectionner plusieurs éléments de la fiche. Sans coche, aucun élément ne reçoit
+le bonus/malus ; une référence supprimée n’élargit pas la sélection.
+
+Seul le bonus/malus fixe est appliqué, avec les mêmes références et formules que
+les autres effets. Les conditions propres à l’effet restent prises en compte.
+Les dégâts normaux, polyvalents et d’action bonus des armes utilisent la même
+sélection. **Tout** inclut aussi les jets de dégâts d’arme improvisée ; le bouton
+de dégâts fixes sans arme reste géré par son effet de statistique dédié.
+
+Dans les options d’un jet d’aptitude, **Utilisation du jet** permet de déclarer
+**Jet de dégâts** pour un bouton portant un nom personnalisé. En automatique,
+un nom contenant « Dégâts » est reconnu ; un jet de soin ou de récupération
+n’est pas assimilé à des dégâts simplement parce qu’il utilise des dés autres
+que le d20. **Autre jet** force l’exclusion des effets de dégâts.
+
+Ces réglages ne proposent pas d’Avantage/Désavantage et ne modifient pas les
+effets « Tous les jets de d20 » ni les attaques. Les anciens bonus de jets
+d’aptitude conservent leur fonctionnement et s’ajoutent, le cas échéant, au
+bonus ciblant explicitement les dégâts.
+
 ## Traits, Aptitudes et effets permanents
 
 Le bouton **Effets permanents** du Cœur (également présent dans Options) ouvre

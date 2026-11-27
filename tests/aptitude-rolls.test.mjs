@@ -103,6 +103,14 @@ async function save(dialog, name, formula = "1d20") {
     return dialog.options.buttons.find(button => button.action === "save").callback(null, { form }, dialog);
 }
 
+test("l’éditeur de jet conserve son utilisation explicite comme dégâts", async () => {
+    const { sheet, item } = fixture();
+    const dialog = await openRoll(sheet);
+    const form = { reportValidity: () => true, fields: { name: "Flammes", formula: "1d6", purpose: "damage", abilities: [], skillId: "", expertiseId: "" } };
+    await dialog.options.buttons.find(button => button.action === "save").callback(null, { form }, dialog);
+    assert.equal(Object.values(item.system.rolls)[0].purpose, "damage");
+});
+
 test("adding two rolls from aptitude options keeps both names and formulas", async () => {
     const { sheet, item } = fixture();
     await ArcaneCharacterSheet._onEditAptitudeOptions.call(sheet, null, { dataset: { itemId: "aptitude" } });

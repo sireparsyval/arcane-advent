@@ -8,6 +8,7 @@ import { withWeaponAmmunition } from "../weapon-ammunition.mjs";
 import { weaponAttackRestrictions } from "../weapon-usage.mjs";
 import { effectSkillRows } from "../effect-skills.mjs";
 import { activeCharacterEffects, conditionActor, resolveRollEffects, sourceConditionsSatisfied } from "../character-effects.mjs";
+import { isAptitudeDamageRoll } from "../damage-effects.mjs";
 
 const SORT_SPACING = 100000;
 
@@ -480,12 +481,15 @@ export class ArcaneActor extends Actor {
         const modifier = ability + mastery + bonus;
         const flavor = foundry.utils.escapeHTML(`${aptitude.name} — ${config.name}`);
         const formula = config.formula.trim();
+        const damage = isAptitudeDamageRoll(config);
 
-        if (formula.toLowerCase() === "1d20") return this._rollD20(modifier, mode, flavor,
+        if (!damage && formula.toLowerCase() === "1d20") return this._rollD20(modifier, mode, flavor,
             { type: "aptitude", abilities: selectedAbilities, skillId: skill?.id, skillName: skill?.name });
 
-        const customBonus = resolveRollEffects(activeCharacterEffects(this).filter(rule => rule.scope === "aptitude"),
-            { type: "aptitude", abilities: selectedAbilities, skillId: skill?.id, skillName: skill?.name }).bonus;
+        const effects = activeCharacterEffects(this);
+        const customBonus = resolveRollEffects(effects.filter(rule => rule.scope === "aptitude"),
+            { type: "aptitude", abilities: selectedAbilities, skillId: skill?.id, skillName: skill?.name }).bonus
+            + (damage ? resolveRollEffects(effects, { type: "damage", damageSource: "aptitude", itemId }).bonus : 0);
         const customModifier = modifier + customBonus;
         const suffix = customModifier < 0 ? ` - ${Math.abs(customModifier)}` : customModifier > 0 ? ` + ${customModifier}` : "";
         const roll = new foundry.dice.Roll(formula + suffix, this.getRollData());
@@ -511,7 +515,8 @@ export class ArcaneActor extends Actor {
     }
 
     async rollImprovisedDamage() {
-        const modifier = this.system.abilities.strength.modifier;
+        const modifier = this.system.abilities.strength.modifier
+            + resolveRollEffects(activeCharacterEffects(this), { type: "damage", damageSource: "improvised" }).bonus;
         const roll = new foundry.dice.Roll(`1d4 ${modifier < 0 ? "-" : "+"} ${Math.abs(modifier)}`);
         await roll.evaluate();
         await roll.toMessage({ speaker: foundry.documents.ChatMessage.getSpeaker({ actor: this }), flavor: "Dégâts — Arme improvisée" });
@@ -605,6 +610,10 @@ export class ArcaneActor extends Actor {
             }
         }
 
+
+        const damageBonus = resolveRollEffects(activeCharacterEffects(this),
+            { type: "damage", damageSource: "weapon", itemId: weaponId }).bonus;
+        if (damageBonus) formula += damageBonus < 0 ? ` - ${Math.abs(damageBonus)}` : ` + ${damageBonus}`;
 
         const roll =
             new foundry.dice.Roll(formula);

@@ -145,6 +145,7 @@ export class AptitudeData extends BaseItemData {
             rolls: new TypedObjectField(new SchemaField({
                 name: new StringField({ blank: false, initial: "Jet" }),
                 formula: new StringField({ blank: false, initial: "1d20" }),
+                purpose: new StringField({ choices: ["auto", "damage", "other"], initial: "auto" }),
                 ability: new StringField({ blank: true, initial: "" }),
                 abilities: new SetField(new StringField({ required: true, blank: false }), {
                     required: true, nullable: false, initial: []

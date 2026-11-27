@@ -89,6 +89,37 @@ export async function runCharacterEffectsTests({ test, assert, equal }) {
             await dialog.config.buttons.find(button => button.action === "cancel").callback(null, null, dialog);
             equal(writes.length, 0);
         });
+        await test("damage roll effects select multiple weapons or aptitudes without d20 controls", async () => {
+            writes.length = 0;
+            const gear = { ...actor, items: [...actor.items,
+                { id: "w1", name: "Lame <une>", type: "weapon" }, { id: "w2", name: "Arc", type: "weapon" },
+                { id: "a1", name: "Flammes", type: "aptitude" }, { id: "a2", name: "Foudre", type: "aptitude" }] };
+            const dialog = await openCharacterEffectsEditor(owner, { actor: gear });
+            const root = dialog.element;
+            root.querySelector('[data-add-effect="roll"]').click();
+            change(root, '[data-efield="scope"]', "damage");
+            assert(!root.querySelector('[data-efield="advantage"]'), "Damage still offers advantage");
+            assert(!root.querySelector('[data-efield="ability"]'), "Damage still offers d20 filters");
+            change(root, '[data-efield="damageSource"]', "weapon");
+            assert(root.querySelector('[data-damage-item-id="w1"]').disabled, "All weapons must disable individual selection");
+            assert(!root.querySelector('[data-damage-item-id="a1"]'), "Aptitude mixed with weapons");
+            change(root, '[data-efield="damageAll"]', false);
+            change(root, '[data-damage-item-id="w1"]', true);
+            change(root, '[data-damage-item-id="w2"]', true);
+            root.querySelector('[data-effect-tab="preview"]').click();
+            root.querySelector('[data-effect-tab="effects"]').click();
+            assert(root.querySelector('[data-damage-item-id="w1"]').checked, "Selection lost across tabs");
+            change(root, '[data-efield="damageSource"]', "aptitude");
+            assert(!root.querySelector('[data-damage-item-id="w1"]'), "Weapon selection carried into aptitudes");
+            change(root, '[data-damage-item-id="a1"]', true);
+            change(root, '[data-damage-item-id="a2"]', true);
+            change(root, '[data-efield="amount"]', "3");
+            assert(!root.querySelector("une"), "An item name became HTML");
+            await save(dialog);
+            const effect = Object.values(writes[0]["system.effectRules"])[0];
+            equal([effect.kind, effect.scope, effect.damageSource, effect.damageAll, effect.damageItemIds, effect.amount],
+                ["roll", "damage", "aptitude", false, ["a1", "a2"], 3]);
+        });
         await test("removing an existing effect uses a document deletion operation", async () => {
             writes.length = 0;
             const source = { ...owner, system: { ...owner.system, effectRules: { old: { kind: "roll", label: "Avant", enabled: true, amount: 0, scope: "all", advantage: true, disadvantage: false } } } };

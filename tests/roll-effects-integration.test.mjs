@@ -158,3 +158,35 @@ test("initiative is strictly one d20 plus the displayed score, without mode or a
     assert.equal(result.total, -1);
     assert.doesNotMatch(result.chatData.flavor, /Effets :/);
 });
+
+test("les dégâts normaux, polyvalents et bonus appliquent une seule fois les bonus ciblés et conditionnels", async () => {
+    const actor = fixture({ generic: rule({ scope: "all", amount: 99 }),
+        damage: rule({ scope: "damage", damageSource: "weapon", damageAll: false, damageItemIds: ["w"], amountFormula: "@abilities.strength.modifier", activationMode: "conditions", conditionIds: ["ready"] }) });
+    actor.system.conditions = { ready: { kind: "manual", enabled: true } };
+    actor.items.set("w", { id: "w", type: "weapon", name: "Lame", system: { damageFormula: "1d4", versatile: { damageFormula: "1d6" }, properties: new Set() } });
+    for (const [options, formula] of [[{}, "1d4 + 2 + 2"], [{ versatile: true }, "1d6 + 2 + 2"], [{ bonusAction: true }, "1d4 + 2"], [{ versatile: true, bonusAction: true }, "1d6 + 2"]]) {
+        assert.equal((await actor.rollWeaponDamage("w", options)).formula, formula);
+    }
+    actor.system.conditions.ready.enabled = false;
+    assert.equal((await actor.rollWeaponDamage("w")).formula, "1d4 + 2");
+    actor.system.conditions.ready.enabled = true; actor.system.effectRules.damage.amountFormula = "-3";
+    assert.equal((await actor.rollWeaponDamage("w", { bonusAction: true })).formula, "1d4 - 3");
+});
+
+test("une aptitude applique le bonus de dégâts à ses dégâts seuls et respecte les choix d’éléments", async () => {
+    const actor = fixture({ damage: rule({ scope: "damage", damageSource: "aptitude", damageAll: false, damageItemIds: ["a"], amount: 4 }),
+        allDamage: rule({ scope: "damage", amount: 1 }) });
+    const rolls = { damage: { name: "Dégâts", formula: "1d6", abilities: new Set(["strength"]) },
+        heal: { name: "Soin", formula: "1d6" }, attack: { name: "Action", formula: "1d20" },
+        named: { name: "Brûlure", formula: "1d4", purpose: "damage" },
+        d20: { name: "Dégâts", formula: "1d20", purpose: "damage" } };
+    actor.items.set("a", { id: "a", type: "aptitude", name: "Flamme", system: { rolls } });
+    actor.items.set("other", { id: "other", type: "aptitude", name: "Autre", system: { rolls } });
+    assert.equal((await actor.rollAptitude("a", "damage")).formula, "1d6 + 7");
+    assert.equal((await actor.rollAptitude("a", "heal")).formula, "1d6");
+    assert.equal((await actor.rollAptitude("a", "attack")).modifier, 0);
+    assert.equal((await actor.rollAptitude("a", "named")).formula, "1d4 + 5");
+    assert.equal((await actor.rollAptitude("a", "d20")).formula, "1d20 + 5");
+    assert.equal((await actor.rollAptitude("other", "damage")).formula, "1d6 + 3");
+    assert.equal((await actor.rollImprovisedDamage()).formula, "1d4 + 3");
+});

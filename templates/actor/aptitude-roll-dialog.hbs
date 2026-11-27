@@ -9,6 +9,15 @@
         <input type="text" name="formula" value="{{current.formula}}" placeholder="1d20" required>
     </label>
 
+    <label>
+        Utilisation du jet
+        <select name="purpose">
+            <option value="auto" {{#if (eq current.purpose "auto")}}selected{{/if}}>Automatique — nom contenant « Dégâts »</option>
+            <option value="damage" {{#if (eq current.purpose "damage")}}selected{{/if}}>Jet de dégâts</option>
+            <option value="other" {{#if (eq current.purpose "other")}}selected{{/if}}>Autre jet (action, soin…)</option>
+        </select>
+    </label>
+
     <fieldset class="aa-aptitude-ability-choices">
         <legend>Caractéristiques à ajouter (plusieurs possibles)</legend>
         {{#each abilities}}

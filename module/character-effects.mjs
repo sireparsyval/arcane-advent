@@ -6,8 +6,9 @@ import { resolveEffectAmount } from "./effect-amounts.mjs";
 export const EFFECT_ROLL_SCOPES = Object.freeze({
     all: "Tous les jets de d20", ability: "Tests de caractéristique", save: "Jets de sauvegarde",
     skill: "Tests de compétence", attack: "Jets d'attaque", initiative: "Initiative",
-    guard: "Jets de Garde", aptitude: "Jets d'aptitude", death: "Contre-la-Mort"
+    guard: "Jets de Garde", aptitude: "Jets d'aptitude", damage: "Jets de dégâts", death: "Contre-la-Mort"
 });
+export const EFFECT_DAMAGE_SOURCES = Object.freeze({ all: "Tout", weapon: "Arme", aptitude: "Aptitude" });
 export const EFFECT_ACTIVATIONS = Object.freeze({
     always: "Permanent — tant que cette source est présente",
     passive: "Seulement si l'aptitude est passive",
@@ -26,7 +27,7 @@ export function newEffectRule(kind = "stat") {
     return { label: "", enabled: true, kind, target: "strength", amount: 0, amountFormula: "", coefficient: 1,
         addBefore: false, scope: "all", ability: "", skill: "", advantage: false, disadvantage: false,
         activationMode: "always", conditionMode: "selected", conditionIds: [], conditionMatch: "all",
-        damageType: "", damageZone: "all" };
+        damageType: "", damageZone: "all", damageSource: "all", damageAll: true, damageItemIds: [] };
 }
 
 export function sourceConditionsSatisfied(actor, system) {
@@ -130,10 +131,17 @@ function normalize(value) {
 export function rollRuleMatches(rule, context = {}) {
     if (rule.kind !== "roll" || rule.enabled === false) return false;
     // Garde is a saving throw; initiative is also a Dexterity check.
-    const scopes = new Set(["all", context.type]);
+    const scopes = new Set(context.type === "damage" ? ["damage"] : ["all", context.type]);
     if (context.type === "guard") scopes.add("save");
     if (context.type === "initiative") scopes.add("ability");
     if (!scopes.has(rule.scope ?? "all")) return false;
+    if (context.type === "damage") {
+        const source = rule.damageSource ?? "all";
+        if (source !== "all" && source !== context.damageSource) return false;
+        if (source !== "all" && rule.damageAll === false && !Array.from(rule.damageItemIds ?? []).includes(context.itemId)) return false;
+        // Damage has its own item selection; d20 ability/skill filters do not apply.
+        return true;
+    }
     const abilities = context.abilities ?? (context.ability ? [context.ability] : []);
     if (rule.ability && !abilities.includes(rule.ability)) return false;
     if (rule.skill && ![context.skillId, context.skillName].some(value => value && normalize(value) === normalize(rule.skill))) return false;
@@ -141,12 +149,13 @@ export function rollRuleMatches(rule, context = {}) {
 }
 
 export function resolveRollEffects(rules = [], context = {}, mode = "normal") {
-    let advantage = mode === "advantage", disadvantage = mode === "disadvantage", bonus = 0;
+    const damage = context.type === "damage";
+    let advantage = !damage && mode === "advantage", disadvantage = !damage && mode === "disadvantage", bonus = 0;
     const sources = [];
     for (const rule of rules) {
         if (!rollRuleMatches(rule, context)) continue;
-        advantage ||= Boolean(rule.advantage);
-        disadvantage ||= Boolean(rule.disadvantage);
+        advantage ||= !damage && Boolean(rule.advantage);
+        disadvantage ||= !damage && Boolean(rule.disadvantage);
         const amount = Number(rule.amount);
         if (Number.isFinite(amount)) bonus += amount;
         sources.push(rule.sourceName ? `${rule.sourceName}${rule.label ? ` : ${rule.label}` : ""}` : rule.label || "Effet permanent");
@@ -166,13 +175,23 @@ export function effectRuleSummary(rule, { compact = false, actor = null } = {}) 
     if (rule.kind === "roll") {
         const namedSkill = compact && rule.scope === "skill" && rule.skill?.trim();
         const pieces = namedSkill ? [] : [EFFECT_ROLL_SCOPES[rule.scope] ?? EFFECT_ROLL_SCOPES.all];
-        if (rule.ability) pieces.push(EFFECT_ABILITIES[rule.ability]);
-        if (rule.skill) pieces.push(rule.skill);
+        if (rule.scope === "damage") {
+            pieces.push(EFFECT_DAMAGE_SOURCES[rule.damageSource ?? "all"] ?? "Tout");
+            if (rule.damageSource !== "all" && rule.damageAll === false) {
+                const ids = Array.from(rule.damageItemIds ?? []);
+                pieces.push(ids.length ? ids.map(id => actor?.items?.get?.(id)?.name ?? `Élément ${id}`).join(", ") : "Aucune sélection");
+            }
+        } else {
+            if (rule.ability) pieces.push(EFFECT_ABILITIES[rule.ability]);
+            if (rule.skill) pieces.push(rule.skill);
+        }
         if (reference) pieces.push(reference);
         else if (value) pieces.push(signed(value));
-        if (rule.advantage) pieces.push("Avantage");
-        if (rule.disadvantage) pieces.push("Désavantage");
-        if (rule.advantage && rule.disadvantage) pieces.push("→ Neutre");
+        if (rule.scope !== "damage") {
+            if (rule.advantage) pieces.push("Avantage");
+            if (rule.disadvantage) pieces.push("Désavantage");
+            if (rule.advantage && rule.disadvantage) pieces.push("→ Neutre");
+        }
         return pieces.join(" · ");
     }
     const amount = reference ? `+ (${reference})` : signed(value), factor = Number(rule.coefficient ?? 1);

@@ -1,4 +1,4 @@
-import { EFFECT_STAT_TARGETS, EFFECT_ROLL_SCOPES, EFFECT_ACTIVATIONS, EFFECT_ABILITIES, EFFECT_DAMAGE_ZONES } from "../character-effects.mjs";
+import { EFFECT_STAT_TARGETS, EFFECT_ROLL_SCOPES, EFFECT_ACTIVATIONS, EFFECT_ABILITIES, EFFECT_DAMAGE_ZONES, EFFECT_DAMAGE_SOURCES } from "../character-effects.mjs";
 import { CONDITION_METRICS } from "../aptitude-conditions.mjs";
 
 export function conditionsField() {
@@ -38,6 +38,9 @@ export function effectFields({ aptitude = false, withConditions = true } = {}) {
             coefficient: new NumberField({ min: 0, initial: 1 }),
             addBefore: new BooleanField({ initial: false }),
             scope: new StringField({ choices: Object.keys(EFFECT_ROLL_SCOPES), initial: "all" }),
+            damageSource: new StringField({ choices: Object.keys(EFFECT_DAMAGE_SOURCES), initial: "all" }),
+            damageAll: new BooleanField({ initial: true }),
+            damageItemIds: new ArrayField(new StringField({ blank: false }), { initial: [] }),
             ability: new StringField({ choices: ["", ...Object.keys(EFFECT_ABILITIES)], blank: true, initial: "" }),
             skill: new StringField({ blank: true, initial: "" }),
             advantage: new BooleanField({ initial: false }),
