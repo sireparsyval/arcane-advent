@@ -28,7 +28,7 @@ class NativeToken {
     _refreshSize() { this.nameplate.y = this.height + 3; }
     _refreshNameplate() {
         this.nameplate.y = this.height + 3;
-        this.nameplate.style = { fontFamily: "Arial", fontWeight: "normal", fontSize: 24, fill: "#ffffff" };
+        this.nameplate.style = { fontFamily: "Arial", fontWeight: "normal", fontSize: 24, fill: "#ffffff", dropShadow: true, stroke: "#333333", strokeThickness: 1 };
     }
     drawBars() {
         for (const [index, name] of ["bar1", "bar2"].entries()) {
@@ -95,7 +95,7 @@ test("les noms des personnages et PNJ restent dans le cadre après rafraîchisse
         const token = fixture(); token.actor = { type };
         token.nameplate.height = 20; token.nameplate.anchor = { y: anchor };
         token._refreshNameplate();
-        assert.deepEqual(token.nameplate.style, { fontFamily: "Vecna", fontWeight: "700", fontSize: 24, fill: "#ffffff" });
+        assert.deepEqual(token.nameplate.style, { fontFamily: "Vecna", fontWeight: "700", fontSize: 24, fill: "#ffffff", dropShadow: false, stroke: "#000000", strokeThickness: 2 });
         const bottom = () => token.nameplate.y + token.nameplate.height * (1 - anchor);
         assert.equal(bottom(), 98);
         token.drawBars(); token._refreshNameplate(); token._refreshSize();
