@@ -52,6 +52,8 @@ export function createArcaneTokenClass(BaseToken) {
 
         _refreshNameplate() {
             super._refreshNameplate();
+            this.nameplate.style.fontFamily = "Vecna";
+            this.nameplate.style.fontWeight = "700";
             this._aaNameplateY = this.nameplate?.y ?? null;
             this._layoutArcaneBars();
         }
