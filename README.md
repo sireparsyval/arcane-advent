@@ -1,5 +1,25 @@
 # arcane-advent
 
+## Barres de raccourcis des personnages
+
+Le bouton **👤** près de la barre de raccourcis active le mode personnage pour
+l’utilisateur. Si **un seul personnage ou PNJ contrôlable est sélectionné**,
+la barre affiche ses cinq pages de raccourcis. Avec zéro ou plusieurs jetons
+sélectionnés, ou un objet au sol, la barre habituelle revient automatiquement.
+Survoler le bouton permet de voir le nom du personnage actif.
+
+Ces raccourcis sont enregistrés sur le personnage : **le MJ et ses joueurs
+propriétaires utilisent la même barre**. Le bouton d’activation reste propre
+à chaque utilisateur. Les raccourcis personnels habituels sont conservés à part.
+
+Glisser une macro du répertoire ou un jet de la fiche sur un emplacement permet
+de le remplir. Le clic, les touches 1 à 0, les cinq pages, le déplacement entre
+emplacements et le retrait d’un raccourci utilisent la barre active.
+Vider la barre commune demande confirmation et conserve les macros elles-mêmes.
+Les macros dont l’assignateur est propriétaire reçoivent un droit d’exécution
+pour les propriétaires du personnage ; les permissions d’exécution de Foundry
+restent applicables. Les modifications se répercutent sur les autres clients.
+
 ### Compétence d’un jet d’aptitude
 
 Le champ **Compétence (nom libre)** accepte n’importe quel nom, même sans

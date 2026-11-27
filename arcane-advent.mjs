@@ -29,6 +29,7 @@ import { ArcaneItem } from "./module/documents/item.mjs";
 import { ArcaneCharacterSheet } from "./module/applications/actor/character-sheet.mjs";
 import { ArcaneInventoryItemSheet } from "./module/applications/item/inventory-item-sheet.mjs";
 import { registerArcaneHotbar, runArcaneShortcut } from "./module/shortcuts.mjs";
+import { registerCharacterHotbars } from "./module/character-hotbar.mjs";
 import { registerArcaneText } from "./module/arcane-text.mjs";
 import { GlyphData } from "./module/data/glyph-data.mjs";
 import { GlyphSheet } from "./module/applications/item/glyph-sheet.mjs";
@@ -62,6 +63,7 @@ Hooks.once("init", () => {
     registerSceneProjectiles({ onComplete: animations.complete });
     registerObjectMotion();
     registerArcaneHotbar();
+    registerCharacterHotbars();
     registerArcaneText();
     registerGlyphCatalog();
     registerTokenBars();

@@ -1,3 +1,5 @@
+import { assignCapturedHotbarMacro, selectedHotbarActor } from "./character-hotbar.mjs";
+
 // Raccourcis : un slot appelle les jets vivants de la fiche, jamais une formule figée.
 const HOTBAR_ACTIONS = new Set([
     "rollAptitude", "rollWeaponAttack", "rollWeaponDamage",
@@ -47,6 +49,7 @@ export async function runArcaneShortcut(data) {
 export function registerArcaneHotbar() {
     Hooks.on("hotbarDrop", (hotbar, data, slot) => {
         if (data?.type !== "ArcaneAdventRoll") return;
+        const destination = selectedHotbarActor();
         // Retour synchrone : le traitement natif du dépôt dans ce slot est annulé.
         void (async () => {
             if (!HOTBAR_ACTIONS.has(data.action) || !data.actorUuid || !game.user) return;
@@ -70,7 +73,7 @@ export function registerArcaneHotbar() {
                 img: actor.img || "icons/svg/d20-highlight.svg",
                 command
             }, { renderSheet: false });
-            if (macro) await game.user.assignHotbarMacro(macro, slot);
+            if (macro) await assignCapturedHotbarMacro(game.user, destination, macro, slot);
         })().catch(error => {
             console.error("Arcane Advent | Raccourci", error);
             ui.notifications.error("Impossible de créer le raccourci de jet.");
