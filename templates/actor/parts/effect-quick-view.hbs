@@ -1,26 +1,5 @@
 {{#if hasEffectSummary}}
 <div class="aa-source-quick-view">
-    <details data-source-effects="{{id}}" {{#if effectsOpen}}open{{/if}}>
-        <summary>Effets ({{effectCount}}) · {{#if effectActive}}Actifs{{else}}Inactifs{{/if}}</summary>
-        <ul class="aa-condition-chips aa-source-summary-list" aria-label="Effets de {{name}}">
-            {{#each effectEntries}}
-                <li class="aa-condition-chip {{#if active}}is-satisfied{{else}}is-inactive{{/if}}"
-                    title="{{status}}">
-                    <button type="button" class="aa-effect-rule-toggle" data-action="toggleEffectRule"
-                        data-item-id="{{../id}}" data-effect-id="{{id}}" aria-pressed="{{active}}"
-                        aria-label="{{#if enabled}}Désactiver{{else}}Activer{{/if}} l’effet {{#if label}}{{label}}{{else}}{{summary}}{{/if}}"
-                        title="{{#if enabled}}Désactiver{{else}}Activer{{/if}} cet effet · {{status}}"
-                        {{#unless @root.canEditState}}disabled{{/unless}}><span aria-hidden="true">{{#if active}}☑{{else}}☐{{/if}}</span></button>
-                    <span class="aa-source-summary-text">
-                        {{#if label}}<strong>{{label}}</strong>{{/if}}
-                        <span>{{summary}}</span>
-                    </span>
-                </li>
-            {{else}}
-                <li class="aa-summary-empty">Aucun effet configuré.</li>
-            {{/each}}
-        </ul>
-    </details>
     <details data-source-conditions="{{id}}" {{#if conditionsOpen}}open{{/if}}>
         <summary>Conditions ({{conditionEntries.length}})</summary>
         <ul class="aa-condition-chips aa-source-summary-list" aria-label="Conditions de {{name}}">
@@ -40,6 +19,27 @@
                 </li>
             {{else}}
                 <li class="aa-summary-empty">Aucun critère configuré.</li>
+            {{/each}}
+        </ul>
+    </details>
+    <details data-source-effects="{{id}}" {{#if effectsOpen}}open{{/if}}>
+        <summary>Effets ({{effectCount}}) · {{#if effectActive}}Actifs{{else}}Inactifs{{/if}}</summary>
+        <ul class="aa-condition-chips aa-source-summary-list" aria-label="Effets de {{name}}">
+            {{#each effectEntries}}
+                <li class="aa-condition-chip {{#if active}}is-satisfied{{else}}is-inactive{{/if}}"
+                    title="{{status}}">
+                    <button type="button" class="aa-effect-rule-toggle" data-action="toggleEffectRule"
+                        data-item-id="{{../id}}" data-effect-id="{{id}}" aria-pressed="{{active}}"
+                        aria-label="{{#if enabled}}Désactiver{{else}}Activer{{/if}} l’effet {{#if label}}{{label}}{{else}}{{summary}}{{/if}}"
+                        title="{{#if enabled}}Désactiver{{else}}Activer{{/if}} cet effet · {{status}}"
+                        {{#unless @root.canEditState}}disabled{{/unless}}><span aria-hidden="true">{{#if active}}☑{{else}}☐{{/if}}</span></button>
+                    <span class="aa-source-summary-text">
+                        {{#if label}}<strong>{{label}}</strong>{{/if}}
+                        <span>{{summary}}</span>
+                    </span>
+                </li>
+            {{else}}
+                <li class="aa-summary-empty">Aucun effet configuré.</li>
             {{/each}}
         </ul>
     </details>

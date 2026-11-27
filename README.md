@@ -1,5 +1,19 @@
 # arcane-advent
 
+### Compétence d’un jet d’aptitude
+
+Le champ **Compétence (nom libre)** accepte n’importe quel nom, même sans
+compétence maîtrisée sur la fiche. Les suggestions regroupent les compétences
+maîtrisées et les noms visés par des effets actifs. Sur un jet de d20, les
+effets des tests de cette compétence se combinent avec ceux de l’aptitude,
+sans compter deux fois les effets généraux. Si une maîtrise correspond au nom,
+elle s’ajoute ; sinon son bonus est zéro et aucun objet Compétence n’est créé.
+Les caractéristiques restent celles cochées dans les options du jet.
+Les anciennes compétences sélectionnées par identifiant sont conservées.
+
+Les récapitulatifs des Traits et Aptitudes présentent **Conditions à gauche**
+et **Effets à droite**.
+
 ### Effets sur les jets de dégâts
 
 Dans **Effet sur les jets**, choisir **Jets de dégâts**, puis **Tout**, **Arme**

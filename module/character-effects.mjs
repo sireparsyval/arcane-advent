@@ -134,6 +134,7 @@ export function rollRuleMatches(rule, context = {}) {
     const scopes = new Set(context.type === "damage" ? ["damage"] : ["all", context.type]);
     if (context.type === "guard") scopes.add("save");
     if (context.type === "initiative") scopes.add("ability");
+    if (context.type === "aptitude" && context.skillEffects && (context.skillName || context.skillId)) scopes.add("skill");
     if (!scopes.has(rule.scope ?? "all")) return false;
     if (context.type === "damage") {
         const source = rule.damageSource ?? "all";

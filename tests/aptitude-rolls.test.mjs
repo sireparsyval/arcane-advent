@@ -111,6 +111,18 @@ test("l’éditeur de jet conserve son utilisation explicite comme dégâts", as
     assert.equal(Object.values(item.system.rolls)[0].purpose, "damage");
 });
 
+test("le champ de compétence conserve un nom absent de la fiche et préremplit les anciennes références", async () => {
+    const { sheet, item } = fixture({ legacy: { ...roll("Action"), skillId: "skill" } });
+    sheet.actor.items.set("skill", { id: "skill", type: "skill", name: "Athlétisme", system: { mastery: 2 } });
+    const editor = await openRoll(sheet, "legacy");
+    assert.equal(JSON.parse(editor.options.content.innerHTML).skillName, "Athlétisme");
+    const form = { reportValidity: () => true, fields: { name: "Action", formula: "1d20", skillName: " Arcanisme ", abilities: ["wisdom"], expertiseId: "" } };
+    await editor.options.buttons.find(button => button.action === "save").callback(null, { form }, editor);
+    assert.equal(item.system.rolls.legacy.skillName, "Arcanisme");
+    assert.equal(item.system.rolls.legacy.skillId, "");
+    assert.equal(sheet.actor.items.size, 2);
+});
+
 test("adding two rolls from aptitude options keeps both names and formulas", async () => {
     const { sheet, item } = fixture();
     await ArcaneCharacterSheet._onEditAptitudeOptions.call(sheet, null, { dataset: { itemId: "aptitude" } });

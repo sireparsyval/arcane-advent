@@ -29,14 +29,15 @@
     </fieldset>
 
     <label>
-        Compétence (bonus de maîtrise)
-        <select name="skillId">
-            <option value="">Aucune</option>
+        Compétence (nom libre)
+        <input type="text" name="skillName" value="{{current.skillName}}" list="aa-aptitude-roll-skills" placeholder="Aucune, Arcanisme, Discrétion…">
+        <datalist id="aa-aptitude-roll-skills">
             {{#each skills}}
-                <option value="{{id}}" {{#if (eq id ../current.skillId)}}selected{{/if}}>{{name}}</option>
+                <option value="{{this}}"></option>
             {{/each}}
-        </select>
+        </datalist>
     </label>
+    <p class="hint">Un nom peut être saisi même sans maîtrise. Les effets actifs de cette compétence s’appliquent aux jets de d20 ; si elle est maîtrisée sur la fiche, son bonus de maîtrise s’ajoute aussi. Les caractéristiques restent celles cochées ci-dessus.</p>
 
     <label>
         Expertise

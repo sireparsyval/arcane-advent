@@ -190,3 +190,28 @@ test("une aptitude applique le bonus de dégâts à ses dégâts seuls et respec
     assert.equal((await actor.rollAptitude("other", "damage")).formula, "1d6 + 3");
     assert.equal((await actor.rollImprovisedDamage()).formula, "1d4 + 3");
 });
+
+test("une aptitude peut utiliser une compétence non maîtrisée et cumule ses effets une seule fois", async () => {
+    const actor = fixture({ generic: rule({ scope: "all", amount: 1 }),
+        arcane: rule({ scope: "skill", skill: "Arcanisme", ability: "wisdom", advantage: true, amount: 2 }),
+        aptitude: rule({ scope: "aptitude", amount: 3 }),
+        other: rule({ scope: "skill", skill: "Athlétisme", amount: 99 }) });
+    actor.system.abilities.wisdom = { modifier: 2 };
+    const config = { name: "Action", formula: "1d20", abilities: new Set(["wisdom"]), skillName: "arcanisme" };
+    actor.items.set("a", { id: "a", type: "aptitude", name: "Flamme", system: { rolls: { action: config } } });
+    let result = await actor.rollAptitude("a", "action");
+    assert.equal(result.modifier, 8); assert.equal(result.mode, "advantage");
+    assert.equal(actor.items.size, 1);
+    actor.items.set("s", { id: "s", type: "skill", name: "Arcanisme", system: { mastery: 4 } });
+    result = await actor.rollAptitude("a", "action");
+    assert.equal(result.modifier, 12); assert.equal(result.mode, "advantage");
+    actor.system.rollMode = "disadvantage";
+    assert.equal((await actor.rollAptitude("a", "action")).mode, "normal");
+    actor.system.effectRules.arcane.enabled = false;
+    assert.equal((await actor.rollAptitude("a", "action")).modifier, 10);
+    config.skillName = "";
+    assert.equal((await actor.rollAptitude("a", "action")).modifier, 6);
+    config.formula = "1d6"; config.name = "Dégâts"; config.skillName = "Arcanisme";
+    actor.system.effectRules.arcane.enabled = true;
+    assert.equal((await actor.rollAptitude("a", "action")).formula, "1d6 + 9");
+});

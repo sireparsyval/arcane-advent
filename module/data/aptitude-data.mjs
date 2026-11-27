@@ -151,6 +151,7 @@ export class AptitudeData extends BaseItemData {
                     required: true, nullable: false, initial: []
                 }),
                 skillId: new StringField({ blank: true, initial: "" }),
+                skillName: new StringField({ blank: true, initial: "" }),
                 expertiseId: new StringField({ blank: true, initial: "" })
             }), { required: true, nullable: false, initial: {} }),
             showOptions: new SchemaField(Object.fromEntries(

@@ -9,6 +9,7 @@ import { weaponAttackRestrictions } from "../weapon-usage.mjs";
 import { effectSkillRows } from "../effect-skills.mjs";
 import { activeCharacterEffects, conditionActor, resolveRollEffects, sourceConditionsSatisfied } from "../character-effects.mjs";
 import { isAptitudeDamageRoll } from "../damage-effects.mjs";
+import { aptitudeSkillData } from "../aptitude-skills.mjs";
 
 const SORT_SPACING = 100000;
 
@@ -467,13 +468,13 @@ export class ArcaneActor extends Actor {
         }
 
         const config = aptitude.system.rolls[rollId];
-        const skill = this.items.get(config.skillId);
+        const skill = aptitudeSkillData(this, config);
         const selectedAbilities = config.abilities?.size
             ? [...config.abilities]
             : config.ability ? [config.ability] : [];
         const ability = [...new Set(selectedAbilities)]
             .reduce((total, key) => total + (this.system.abilities[key]?.modifier ?? 0), 0);
-        const mastery = skill?.type === "skill" ? skill.system.mastery : 0;
+        const mastery = skill.mastery;
         const expertise = this.items.get(config.expertiseId);
         const bonus = expertise?.type === "expertise" && this._canApplyAptitudeExpertise(expertise)
             ? expertise.system.bonus
@@ -484,11 +485,11 @@ export class ArcaneActor extends Actor {
         const damage = isAptitudeDamageRoll(config);
 
         if (!damage && formula.toLowerCase() === "1d20") return this._rollD20(modifier, mode, flavor,
-            { type: "aptitude", abilities: selectedAbilities, skillId: skill?.id, skillName: skill?.name });
+            { type: "aptitude", abilities: selectedAbilities, skillId: skill.skillId, skillName: skill.skillName, skillEffects: true });
 
         const effects = activeCharacterEffects(this);
         const customBonus = resolveRollEffects(effects.filter(rule => rule.scope === "aptitude"),
-            { type: "aptitude", abilities: selectedAbilities, skillId: skill?.id, skillName: skill?.name }).bonus
+            { type: "aptitude", abilities: selectedAbilities, skillId: skill.skillId, skillName: skill.skillName }).bonus
             + (damage ? resolveRollEffects(effects, { type: "damage", damageSource: "aptitude", itemId }).bonus : 0);
         const customModifier = modifier + customBonus;
         const suffix = customModifier < 0 ? ` - ${Math.abs(customModifier)}` : customModifier > 0 ? ` + ${customModifier}` : "";

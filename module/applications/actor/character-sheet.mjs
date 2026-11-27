@@ -7,6 +7,7 @@ import { unarmedDamage, equippedAttackShortcuts, weaponAttackIcon } from "../../
 import { ammunitionItems } from "../../weapon-ammunition.mjs";
 import { weaponAttackRestrictions } from "../../weapon-usage.mjs";
 import { openEffectSkillsDialog } from "../effect-skills-dialog.mjs";
+import { aptitudeSkillData, aptitudeSkillSuggestions } from "../../aptitude-skills.mjs";
 import { throwInventoryWeapon } from "../scene-object-motion-controls.mjs";
 import { APTITUDE_RANGE_MODES, aptitudeRangeMode, aptitudeRangeSummary,
     bindAptitudeRangeToggle, refreshAptitudeTargetingFields } from "../../aptitude-targeting.mjs";
@@ -1356,13 +1357,13 @@ export class ArcaneCharacterSheet
         content.innerHTML = await foundry.applications.handlebars.renderTemplate(
             "systems/arcane-advent/templates/actor/aptitude-roll-dialog.hbs",
             {
-                current,
+                current: { ...current, skillName: aptitudeSkillData(this.actor, current).skillName },
                 abilities: Object.entries(APTITUDE_ROLL_ABILITIES).map(([key, label]) => ({
                     key, label, selected: current.abilities?.size
                         ? current.abilities.has(key)
                         : current.ability === key
                 })),
-                skills: this.actor.items.filter(entry => entry.type === "skill"),
+                skills: aptitudeSkillSuggestions(this.actor),
                 expertises: this.actor.items.filter(entry => entry.type === "expertise")
             }
         );
@@ -1390,7 +1391,8 @@ export class ArcaneCharacterSheet
                         purpose: ["auto", "damage", "other"].includes(fields.get("purpose")) ? fields.get("purpose") : "auto",
                         ability: "",
                         abilities: fields.getAll("abilities").filter(key => Object.hasOwn(APTITUDE_ROLL_ABILITIES, key)),
-                        skillId: fields.get("skillId"),
+                        skillName: String(fields.get("skillName") ?? "").trim(),
+                        skillId: aptitudeSkillData(this.actor, { skillName: fields.get("skillName") }).skillId,
                         expertiseId: fields.get("expertiseId")
                     }
                 });
