@@ -26,6 +26,7 @@ class NativeToken {
     }
     _getBarColors() { return { empty: "native-empty", full: "native-full" }; }
     _refreshSize() { this.nameplate.y = this.height + 3; }
+    _refreshNameplate() { this.nameplate.y = this.height + 3; }
     drawBars() {
         for (const [index, name] of ["bar1", "bar2"].entries()) {
             const b = this[name];
@@ -84,6 +85,35 @@ test("turning the bottom layout off restores native positions", () => {
     assert.equal(token.bar1.y, 92);
     assert.equal(token.bar2.y, 0);
     assert.equal(token.nameplate.y, 103);
+});
+
+test("les noms des personnages et PNJ restent dans le cadre après rafraîchissement, redimensionnement et changement d’ancre", () => {
+    for (const type of ["character", "npc"]) for (const anchor of [0, 0.5, 1]) {
+        const token = fixture(); token.actor = { type };
+        token.nameplate.height = 20; token.nameplate.anchor = { y: anchor };
+        token._refreshNameplate();
+        const bottom = () => token.nameplate.y + token.nameplate.height * (1 - anchor);
+        assert.equal(bottom(), 98);
+        token.drawBars(); token._refreshNameplate(); token._refreshSize();
+        assert.equal(bottom(), 98);
+        assert.ok(token.bar1.y > token.height);
+        token.height = 200; canvas.dimensions.uiScale = 2;
+        token._refreshSize(); token.drawBars();
+        assert.equal(bottom(), 196);
+        token.nameplate.visible = false; token._refreshNameplate();
+        assert.equal(token.nameplate.visible, false);
+        assert.equal(bottom(), 196);
+    }
+});
+
+test("le nom reste à l’intérieur sans barres et ne recouvre pas la barre basse en mode natif", () => {
+    const token = fixture(); token.actor = { type: "character" }; token.nameplate.height = 20;
+    token.bars = null; token._refreshNameplate();
+    assert.equal(token.nameplate.y, 78);
+    token.bars = { bar1: token.bar1, bar2: token.bar2 };
+    settings.set("tokenBarsBelow", false); token.drawBars();
+    assert.equal(token.bar1.y, 92);
+    assert.equal(token.nameplate.y + token.nameplate.height, 90);
 });
 
 test("colors follow the attribute even when bar slots are swapped", () => {

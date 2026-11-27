@@ -1632,6 +1632,26 @@ body.detached > .aa-detached-sheet .window-content {
 #token-hud.aa-token-bars-below .attribute.bar1 { order: 0; }
 #token-hud.aa-token-bars-below .attribute.bar2 { order: 1; }
 #token-hud.aa-token-bars-below .col.middle .attribute:not(:has(input)) { display: none; }
+#token-hud.aa-token-resources-split .col.middle {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    left: 0;
+    gap: 4px;
+}
+#token-hud.aa-token-resources-split .col.middle .attribute {
+    grid-column: var(--aa-token-resource-column, auto);
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+}
+#token-hud.aa-token-resources-split .col.middle .attribute input {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
 
 .aa-consciousness-die-formula {
     max-width: 9rem;

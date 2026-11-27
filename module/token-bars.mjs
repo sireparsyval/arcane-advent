@@ -5,6 +5,7 @@ const RESOURCES = {
 };
 
 function belowTokens() { return game.settings.get(SCOPE, "tokenBarsBelow"); }
+function characterToken(token) { return ["character", "npc"].includes((token?.actor ?? token?.document?.actor)?.type); }
 function resourceStyle(attribute) {
     const resource = RESOURCES[attribute];
     if (!resource) return null;
@@ -39,6 +40,12 @@ export function createArcaneTokenClass(BaseToken) {
             this._layoutArcaneBars();
         }
 
+        _refreshNameplate() {
+            super._refreshNameplate();
+            this._aaNameplateY = this.nameplate?.y ?? null;
+            this._layoutArcaneBars();
+        }
+
         drawBars() {
             const result = super.drawBars();
             this._layoutArcaneBars();
@@ -46,19 +53,26 @@ export function createArcaneTokenClass(BaseToken) {
         }
 
         _layoutArcaneBars() {
-            if (!this.bars || !this.nameplate) return;
+            if (!this.nameplate) return;
             const { height } = this.document.getSize();
             const gap = 2 * (canvas.dimensions?.uiScale ?? 1);
             const baseline = this._aaNameplateY ?? height + gap;
-            this.nameplate.y = baseline;
-            if (!belowTokens()) return;
+            const inside = characterToken(this);
             const bars = resourceBars(this);
+            // Respect the native text anchor, font and visibility. The bottom of
+            // the name stays inside the frame, above any native bottom bar.
+            const bottomBars = !belowTokens() ? bars.filter(bar => bar.y >= height / 2 && bar.y < height) : [];
+            const inset = bottomBars.length ? height - Math.min(...bottomBars.map(bar => bar.y)) + gap : gap;
+            this.nameplate.y = inside
+                ? height - inset - (this.nameplate.height ?? 0) * (1 - (this.nameplate.anchor?.y ?? 0))
+                : baseline;
+            if (!belowTokens() || !this.bars) return;
             let y = height + gap;
             for (const bar of bars) {
                 bar.position.set(0, y);
                 y += bar.height + gap;
             }
-            if (bars.length) this.nameplate.y = Math.max(baseline, y + gap);
+            if (bars.length && !inside) this.nameplate.y = Math.max(baseline, y + gap);
         }
     };
 }
@@ -67,13 +81,18 @@ export function styleTokenHUD(app, html) {
     const root = html instanceof HTMLElement ? html : html?.[0];
     if (!root || !app.document) return;
     root.classList.add("aa-token-resources");
-    root.classList.toggle("aa-token-bars-below", Boolean(belowTokens()));
+    const split = characterToken(app.object) || ["character", "npc"].includes(app.document.actor?.type);
+    root.classList.toggle("aa-token-resources-split", split);
+    root.classList.toggle("aa-token-bars-below", Boolean(belowTokens()) || split);
     for (const name of ["bar1", "bar2"]) {
         const field = root.querySelector(`.attribute.${name}`);
         if (!field) continue;
-        const resource = resourceStyle(app.document.getBarAttribute(name)?.attribute);
+        const attribute = app.document.getBarAttribute(name)?.attribute;
+        const resource = resourceStyle(attribute);
         field.style.removeProperty("--aa-token-resource-color");
+        field.style.removeProperty("--aa-token-resource-column");
         if (!resource) continue;
+        if (split) field.style.setProperty("--aa-token-resource-column", attribute === "consciousness" ? "1" : "2");
         field.style.setProperty("--aa-token-resource-color", resource.color);
         const input = field.querySelector("input");
         if (input) {
@@ -86,8 +105,9 @@ export function styleTokenHUD(app, html) {
     if (token) {
         const { height } = app.document.getSize();
         const scale = canvas.dimensions?.uiScale ?? 1;
-        const bottom = Math.max(height, ...resourceBars(token).map(bar => bar.y + bar.height),
-            token.nameplate?.visible ? token.nameplate.y + token.nameplate.height : height);
+        const visibleBars = token.bars?.visible === false ? [] : resourceBars(token);
+        const bottom = Math.max(height, ...visibleBars.map(bar => bar.y + bar.height),
+            token.nameplate?.visible ? token.nameplate.y + token.nameplate.height * (1 - (token.nameplate.anchor?.y ?? 0)) : height);
         root.style.setProperty("--aa-token-resource-offset", `${(bottom - height) / scale + 6}px`);
     }
 }
@@ -107,7 +127,7 @@ function refreshTokenBars() {
 export function registerTokenBars() {
     game.settings.register(SCOPE, "tokenBarsBelow", {
         name: "Placer les deux barres sous les jetons",
-        hint: "Empile les deux barres sous le jeton et décale le nom ainsi que les champs de saisie.",
+        hint: "Empile les deux barres sous le jeton. Pour les personnages, le nom reste à l’intérieur et les champs PdC/PdF sont côte à côte en dessous.",
         scope: "world", config: true, type: Boolean, default: true, onChange: refreshTokenBars
     });
     for (const resource of Object.values(RESOURCES)) {

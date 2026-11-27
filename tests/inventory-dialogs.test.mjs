@@ -44,7 +44,7 @@ test("inventory dialogs, token HUD, aptitude targeting and defense tooltips in a
         { windowsHide: true, timeout: 35000, maxBuffer: 1024 * 1024 });
         assert.match(stdout, /data-status="passed"/, stdout.match(/<pre>(.*?)<\/pre>/s)?.[1] ?? stdout.slice(-4000));
         const results = JSON.parse(stdout.match(/<pre>(.*?)<\/pre>/s)[1]);
-        assert.equal(results.length, 53);
+        assert.equal(results.length, 54);
         assert.ok(results.every(result => result.passed), JSON.stringify(results));
     } finally {
         server.closeAllConnections();

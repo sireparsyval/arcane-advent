@@ -132,8 +132,12 @@ Dans les fiches complètes, la barre de Points de Fièvre est également jaune.
 
 ## Barres des jetons
 
-Les deux barres de ressources sont affichées sous le jeton, avec le nom décalé
-pour éviter les chevauchements. Les champs du clic droit suivent cette disposition.
+Les deux barres de ressources sont affichées sous le jeton. Pour les personnages
+et PNJ, le nom est centré contre le bord inférieur, à l’intérieur du cadre.
+Les champs du clic droit sont sur une seule ligne sous le jeton : **PdC à gauche**,
+**PdF à droite**, chacun sur la moitié de la largeur, même si Barre 1 et Barre 2
+sont inversées. Leur position tient compte des barres visibles pour éviter les
+chevauchements et ignore l’espace des barres masquées.
 Les valeurs, maxima, attributs choisis et permissions d’affichage restent gérés
 par Foundry.
 
