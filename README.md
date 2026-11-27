@@ -132,6 +132,23 @@ Dans les fiches complètes, la barre de Points de Fièvre est également jaune.
 
 ## Barres des jetons
 
+### Vitesse de déplacement visuelle
+
+Dans les paramètres **Arcane Advent**, **Vitesse d’animation des personnages**
+utilise par défaut le tracker **Vitesse effective** de chaque personnage/PNJ,
+avec ses effets et son encombrement. Sa valeur est interprétée en mètres par
+seconde d’animation : 10 donne 10 m/s, soit 5 cases/s sur une grille de 2 m.
+Le mode **Vitesse fixe** utilise une valeur commune, réglée à **12 cases/s**
+par défaut. Les réglages sont partagés par les clients du monde et s’appliquent
+au prochain déplacement, sans relancer de macro.
+
+Un tracker nul/absent ou une échelle inconnue utilise la vitesse fixe de secours.
+Ce réglage ne bloque pas les déplacements et ne modifie pas leur budget en jeu.
+Les objets de scène et les animations avec leur durée/vitesse explicite gardent
+leur propre fonctionnement.
+
+### Noms et ressources
+
 Les deux barres de ressources sont affichées sous le jeton. Pour les personnages
 et PNJ, le nom est centré contre le bord inférieur, à l’intérieur du cadre.
 Les champs du clic droit sont sur une seule ligne sous le jeton : **PdC à gauche**,

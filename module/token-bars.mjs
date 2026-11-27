@@ -1,3 +1,5 @@
+import { registerTokenMovementSettings, tokenMovementSpeed } from "./token-movement.mjs";
+
 const SCOPE = "arcane-advent";
 const RESOURCES = {
     consciousness: { setting: "tokenConsciousnessColor", label: "Points de Conscience", color: "#bd3737" },
@@ -25,6 +27,14 @@ function resourceBars(token) {
 export function createArcaneTokenClass(BaseToken) {
     return class ArcaneToken extends BaseToken {
         _aaNameplateY = null;
+
+        _getAnimationMovementSpeed(options = {}) {
+            if (Number.isFinite(options.movementSpeed) && options.movementSpeed > 0) return options.movementSpeed;
+            return tokenMovementSpeed(this, {
+                mode: game.settings.get(SCOPE, "tokenMovementMode") ?? "tracker",
+                fixedSpeed: game.settings.get(SCOPE, "tokenMovementFixedSpeed") ?? 12
+            }) ?? super._getAnimationMovementSpeed(options);
+        }
 
         _getBarColors(index, data) {
             const resource = resourceStyle(data.attribute);
@@ -125,6 +135,7 @@ function refreshTokenBars() {
 }
 
 export function registerTokenBars() {
+    registerTokenMovementSettings();
     game.settings.register(SCOPE, "tokenBarsBelow", {
         name: "Placer les deux barres sous les jetons",
         hint: "Empile les deux barres sous le jeton. Pour les personnages, le nom reste à l’intérieur et les champs PdC/PdF sont côte à côte en dessous.",
