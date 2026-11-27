@@ -131,6 +131,21 @@ test("colors follow the attribute even when bar slots are swapped", () => {
     assert.deepEqual(token._getBarColors(0, { attribute: "other" }), { empty: "native-empty", full: "native-full" });
 });
 
+test("les noms gardent au moins 18 pixels à l’écran au dézoom et retrouvent leur taille native au zoom", () => {
+    const token = fixture();
+    try {
+        for (const zoom of [0.2, 0.4, 0.75, 1, 2]) {
+            canvas.stage = { scale: { x: zoom } };
+            canvas.dimensions.uiScale = 1.5;
+            token._refreshNameplate();
+            const size = token.nameplate.style.fontSize;
+            assert.ok(size * zoom * 1.5 >= 18);
+            assert.equal(size, Math.max(24, 18 / (zoom * 1.5)));
+            assert.equal(token.nameplate.style.strokeThickness, 2 * size / 24);
+        }
+    } finally { delete canvas.stage; canvas.dimensions.uiScale = 1; }
+});
+
 test("world settings refresh existing tokens and safely handle a closed canvas", () => {
     const registered = new Map(), hooks = new Map(), flags = [];
     const prior = game.settings.register;
@@ -144,12 +159,19 @@ test("world settings refresh existing tokens and safely handle a closed canvas",
         assert.ok(registered.get("tokenFeverColor").type instanceof foundry.data.fields.ColorField);
         assert.equal(registered.get("tokenConsciousnessColor").scope, "world");
         assert.ok(hooks.has("renderTokenHUD"));
+        assert.ok(hooks.has("canvasPan"));
         assert.ok(CONFIG.Token.objectClass.prototype instanceof NativeToken);
         let redraws = 0;
         canvas.tokens.placeables = [{ drawBars: () => redraws++, renderFlags: { set: value => flags.push(value) } }];
         registered.get("tokenFeverColor").onChange();
         assert.equal(redraws, 1);
         assert.deepEqual(flags, [{ refreshBars: true, refreshNameplate: true }]);
+        flags.length = 0;
+        canvas.stage = { scale: { x: 0.4 } };
+        hooks.get("canvasPan")();
+        hooks.get("canvasPan")();
+        assert.deepEqual(flags, [{ refreshNameplate: true }], "Un déplacement sans changement de zoom ne redessine pas les noms");
+        delete canvas.stage;
         canvas.ready = false;
         registered.get("tokenBarsBelow").onChange();
         assert.equal(flags.length, 1);

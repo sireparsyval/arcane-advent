@@ -54,9 +54,12 @@ export function createArcaneTokenClass(BaseToken) {
             super._refreshNameplate();
             this.nameplate.style.fontFamily = "Vecna";
             this.nameplate.style.fontWeight = "700";
+            const screenScale = (canvas.stage?.scale?.x ?? 1) * (canvas.dimensions?.uiScale ?? 1);
+            const fontSize = Math.max(24, 18 / Math.max(screenScale, 0.01));
+            this.nameplate.style.fontSize = fontSize;
             this.nameplate.style.dropShadow = false;
             this.nameplate.style.stroke = "#000000";
-            this.nameplate.style.strokeThickness = 2;
+            this.nameplate.style.strokeThickness = 2 * fontSize / 24;
             this._aaNameplateY = this.nameplate?.y ?? null;
             this._layoutArcaneBars();
         }
@@ -168,4 +171,13 @@ export function registerTokenBars() {
         };
     }
     Hooks.on("renderTokenHUD", styleTokenHUD);
+    let lastNameplateScale;
+    Hooks.on("canvasPan", () => {
+        const scale = (canvas.stage?.scale?.x ?? 1) * (canvas.dimensions?.uiScale ?? 1);
+        if (scale === lastNameplateScale) return;
+        lastNameplateScale = scale;
+        for (const token of canvas.tokens?.placeables ?? []) {
+            token.renderFlags.set({ refreshNameplate: true });
+        }
+    });
 }
