@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { assignCapturedHotbarMacro, assignCharacterMacro, characterHotbarSlots, clearCharacterHotbar,
+import { assignCapturedHotbarMacro, assignCharacterMacro, characterHotbarSlots,
     createCharacterHotbarUserClass, registerCharacterHotbars, selectedHotbarActor, syncCharacterHotbarPermissions } from "../module/character-hotbar.mjs";
 
 class NativeUser {
@@ -64,13 +64,13 @@ test("MJ et joueur retrouvent les mêmes cinquante emplacements du personnage", 
     assert.equal(macro.ownership.player, 1); assert.equal(macro.ownership.observer, undefined);
 });
 
-test("déplacer, retirer et vider les raccourcis ne supprime pas les macros ou l’autre barre", async () => {
+test("déplacer et retirer un raccourci ne supprime pas les macros ou l’autre barre", async () => {
     const { a, b, user, macro } = fixture();
     await user.assignHotbarMacro(macro, 1);
     await user.assignHotbarMacro(macro, 2, { fromSlot: 1 });
     assert.deepEqual(characterHotbarSlots(a), { 2: "m" });
     await assignCharacterMacro(b, macro, 3);
-    await clearCharacterHotbar(a);
+    await user.assignHotbarMacro(null, 2);
     assert.deepEqual(characterHotbarSlots(a), {});
     assert.deepEqual(characterHotbarSlots(b), { 3: "m" });
     assert.equal(game.macros.has("m"), true);

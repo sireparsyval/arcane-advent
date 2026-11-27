@@ -1,5 +1,3 @@
-import { formDialog } from "./applications/form-interactions.mjs";
-
 const SCOPE = "arcane-advent", MODE = "characterHotbarMode", BAR = "characterHotbar";
 const queues = new WeakMap(), bindings = new WeakMap();
 const validSlot = slot => Number.isInteger(Number(slot)) && Number(slot) >= 1 && Number(slot) <= 50;
@@ -54,15 +52,6 @@ export function assignCharacterMacro(actor, macro, slot, fromSlot) {
         }
         await actor.update(changes);
         return actor;
-    });
-}
-
-export function clearCharacterHotbar(actor) {
-    return enqueue(actor, async () => {
-        if (!actor.isOwner) throw Error("Vous ne pouvez pas modifier les raccourcis de ce personnage.");
-        const changes = Object.fromEntries(Object.keys(characterHotbarSlots(actor))
-            .map(slot => [`flags.${SCOPE}.${BAR}.slots.-=${slot}`, null]));
-        if (Object.keys(changes).length) await actor.update(changes);
     });
 }
 
@@ -166,17 +155,21 @@ export function decorateCharacterHotbar(app, html) {
     if (!root) return;
     bindings.get(root)?.abort();
     const abort = new AbortController(); bindings.set(root, abort);
-    root.querySelector("[data-character-hotbar-toggle]")?.remove();
+    const previous = root.querySelector("[data-character-hotbar-toggle]");
+    const placeholder = root.querySelector('[data-action="clear"]') ?? previous;
     const enabled = Boolean(game.user.getFlag(SCOPE, MODE)), actor = selectedHotbarActor();
     const button = root.ownerDocument.createElement("button");
-    button.type = "button"; button.className = "aa-character-hotbar-toggle";
+    button.type = "button"; button.className = "ui-control icon aa-character-hotbar-toggle";
     button.dataset.characterHotbarToggle = ""; button.textContent = "👤";
     button.setAttribute("aria-pressed", String(enabled));
     button.title = actor ? `Barre commune — ${actor.name}` : enabled
         ? "Mode personnage actif — sélectionnez un seul personnage ; barre habituelle affichée"
         : "Activer la barre commune du personnage sélectionné";
     button.setAttribute("aria-label", button.title);
-    (root.querySelector(".hotbar-controls, #hotbar-controls, .bar-controls") ?? root).append(button);
+    if (placeholder) placeholder.replaceWith(button);
+    else (root.querySelector("#hotbar-controls-right > .flexcol, .hotbar-controls, #hotbar-controls, .bar-controls") ?? root).append(button);
+    if (previous && previous !== placeholder) previous.remove();
+    for (const clear of root.querySelectorAll('[data-action="clear"]')) clear.remove();
     root.classList.toggle("aa-character-hotbar-active", Boolean(actor));
     button.addEventListener("click", async event => {
         event.preventDefault(); event.stopPropagation(); button.disabled = true;
@@ -184,16 +177,6 @@ export function decorateCharacterHotbar(app, html) {
         catch (error) { report(error); }
         finally { button.disabled = false; }
     }, { signal: abort.signal });
-    root.addEventListener("click", event => {
-        if (!event.target.closest('[data-action="clear"]')) return;
-        const target = selectedHotbarActor(); if (!target) return;
-        event.preventDefault(); event.stopImmediatePropagation();
-        void (async () => {
-            const confirm = await formDialog.confirm({ window: { title: "Vider la barre du personnage" },
-                content: "Vider les cinq pages de raccourcis communes à ce personnage ? Les macros elles-mêmes sont conservées." });
-            if (confirm) { await clearCharacterHotbar(target); await refreshHotbar(); }
-        })().catch(report);
-    }, { capture: true, signal: abort.signal });
     root.addEventListener("dragstart", event => {
         const target = selectedHotbarActor();
         const entry = event.target.closest("[data-slot]");

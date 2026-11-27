@@ -1653,15 +1653,6 @@ body.detached > .aa-detached-sheet .window-content {
     max-width: 100%;
 }
 
-#hotbar .aa-character-hotbar-toggle {
-    flex: 0 0 auto;
-    min-width: 28px;
-    width: 28px;
-    height: 28px;
-    padding: 2px;
-    line-height: 1;
-    align-self: center;
-}
 #hotbar .aa-character-hotbar-toggle[aria-pressed="true"] {
     border-color: var(--aa-gold, #c6a66f);
     box-shadow: inset 0 0 0 1px var(--aa-gold, #c6a66f);
